@@ -1,0 +1,12 @@
+# Monorepo gitignore
+node_modules/
+dist/
+vendor/
+.env
+*.log
+.phpunit.cache/
+__pycache__/
+*.pyc
+.pytest_cache/
+pgdata/
+redisdata/
