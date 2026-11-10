@@ -60,3 +60,4 @@ class Workspace extends Model
         return $this->hasMany(AuditLog::class);
     }
 }
+

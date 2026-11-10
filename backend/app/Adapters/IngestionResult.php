@@ -21,3 +21,4 @@ class IngestionResult
         return $this->errorCode === null;
     }
 }
+

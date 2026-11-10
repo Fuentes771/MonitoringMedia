@@ -17,7 +17,7 @@ class ConnectorCredential extends Model
     ];
 
     protected $casts = [
-        'encrypted_payload' => 'encrypted',
+        'encrypted_payload' => 'encrypted:array',
         'expires_at' => 'datetime',
     ];
 
@@ -26,3 +26,4 @@ class ConnectorCredential extends Model
         return $this->belongsTo(Connector::class);
     }
 }
+

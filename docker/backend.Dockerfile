@@ -1,6 +1,6 @@
 FROM php:8.3-cli-alpine
 
-RUN apk add --no-cache postgresql-dev linux-headers $PHPIZE_DEPS \
+RUN apk add --no-cache postgresql-dev linux-headers $PHPIZE_DEP \
     && docker-php-ext-install pdo pdo_pgsql pgsql pcntl \
     && rm -rf /var/cache/apk/*
 
@@ -16,3 +16,4 @@ COPY . .
 EXPOSE 8000
 
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+

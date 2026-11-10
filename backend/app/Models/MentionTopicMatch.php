@@ -30,3 +30,4 @@ class MentionTopicMatch extends Model
         return $this->belongsTo(Topic::class);
     }
 }
+

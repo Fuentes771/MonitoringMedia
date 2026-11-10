@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\V1\TrendController;
 use App\Http\Controllers\Api\V1\ConnectorController;
 use App\Http\Controllers\Api\V1\AlertController;
 use App\Http\Controllers\Api\V1\ReportController;
+use App\Http\Controllers\Api\V1\AiIntelligenceController;
+use App\Http\Controllers\Api\V1\HotIssueController;
 
 Route::prefix('v1')->group(function () {
     // 1. Authentication
@@ -38,11 +40,15 @@ Route::prefix('v1')->group(function () {
 
     // 5. Trends & Intelligence
     Route::get('/trends', [TrendController::class, 'index']);
+    Route::get('/hot-issues', [HotIssueController::class, 'index']);
+    Route::post('/hot-issues', [HotIssueController::class, 'store']);
 
     // 6. Connectors (Data Sources)
     Route::get('/connectors', [ConnectorController::class, 'index']);
     Route::post('/connectors/{provider}/connect', [ConnectorController::class, 'connect']);
+    Route::post('/connectors/{provider}/credentials', [ConnectorController::class, 'connect']);
     Route::post('/connectors/{provider}/test', [ConnectorController::class, 'test']);
+    Route::post('/connectors/{provider}/live-preview', [ConnectorController::class, 'livePreview']);
 
     // 7. Alerts & Notifications
     Route::get('/alerts', [AlertController::class, 'index']);
@@ -52,4 +58,11 @@ Route::prefix('v1')->group(function () {
 
     // 8. Reports & Exports
     Route::post('/reports/export', [ReportController::class, 'export']);
+
+    // 9. AI Intelligence (9Router & Context-Bounded RAG)
+    Route::get('/ai/status', [AiIntelligenceController::class, 'status']);
+    Route::post('/ai/chat', [AiIntelligenceController::class, 'chat']);
+    Route::get('/topics/{id}/ai-summary', [AiIntelligenceController::class, 'topicSummary']);
+    Route::post('/ai/generate-queries', [AiIntelligenceController::class, 'generateQueries']);
 });
+

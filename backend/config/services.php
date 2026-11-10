@@ -35,4 +35,28 @@ return [
         ],
     ],
 
+    'rapidapi' => [
+        'key' => env('RAPIDAPI_KEY'),
+        'x' => [
+            'host' => env('RAPIDAPI_X_HOST', 'twitter154.p.rapidapi.com'),
+            'search_url' => env('RAPIDAPI_X_URL', 'https://twitter154.p.rapidapi.com/search/search'),
+            'replies_url' => env('RAPIDAPI_X_REPLIES_URL', 'https://twitter154.p.rapidapi.com/tweet/replies'),
+        ],
+        'tiktok' => [
+            'host' => env('RAPIDAPI_TIKTOK_HOST', 'tiktok-scraper7.p.rapidapi.com'),
+            'search_url' => env('RAPIDAPI_TIKTOK_URL', 'https://tiktok-scraper7.p.rapidapi.com/feed/search'),
+            'comments_url' => env('RAPIDAPI_TIKTOK_COMMENTS_URL', 'https://tiktok-scraper7.p.rapidapi.com/comment/list'),
+        ],
+        'instagram' => [
+            'host' => env('RAPIDAPI_INSTAGRAM_HOST', 'instagram-scraper-api2.p.rapidapi.com'),
+            'search_url' => env('RAPIDAPI_INSTAGRAM_URL', 'https://instagram-scraper-api2.p.rapidapi.com/v1/hashtag'),
+            'comments_url' => env('RAPIDAPI_INSTAGRAM_COMMENTS_URL', 'https://instagram-scraper-api2.p.rapidapi.com/v1/comments'),
+        ],
+        'facebook' => [
+            'host' => env('RAPIDAPI_FACEBOOK_HOST', 'facebook-scraper3.p.rapidapi.com'),
+            'search_url' => env('RAPIDAPI_FACEBOOK_URL', 'https://facebook-scraper3.p.rapidapi.com/search/posts'),
+            'comments_url' => env('RAPIDAPI_FACEBOOK_COMMENTS_URL', 'https://facebook-scraper3.p.rapidapi.com/post/comments'),
+        ],
+    ],
+
 ];

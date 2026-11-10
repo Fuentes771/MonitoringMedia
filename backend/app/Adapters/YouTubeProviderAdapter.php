@@ -147,3 +147,4 @@ class YouTubeProviderAdapter implements ProviderAdapterInterface
         }
     }
 }
+

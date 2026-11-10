@@ -71,7 +71,7 @@ class TrendService
         $growthStr = $growthMultiplier >= 1.0 
             ? sprintf("%.1fx dibanding baseline", $growthMultiplier)
             : "stabil";
-        $explanation = "Trend score {$score}/100: volume {$currentVolume} mention ({$growthStr}) pada periode {$windowHours} jam terakhir.";
+        $explanation = "Trend score {$score}/100 — volume {$currentVolume} mention ({$growthStr}) pada periode {$windowHours} jam terakhir.";
 
         $components = [
             'volume' => round($normVolume, 2),
@@ -106,3 +106,4 @@ class TrendService
         ];
     }
 }
+

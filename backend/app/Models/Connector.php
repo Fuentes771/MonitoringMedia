@@ -40,3 +40,4 @@ class Connector extends Model
         return $this->hasMany(IngestionRun::class);
     }
 }
+

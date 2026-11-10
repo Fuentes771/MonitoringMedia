@@ -162,3 +162,4 @@ cd frontend
 pnpm run build
 ```
 *Hasil: 0 TypeScript errors, bundle berhasil dikompilasi.*
+

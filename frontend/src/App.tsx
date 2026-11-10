@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api, DashboardOverview } from '@/lib/api';
 import { Sidebar, NavTab } from '@/components/layout/Sidebar';
@@ -8,16 +8,32 @@ import { MentionsPage } from '@/pages/MentionsPage';
 import { TopicsPage } from '@/pages/TopicsPage';
 import { AlertsPage } from '@/pages/AlertsPage';
 import { DataSourcesPage } from '@/pages/DataSourcesPage';
+import { HotIssuesPage } from '@/pages/HotIssuesPage';
+import { AiIntelligenceDrawer } from '@/components/ai/AiIntelligenceDrawer';
+import { FloatingAiAssistantButton } from '@/components/ai/FloatingAiAssistantButton';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<NavTab>('overview');
-  const [isDark, setIsDark] = useState(true);
   const [days, setDays] = useState(7);
   const [isExporting, setIsExporting] = useState(false);
+  const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
+  const [aiInitialQuery, setAiInitialQuery] = useState<string | undefined>(undefined);
+
+  // Enforce permanent Dark Mode (Stealth Intelligence Theme)
+  useEffect(() => {
+    document.documentElement.classList.remove('light');
+    document.documentElement.classList.add('dark');
+    try {
+      localStorage.removeItem('theme');
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // Selected filters passed across pages
   const [targetTopicId, setTargetTopicId] = useState<number | undefined>(undefined);
   const [targetKeyword, setTargetKeyword] = useState<string | undefined>(undefined);
+  const [targetSentiment, setTargetSentiment] = useState<string | undefined>(undefined);
 
   // Fetch overview data for topbar coverage strip
   const { data: overview, refetch: refetchOverview, isFetching } = useQuery({
@@ -30,27 +46,31 @@ export default function App() {
     },
   });
 
-  const toggleTheme = () => {
-    setIsDark(!isDark);
-    if (isDark) {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.classList.add('light');
-    } else {
-      document.documentElement.classList.remove('light');
-      document.documentElement.classList.add('dark');
-    }
-  };
-
   const handleNavigateToTopic = (topicId: number) => {
     setTargetTopicId(topicId);
     setTargetKeyword(undefined);
+    setTargetSentiment(undefined);
     setCurrentTab('mentions');
   };
 
   const handleNavigateToMentionsWithKeyword = (kw: string) => {
     setTargetKeyword(kw);
     setTargetTopicId(undefined);
+    setTargetSentiment(undefined);
     setCurrentTab('mentions');
+  };
+
+  const handleNavigateToMentionsWithFilters = (topicId?: number, sentiment?: string, keyword?: string) => {
+    setTargetTopicId(topicId);
+    setTargetSentiment(sentiment);
+    setTargetKeyword(keyword);
+    setCurrentTab('mentions');
+  };
+
+  const handleOpenAiWithQuery = (query: string, topicId?: number) => {
+    if (topicId) setTargetTopicId(topicId);
+    setAiInitialQuery(query);
+    setIsAiDrawerOpen(true);
   };
 
   // CSV Export action
@@ -77,56 +97,101 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen flex ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
-      {/* Sidebar Navigation */}
-      <Sidebar
-        currentTab={currentTab}
-        onSelectTab={(tab) => {
-          setCurrentTab(tab);
-          if (tab !== 'mentions') {
-            setTargetTopicId(undefined);
-            setTargetKeyword(undefined);
-          }
-        }}
-        onExportCsv={handleExportCsv}
-        isExporting={isExporting}
+    <div className="min-h-screen flex font-sans-ui relative bg-[#08090d] text-[#f4f5f8] selection:bg-cyan-500/20 selection:text-cyan-200">
+      {/* High-Visibility Ambient Telemetry Backdrop (Gambar 3) */}
+      <div
+        className="fixed top-0 left-0 right-0 h-[720px] pointer-events-none z-0 opacity-60 mix-blend-screen bg-cover bg-top bg-no-repeat transition-opacity duration-700"
+        style={{ backgroundImage: `url('/brand/ambient-backdrop.jpg')` }}
       />
+      <div className="fixed top-0 left-0 right-0 h-[720px] pointer-events-none z-0 bg-gradient-to-b from-transparent via-[#08090d]/30 to-[#08090d]" />
+
+      {/* Sidebar Navigation */}
+      <div className="relative z-20">
+        <Sidebar
+          currentTab={currentTab}
+          onSelectTab={(tab) => {
+            setCurrentTab(tab);
+            if (tab !== 'mentions') {
+              setTargetTopicId(undefined);
+              setTargetKeyword(undefined);
+              setTargetSentiment(undefined);
+            }
+          }}
+          onExportCsv={handleExportCsv}
+          isExporting={isExporting}
+        />
+      </div>
 
       {/* Main View Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 relative z-10">
         <Topbar
-          isDark={isDark}
-          onToggleTheme={toggleTheme}
+          currentTab={currentTab}
           coverage={overview?.coverage}
           onRefresh={() => refetchOverview()}
           isRefreshing={isFetching}
           days={days}
           onChangeDays={setDays}
+          onNavigateToAlerts={() => setCurrentTab('alerts')}
         />
 
-        <main className="flex-1 p-6 max-w-7xl w-full mx-auto overflow-y-auto">
+        <main className="flex-1 p-6 sm:p-8 max-w-7xl w-full mx-auto overflow-y-auto">
           {currentTab === 'overview' && (
             <OverviewPage
               days={days}
               onNavigateToTopic={handleNavigateToTopic}
               onNavigateToMentionsWithKeyword={handleNavigateToMentionsWithKeyword}
+              onOpenAiWithQuery={handleOpenAiWithQuery}
             />
           )}
+
+          {currentTab === 'hot_issues' && <HotIssuesPage />}
 
           {currentTab === 'mentions' && (
             <MentionsPage
               initialKeyword={targetKeyword}
               initialTopicId={targetTopicId}
+              initialSentiment={targetSentiment}
+              onOpenAiWithQuery={handleOpenAiWithQuery}
             />
           )}
 
-          {currentTab === 'topics' && <TopicsPage />}
+          {currentTab === 'topics' && (
+            <TopicsPage
+              onNavigateToMentions={handleNavigateToTopic}
+              onOpenAiWithQuery={handleOpenAiWithQuery}
+            />
+          )}
 
-          {currentTab === 'alerts' && <AlertsPage />}
+          {currentTab === 'alerts' && (
+            <AlertsPage
+              onNavigateToMentions={handleNavigateToMentionsWithFilters}
+              onOpenAiWithQuery={handleOpenAiWithQuery}
+            />
+          )}
 
           {currentTab === 'sources' && <DataSourcesPage />}
         </main>
       </div>
+
+      {/* Floating Action Button (FAB) Bottom-Right AI Assistant */}
+      <FloatingAiAssistantButton
+        onClick={() => {
+          setAiInitialQuery(undefined);
+          setIsAiDrawerOpen(true);
+        }}
+        isOpen={isAiDrawerOpen}
+      />
+
+      {/* AI Intelligence Chatbot Drawer */}
+      <AiIntelligenceDrawer
+        isOpen={isAiDrawerOpen}
+        onClose={() => {
+          setIsAiDrawerOpen(false);
+          setAiInitialQuery(undefined);
+        }}
+        selectedTopicId={targetTopicId}
+        initialQuery={aiInitialQuery}
+      />
     </div>
   );
 }

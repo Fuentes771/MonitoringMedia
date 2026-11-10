@@ -40,3 +40,4 @@ def extract_keywords(text: str, top_n: int = 5) -> List[Dict[str, Any]]:
         })
 
     return result
+

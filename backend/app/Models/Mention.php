@@ -58,3 +58,4 @@ class Mention extends Model
         return $this->hasMany(MentionKeyword::class);
     }
 }
+

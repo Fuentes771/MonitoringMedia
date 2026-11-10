@@ -16,6 +16,9 @@ class Topic extends Model
         'workspace_id',
         'name',
         'description',
+        'category',
+        'urgency_level',
+        'surge_detected_at',
         'status',
         'match_mode',
         'language_filters',
@@ -27,7 +30,18 @@ class Topic extends Model
         'language_filters' => 'array',
         'providers' => 'array',
         'is_demo' => 'boolean',
+        'surge_detected_at' => 'datetime',
     ];
+
+    public function scopeNationalPrograms($query)
+    {
+        return $query->where('category', 'national_program');
+    }
+
+    public function scopeTrendingIssues($query)
+    {
+        return $query->where('category', 'trending_issue');
+    }
 
     public function workspace(): BelongsTo
     {
@@ -56,3 +70,4 @@ class Topic extends Model
         return $this->hasMany(TrendSnapshot::class);
     }
 }
+

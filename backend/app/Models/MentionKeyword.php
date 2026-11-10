@@ -25,3 +25,4 @@ class MentionKeyword extends Model
         return $this->belongsTo(Mention::class);
     }
 }
+

@@ -30,3 +30,4 @@ class SentimentResult extends Model
         return $this->belongsTo(Mention::class);
     }
 }
+

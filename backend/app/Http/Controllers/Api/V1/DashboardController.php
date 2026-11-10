@@ -92,6 +92,125 @@ class DashboardController extends Controller
             ->distinct('topic_id')
             ->count('topic_id');
 
+        // Executive Daily Intelligence Briefing Window: 00:00 Kemarin s/d 09:00 WIB Hari Ini
+        $nowWib = Carbon::now('Asia/Jakarta');
+        $dailyStart = $nowWib->copy()->subDay()->startOfDay(); // 00:00 Kemarin
+        $dailyEnd = $nowWib->copy()->startOfDay()->setHour(9); // 09:00 Hari Ini
+
+        $dailyQuery = Mention::where('workspace_id', $workspaceId)
+            ->whereBetween('published_at', [$dailyStart, $dailyEnd]);
+
+        $dailyTotal = (clone $dailyQuery)->count();
+        $dailySentiments = (clone $dailyQuery)
+            ->join('sentiment_results', 'mentions.id', '=', 'sentiment_results.mention_id')
+            ->select('sentiment_results.label', DB::raw('count(*) as count'))
+            ->groupBy('sentiment_results.label')
+            ->pluck('count', 'label')
+            ->toArray();
+
+        $dPos = $dailySentiments['positive'] ?? 0;
+        $dNeu = $dailySentiments['neutral'] ?? 0;
+        $dNeg = $dailySentiments['negative'] ?? 0;
+        $dTotalSent = max(1, $dPos + $dNeu + $dNeg);
+
+        // Top programs discussed in this daily window
+        $dailyTopTopics = Topic::where('workspace_id', $workspaceId)
+            ->where('status', 'active')
+            ->whereHas('mentions', function ($q) use ($dailyStart, $dailyEnd) {
+                $q->whereBetween('published_at', [$dailyStart, $dailyEnd]);
+            })
+            ->withCount(['mentions' => function ($q) use ($dailyStart, $dailyEnd) {
+                $q->whereBetween('published_at', [$dailyStart, $dailyEnd]);
+            }])
+            ->orderBy('mentions_count', 'desc')
+            ->limit(3)
+            ->get(['id', 'name', 'mentions_count']);
+
+        // Chronological factual events in this 33-hour window
+        $chronologicalEvents = Mention::where('workspace_id', $workspaceId)
+            ->whereBetween('published_at', [$dailyStart, $dailyEnd])
+            ->with(['sentiment', 'topics:id,name'])
+            ->orderBy('published_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(function ($m) {
+                $lines = explode("\n", trim($m->text));
+                $headline = trim($lines[0] ?? $m->text);
+                if (strlen($headline) > 110) {
+                    $headline = substr($headline, 0, 107) . '...';
+                }
+
+                return [
+                    'id' => $m->id,
+                    'time_label' => $m->published_at ? $m->published_at->timezone('Asia/Jakarta')->format('d M H:i') . ' WIB' : 'Waktu tidak diketahui',
+                    'program_name' => $m->topics->first()?->name ?? 'Program Prioritas',
+                    'headline' => $headline,
+                    'sentiment' => $m->sentiment?->label ?? 'neutral',
+                    'source' => $m->author_name ?? ucfirst($m->provider),
+                    'url' => $m->source_url,
+                ];
+            });
+
+        // 33-Hour Activity Curve (Hourly Velocity Sparkline in memory)
+        $windowMentions = Mention::where('mentions.workspace_id', $workspaceId)
+            ->whereBetween('mentions.published_at', [$dailyStart, $dailyEnd])
+            ->leftJoin('sentiment_results', 'mentions.id', '=', 'sentiment_results.mention_id')
+            ->select('mentions.published_at', 'sentiment_results.label as sentiment')
+            ->get();
+
+        $hourlyVelocity = [];
+        $cursor = $dailyStart->copy();
+        while ($cursor < $dailyEnd) {
+            $bucketEnd = $cursor->copy()->addHours(3);
+            if ($bucketEnd > $dailyEnd) {
+                $bucketEnd = $dailyEnd->copy();
+            }
+
+            $inBucket = $windowMentions->filter(function ($item) use ($cursor, $bucketEnd) {
+                if (!$item->published_at) return false;
+                $t = Carbon::parse($item->published_at);
+                return $t >= $cursor && $t < $bucketEnd;
+            });
+
+            $bPos = $inBucket->where('sentiment', 'positive')->count();
+            $bNeg = $inBucket->where('sentiment', 'negative')->count();
+
+            $isToday = $cursor->isToday();
+            $labelPrefix = $isToday ? 'Hari Ini ' : 'Kemarin ';
+
+            $hourlyVelocity[] = [
+                'time_label' => $labelPrefix . $cursor->format('H:i'),
+                'count' => $inBucket->count(),
+                'positive' => $bPos,
+                'negative' => $bNeg,
+            ];
+
+            $cursor->addHours(3);
+        }
+
+        $aiSummary = app(\App\Services\AiIntelligenceService::class)->getDailyExecutiveSummary($workspaceId, $dailyStart, $dailyEnd);
+
+        $dailyBriefing = [
+            'window_label' => 'Periode 00:00 Kemarin s/d 09:00 WIB Hari Ini',
+            'start' => $dailyStart->toIso8601String(),
+            'end' => $dailyEnd->toIso8601String(),
+            'total_mentions' => $dailyTotal,
+            'positive' => $dPos,
+            'neutral' => $dNeu,
+            'negative' => $dNeg,
+            'pos_percent' => round(($dPos / $dTotalSent) * 100),
+            'neu_percent' => round(($dNeu / $dTotalSent) * 100),
+            'neg_percent' => round(($dNeg / $dTotalSent) * 100),
+            'top_programs' => $dailyTopTopics->map(fn($t) => [
+                'id' => $t->id,
+                'name' => $t->name,
+                'mentions' => $t->mentions_count,
+            ]),
+            'chronological_events' => $chronologicalEvents,
+            'hourly_velocity' => $hourlyVelocity,
+            'ai_summary' => $aiSummary,
+        ];
+
         return response()->json([
             'status' => 'success',
             'meta' => [
@@ -124,6 +243,7 @@ class DashboardController extends Controller
                 'negative' => $negCount,
                 'unknown' => $unkCount,
             ],
+            'daily_briefing' => $dailyBriefing,
             'platform_breakdown' => $platformBreakdown,
         ]);
     }
@@ -150,14 +270,13 @@ class DashboardController extends Controller
             $query->where('mentions.provider', $provider);
         }
 
-        // Group by day using database-appropriate date function
-        $driver = DB::connection()->getDriverName();
-        $dayExpr = $driver === 'sqlite'
+        $isSqlite = DB::connection()->getDriverName() === 'sqlite';
+        $dayExpression = $isSqlite
             ? "strftime('%Y-%m-%d', mentions.published_at) as day"
             : "date_trunc('day', mentions.published_at AT TIME ZONE 'Asia/Jakarta') as day";
 
         $rows = $query->select(
-            DB::raw($dayExpr),
+            DB::raw($dayExpression),
             DB::raw("count(*) as total"),
             DB::raw("count(case when sentiment_results.label = 'positive' then 1 end) as positive"),
             DB::raw("count(case when sentiment_results.label = 'neutral' then 1 end) as neutral"),
@@ -191,3 +310,4 @@ class DashboardController extends Controller
         ]);
     }
 }
+

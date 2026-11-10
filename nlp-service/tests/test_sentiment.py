@@ -29,3 +29,4 @@ def test_keyword_extraction():
     assert len(kws) > 0
     words = [k["keyword"] for k in kws]
     assert any("lrt" in w or "antrean" in w for w in words)
+

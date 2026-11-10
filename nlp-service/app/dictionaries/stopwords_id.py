@@ -15,3 +15,4 @@ STOPWORDS_ID = {
     "hari", "minggu", "bulan", "tahun", "waktu", "jam", "terhadap", "mengatakan",
     "ujar", "tutur", "kata", "senin", "selasa", "rabu", "kamis", "jumat", "sabtu", "minggu"
 }
+

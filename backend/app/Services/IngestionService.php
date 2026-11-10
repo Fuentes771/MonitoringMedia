@@ -5,6 +5,10 @@ namespace App\Services;
 use App\Adapters\ProviderAdapterInterface;
 use App\Adapters\RssProviderAdapter;
 use App\Adapters\YouTubeProviderAdapter;
+use App\Adapters\XProviderAdapter;
+use App\Adapters\TikTokProviderAdapter;
+use App\Adapters\InstagramProviderAdapter;
+use App\Adapters\FacebookProviderAdapter;
 use App\Models\Topic;
 use App\Models\Connector;
 use App\Models\IngestionRun;
@@ -26,6 +30,10 @@ class IngestionService
     {
         $this->registerAdapter(new RssProviderAdapter());
         $this->registerAdapter(new YouTubeProviderAdapter());
+        $this->registerAdapter(new XProviderAdapter());
+        $this->registerAdapter(new TikTokProviderAdapter());
+        $this->registerAdapter(new InstagramProviderAdapter());
+        $this->registerAdapter(new FacebookProviderAdapter());
     }
 
     public function registerAdapter(ProviderAdapterInterface $adapter): void
@@ -131,9 +139,9 @@ class IngestionService
                 'source_url' => $record['source_url'] ?? null,
                 'author_name' => $record['author_name'] ?? null,
                 'published_at' => $record['published_at'],
-                'collected_at' => $record['collected_at'],
+                'collected_at' => $record['collected_at'] ?? Carbon::now('Asia/Jakarta'),
                 'text' => $record['text'],
-                'text_normalized' => $record['text_normalized'],
+                'text_normalized' => $record['text_normalized'] ?? mb_strtolower(trim($record['text'])),
                 'language' => $record['language'] ?? 'id',
                 'deletion_status' => 'active',
                 'is_demo' => $record['is_demo'] ?? false,
@@ -184,10 +192,12 @@ class IngestionService
         $nlpUrl = env('NLP_SERVICE_URL', 'http://127.0.0.1:8001');
 
         try {
-            $response = Http::timeout(4)->post("{$nlpUrl}/analyze", [
+            $useAi = (bool)env('NLP_INGEST_USE_AI', false);
+            $response = Http::timeout(10)->post("{$nlpUrl}/analyze", [
                 'text' => $mention->text,
                 'language' => $mention->language,
                 'top_keywords' => 5,
+                'use_ai' => $useAi,
             ]);
 
             if ($response->successful()) {
@@ -201,10 +211,22 @@ class IngestionService
                         'label' => $sent['label'] ?? 'unknown',
                         'confidence' => $sent['confidence'] ?? 0.50,
                         'probabilities_json' => $sent['probabilities'] ?? null,
-                        'model_version' => $sent['model_version'] ?? 'v1.0-hybrid-id',
+                        'model_version' => $sent['model_version'] ?? 'v2.0-9router',
                         'analyzed_at' => Carbon::now('Asia/Jakarta'),
                     ]
                 );
+
+                // Store rich AI reasoning in mention metadata
+                if (isset($sent['aspect']) || isset($sent['key_reason'])) {
+                    $meta = $mention->metadata_json ?? [];
+                    $meta['ai_analysis'] = [
+                        'aspect' => $sent['aspect'] ?? 'umum',
+                        'key_reason' => $sent['key_reason'] ?? '',
+                        'urgency' => $sent['urgency'] ?? 'low',
+                        'engine' => $sent['engine'] ?? 'nlp-service',
+                    ];
+                    $mention->update(['metadata_json' => $meta]);
+                }
 
                 foreach ($kws as $kw) {
                     MentionKeyword::firstOrCreate(
@@ -231,3 +253,4 @@ class IngestionService
         );
     }
 }
+

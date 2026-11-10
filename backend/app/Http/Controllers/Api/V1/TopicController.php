@@ -14,10 +14,22 @@ class TopicController extends Controller
 {
     public function index(Request $request, $workspaceId)
     {
-        $topics = Topic::where('workspace_id', $workspaceId)
+        $status = $request->input('status', 'active');
+        $query = Topic::where('workspace_id', $workspaceId)
             ->with(['keywords', 'trendSnapshots' => fn($q) => $q->latest()->limit(1)])
-            ->withCount('mentions')
-            ->orderBy('id', 'desc')
+            ->withCount([
+                'mentions',
+                'mentions as positive_count' => fn($q) => $q->whereHas('sentiment', fn($s) => $s->where('label', 'positive')),
+                'mentions as neutral_count' => fn($q) => $q->whereHas('sentiment', fn($s) => $s->where('label', 'neutral')),
+                'mentions as negative_count' => fn($q) => $q->whereHas('sentiment', fn($s) => $s->where('label', 'negative')),
+            ]);
+
+        if ($status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        $topics = $query->orderBy('mentions_count', 'desc')
+            ->orderBy('id', 'asc')
             ->get();
 
         return response()->json([
@@ -135,3 +147,4 @@ class TopicController extends Controller
         ]);
     }
 }
+

@@ -43,3 +43,4 @@ class Alert extends Model
         return $this->hasMany(AlertEvent::class);
     }
 }
+

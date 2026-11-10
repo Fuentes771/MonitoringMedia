@@ -22,3 +22,4 @@ INTENSIFIERS = {
     "bener": 1.2,
     "pol": 1.3,
 }
+

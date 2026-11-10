@@ -22,3 +22,4 @@ interface ProviderAdapterInterface
      */
     public function fetch(Topic $topic, ?string $cursor = null): IngestionResult;
 }
+

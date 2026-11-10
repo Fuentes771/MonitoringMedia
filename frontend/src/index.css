@@ -2,42 +2,140 @@
 
 @layer base {
   :root {
-    --bg-primary: #020617;
-    --bg-secondary: #0f172a;
-    --bg-card: #1e293b;
-    --border-color: #334155;
-    --text-primary: #f8fafc;
-    --text-muted: #94a3b8;
-    --accent-emerald: #10b981;
-    --accent-rose: #f43f5e;
-    --accent-amber: #f59e0b;
-    --accent-indigo: #6366f1;
-  }
+    /* Executive Editorial Intelligence - Dark Theme (Default) */
+    --bg-canvas: #08090d;
+    --bg-surface: #0e1117;
+    --bg-surface-elevated: #141822;
+    --bg-subtle: rgba(255, 255, 255, 0.04);
+    --bg-hover: rgba(255, 255, 255, 0.06);
 
-  html.light {
-    --bg-primary: #f8fafc;
-    --bg-secondary: #f1f5f9;
-    --bg-card: #ffffff;
-    --border-color: #e2e8f0;
-    --text-primary: #0f172a;
-    --text-muted: #64748b;
-    --accent-emerald: #059669;
-    --accent-rose: #e11d48;
-    --accent-amber: #d97706;
-    --accent-indigo: #4f46e5;
+    --border-hairline: rgba(255, 255, 255, 0.08);
+    --border-medium: rgba(255, 255, 255, 0.16);
+    --border-focus: rgba(59, 130, 246, 0.6);
+
+    --text-primary: #f4f5f8;
+    --text-secondary: #9da3ae;
+    --text-muted: #646b79;
+    --text-micro: #474d5a;
+
+    /* Telemetry Accents */
+    --brand-primary: #3b82f6;
+    --brand-hover: #60a5fa;
+    --brand-subtle: rgba(59, 130, 246, 0.12);
+
+    --sentiment-pos: #10b981;
+    --sentiment-pos-subtle: rgba(16, 185, 129, 0.12);
+    --sentiment-neu: #71717a;
+    --sentiment-neu-subtle: rgba(113, 113, 122, 0.12);
+    --sentiment-neg: #f43f5e;
+    --sentiment-neg-subtle: rgba(244, 63, 94, 0.14);
+
+    --status-warning: #f59e0b;
+    --status-warning-subtle: rgba(245, 158, 11, 0.14);
   }
 
   body {
-    background-color: var(--bg-primary);
+    background-color: var(--bg-canvas);
     color: var(--text-primary);
-    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
   }
 
-  /* Accessible interaction affordances per Antislop R-39 */
-  button, a, select, input[type="checkbox"], input[type="radio"], [role="button"] {
+  /* Accessible interaction affordances */
+  button, a, select, input[type="checkbox"], input[type="radio"], [role="button"], summary {
     cursor: pointer;
   }
-  button:disabled, a[aria-disabled="true"], input:disabled {
+  button:disabled, a[aria-disabled="true"], input:disabled, select:disabled {
     cursor: not-allowed;
   }
+
+  /* Visible focus ring per WCAG & Antislop */
+  :focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+
+  /* Sleek custom scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-medium);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+  }
+}
+
+/* Typography Classes */
+.font-editorial {
+  font-family: 'Newsreader', Georgia, serif;
+}
+
+.font-sans-ui {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.font-mono-code {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Tabular numerals for analytics data, metrics, and timestamps */
+.font-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Bento Cards with subtle inner glow and high-end depth */
+.bento-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.bento-card:hover {
+  border-color: var(--border-medium);
+  box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Backwards-compatibility for analytic-card */
+.analytic-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.analytic-card:hover {
+  border-color: var(--border-medium);
+}
+
+/* Subtle Marquee Ticker */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 50s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
 }

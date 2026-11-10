@@ -68,3 +68,4 @@ SENTIMENT_LEXICON = {
     "dikeluhkan": -1.6,
     "merugikan": -1.8,
 }
+

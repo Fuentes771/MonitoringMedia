@@ -92,3 +92,4 @@ SLANG_NORMALIZER = {
     "utk": "untuk",
     "b aja": "biasa saja",
 }
+

@@ -62,3 +62,4 @@ class MentionController extends Controller
         ]);
     }
 }
+

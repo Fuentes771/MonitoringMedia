@@ -136,3 +136,4 @@ class AlertServiceTest extends TestCase
         $this->assertDatabaseCount('alert_events', 1);
     }
 }
+

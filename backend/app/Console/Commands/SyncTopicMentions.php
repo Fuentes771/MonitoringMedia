@@ -41,3 +41,4 @@ class SyncTopicMentions extends Command
         return 0;
     }
 }
+

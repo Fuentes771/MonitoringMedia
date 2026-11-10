@@ -1,78 +1,114 @@
-import { Sun, Moon, RefreshCw, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { RefreshCw, Radio, Bell, ChevronRight } from 'lucide-react';
 import { CoverageInfo } from '@/lib/api';
+import { NavTab } from './Sidebar';
 
 interface TopbarProps {
-  isDark: boolean;
-  onToggleTheme: () => void;
+  currentTab?: NavTab;
   coverage?: CoverageInfo;
   onRefresh: () => void;
   isRefreshing: boolean;
   days: number;
   onChangeDays: (d: number) => void;
+  onNavigateToAlerts?: () => void;
 }
 
 export function Topbar({
-  isDark,
-  onToggleTheme,
+  currentTab = 'overview',
   coverage,
   onRefresh,
   isRefreshing,
   days,
   onChangeDays,
+  onNavigateToAlerts,
 }: TopbarProps) {
+  const getTabLabel = (tab: NavTab) => {
+    switch (tab) {
+      case 'overview':
+        return 'Ruang Intelijen';
+      case 'mentions':
+        return 'Eksplorasi Sebutan';
+      case 'topics':
+        return 'Radar Topik Isu';
+      case 'alerts':
+        return 'Sinyal & Peringatan';
+      case 'sources':
+        return 'Konektor Sumber Data';
+      default:
+        return 'Konsol Utama';
+    }
+  };
+
   const formatSyncTime = (iso?: string | null) => {
-    if (!iso) return 'Belum pernah sinkron';
+    if (!iso) return 'Terhubung';
     const date = new Date(iso);
     return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
   };
 
   return (
-    <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur-md sticky top-0 z-30 px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4">
-      {/* Coverage & Provenance Strip */}
-      <div className="flex items-center flex-wrap gap-3 text-xs">
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 text-slate-300">
-          <span className="text-slate-400">Workspace:</span>
-          <span className="font-semibold text-slate-200">PulseScope Hub</span>
+    <header className="border-b border-white/[0.08] bg-[#08090d]/85 backdrop-blur-xl sticky top-0 z-30 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors font-sans-ui">
+      {/* Context & Location Breadcrumb */}
+      <div className="flex items-center flex-wrap gap-3.5 text-xs">
+        <div className="flex items-center gap-2 text-zinc-400">
+          <img
+            src="/brand/logo-transparent.png"
+            alt="PulseScope"
+            className="w-5 h-5 object-contain filter drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]"
+          />
+          <span className="font-semibold text-zinc-300">PulseScope</span>
+          <ChevronRight className="w-3.5 h-3.5 text-zinc-600" />
+          <span className="font-bold text-white text-sm tracking-tight">
+            {getTabLabel(currentTab)}
+          </span>
         </div>
 
         {coverage && (
-          <div className="flex items-center gap-2">
-            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium ${
-              coverage.partial_data
-                ? 'bg-amber-950/40 border-amber-800/60 text-amber-300'
-                : 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300'
-            }`}>
-              {coverage.partial_data ? (
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-              ) : (
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              )}
-              <span>{coverage.connected_providers}/{coverage.total_configured_providers} Konektor Aktif</span>
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-white/[0.08] bg-white/[0.03] text-zinc-300 text-xs font-medium">
+              <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+              <span className="font-mono-code text-[11px] text-zinc-200">
+                Google News ID Live
+              </span>
             </div>
 
-            <div className="text-slate-400 text-xs hidden lg:inline">
-              Sinkron terakhir: <span className="text-slate-200">{formatSyncTime(coverage.last_successful_sync_at)}</span>
+            <div className="text-zinc-400 text-xs hidden md:flex items-center gap-1.5">
+              <span>Sinkron:</span>
+              <span className="text-zinc-300 font-medium font-mono-code text-[11px]">
+                {formatSyncTime(coverage.last_successful_sync_at)}
+              </span>
             </div>
           </div>
         )}
       </div>
 
-      {/* Controls & Actions */}
-      <div className="flex items-center gap-3">
-        {/* Date Range Selector */}
-        <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs">
+      {/* Date Switchers, Alert Bell & Actions */}
+      <div className="flex items-center gap-2.5">
+        {/* Quick Alert Bell */}
+        {onNavigateToAlerts && (
+          <button
+            onClick={onNavigateToAlerts}
+            className="p-2 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.08] text-zinc-300 hover:text-white transition-all relative cursor-pointer"
+            title="Peringatan Dini"
+            aria-label="Peringatan Dini"
+          >
+            <Bell className="w-4 h-4" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50" />
+          </button>
+        )}
+
+        {/* Date Window Segmented Control */}
+        <div className="flex items-center bg-white/[0.03] border border-white/[0.08] rounded-xl p-0.5 text-xs shadow-xs">
           {[
+            { label: '24 Jam', val: 1 },
             { label: '7 Hari', val: 7 },
-            { label: '14 Hari', val: 14 },
             { label: '30 Hari', val: 30 },
           ].map((item) => (
             <button
               key={item.val}
               onClick={() => onChangeDays(item.val)}
-              className={`px-3 py-1 rounded-md transition-colors ${
+              className={`px-3 py-1.5 rounded-lg transition-all text-xs font-semibold cursor-pointer ${
                 days === item.val
-                  ? 'bg-indigo-600 text-white font-medium shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-white text-zinc-950 shadow-xs'
+                  : 'text-zinc-400 hover:text-white'
               }`}
             >
               {item.label}
@@ -80,24 +116,15 @@ export function Topbar({
           ))}
         </div>
 
-        {/* Live Refresh Button */}
+        {/* Refresh Action */}
         <button
           onClick={onRefresh}
           disabled={isRefreshing}
-          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 transition-colors disabled:opacity-50"
-          title="Sinkronkan data terbaru"
+          className="p-2 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.08] text-zinc-300 hover:text-white transition-all disabled:opacity-50 cursor-pointer"
+          title="Segarkan Data Realtime"
+          aria-label="Segarkan data realtime"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-indigo-400' : ''}`} />
-          <span className="hidden sm:inline">Refresh Data</span>
-        </button>
-
-        {/* Theme Toggle */}
-        <button
-          onClick={onToggleTheme}
-          aria-label="Ganti Tema Tampilan"
-          className="p-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-300 transition-colors"
-        >
-          {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-zinc-400' : ''}`} />
         </button>
       </div>
     </header>

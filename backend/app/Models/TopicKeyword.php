@@ -22,3 +22,4 @@ class TopicKeyword extends Model
         return $this->belongsTo(Topic::class);
     }
 }
+
