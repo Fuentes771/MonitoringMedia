@@ -20,18 +20,33 @@ class NineRouterClient:
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
         default_model: Optional[str] = None,
-        timeout: float = 35.0
+        timeout: float = 180.0
     ):
-        self.base_url = (base_url or os.getenv("NINE_ROUTER_BASE_URL", "http://127.0.0.1:20128/v1")).rstrip("/")
-        # Default to user's configured key if none provided
-        configured_key = api_key or os.getenv("NINE_ROUTER_API_KEY")
-        if not configured_key or configured_key == "9router":
-            # Auto-resolve from system SQLite or default key if present
-            configured_key = "sk-5871bb55f9074507-64cb56-4393850a"
+        raw_url = (
+            base_url 
+            or os.getenv("NINE_ROUTER_BASE_URL") 
+            or os.getenv("NINEROUTER_BASE_URL", "http://bappisus-9router-1:20128/v1")
+        ).rstrip("/")
+        if not raw_url.endswith("/v1"):
+            raw_url += "/v1"
+        self.base_url = raw_url
+
+        configured_key = (
+            api_key 
+            or os.getenv("NINE_ROUTER_API_KEY") 
+            or os.getenv("NINEROUTER_API_KEY")
+            or "sk-00aa7ca271b1dbfa-ujt4xd-65b13ebe"
+        )
         self.api_key = configured_key
 
-        self.default_model = default_model or os.getenv("NINE_ROUTER_MODEL", "ag/claude-sonnet-4-6")
-        self.timeout = float(os.getenv("NINE_ROUTER_TIMEOUT", str(timeout)))
+        self.default_model = (
+            default_model 
+            or os.getenv("NINE_ROUTER_MODEL") 
+            or os.getenv("NINEROUTER_MODEL") 
+            or "ag/gemini-3.8-flash-medium"
+        )
+        timeout_val = os.getenv("NINE_ROUTER_TIMEOUT") or os.getenv("NINEROUTER_TIMEOUT", str(timeout))
+        self.timeout = float(timeout_val)
 
     def _headers(self) -> Dict[str, str]:
         headers = {
