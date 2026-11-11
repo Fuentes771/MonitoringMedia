@@ -65,7 +65,7 @@ services:
       APP_ENV: production
       APP_KEY: base64:Jn3TOaXgpeEBXPw6EscFr53t7V0gU6gnMXMG1+64zv4=
       APP_DEBUG: "false"
-      APP_URL: https://antiquetech.web.id
+      APP_URL: https://media.antiquetech.web.id
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: 5432

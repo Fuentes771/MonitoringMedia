@@ -28,4 +28,4 @@ jobs:
           docker compose exec -T backend php artisan config:cache
           docker compose exec -T backend php artisan route:cache
 
-          echo "✅ Deployment selesai! Aplikasi berhasil diperbarui di https://antiquetech.web.id"
+          echo "✅ Deployment selesai! Aplikasi berhasil diperbarui di https://media.antiquetech.web.id"
