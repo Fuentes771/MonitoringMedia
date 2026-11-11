@@ -20,6 +20,9 @@ jobs:
           echo "🐳 [1/3] Membangun ulang dan memperbarui container Docker..."
           docker compose up --build -d
 
+          echo "⏳ Menunggu database siap..."
+          sleep 5
+
           echo "📦 [2/3] Menjalankan migrasi database..."
           docker compose exec -T backend php artisan migrate --force
 
