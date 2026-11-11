@@ -74,6 +74,7 @@ services:
       CACHE_STORE: redis
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_CLIENT: predis
       NLP_SERVICE_URL: http://nlp:8001
     ports:
       - "8000:8000"
