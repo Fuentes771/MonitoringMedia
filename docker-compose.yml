@@ -39,6 +39,7 @@ services:
     restart: unless-stopped
     environment:
       - NINE_ROUTER_BASE_URL=http://bappisus-9router-1:20128/v1
+      - NINE_ROUTER_API_KEY=${NINE_ROUTER_API_KEY:-}
     ports:
       - "8001:8001"
     healthcheck:
@@ -91,6 +92,34 @@ services:
       - backend
     ports:
       - "127.0.0.1:8081:80"
+
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: ../docker/backend.Dockerfile
+    container_name: pulsescope-scheduler
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      APP_NAME: PulseScope
+      APP_ENV: production
+      APP_KEY: base64:Jn3TOaXgpeEBXPw6EscFr53t7V0gU6gnMXMG1+64zv4=
+      APP_DEBUG: "false"
+      APP_URL: https://media.antiquetech.web.id
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: pulsescope
+      DB_USERNAME: postgres
+      DB_PASSWORD: secretpassword
+      QUEUE_CONNECTION: redis
+      CACHE_STORE: redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_CLIENT: predis
+      NLP_SERVICE_URL: http://nlp:8001
+    command: ["php", "artisan", "schedule:work"]
 
 volumes:
   pgdata:
