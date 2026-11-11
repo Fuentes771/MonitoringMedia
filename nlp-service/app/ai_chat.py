@@ -5,7 +5,7 @@ from .nine_router import nine_router_client, NineRouterClient
 
 logger = logging.getLogger("pulsescope.ai_chat")
 
-STRICT_RAG_SYSTEM_PROMPT = """Anda adalah PulseScope Intelligence Officer, asisten analisis data intelijen untuk pimpinan dan eksekutif yang memantau 17 Program Prioritas Nasional Indonesia:
+STRICT_RAG_SYSTEM_PROMPT = """Anda adalah TRINETRA Intelligence Officer, asisten analisis data intelijen untuk pimpinan dan eksekutif yang memantau dinamika ruang publik dan isu strategis nasional:
 1. Makan Bergizi Gratis (MBG)
 2. Cek Kesehatan Gratis (CKG)
 3. Sekolah Rakyat
@@ -67,7 +67,7 @@ def process_rag_chat(
     if not context_mentions:
         target_focus = f"topik '{topic_name}'" if topic_name else "17 Program Prioritas Nasional"
         return {
-            "answer": f"Berdasarkan data monitoring PulseScope saat ini, belum ada sebutan berita atau media sosial yang tersimpan untuk {target_focus} terkait pertanyaan Anda. Silakan lakukan sinkronisasi sumber berita pada halaman Topics atau pastikan kata kunci pencarian telah aktif.",
+            "answer": f"Berdasarkan data monitoring TRINETRA saat ini, belum ada sebutan berita atau media sosial yang tersimpan untuk {target_focus} terkait pertanyaan Anda. Silakan lakukan sinkronisasi sumber berita pada halaman Topics atau pastikan kata kunci pencarian telah aktif.",
             "citations": [],
             "mentions_count": 0,
             "grounded": False,
@@ -114,7 +114,7 @@ def process_rag_chat(
             if turn.get("role") in ["user", "assistant"]:
                 messages.append({"role": turn["role"], "content": turn.get("content", "")})
 
-    user_prompt = f"""DATA KONTEKS MONITORING PULSESCOPE (Total: {len(context_mentions)} sebutan):
+    user_prompt = f"""DATA KONTEKS MONITORING TRINETRA (Total: {len(context_mentions)} sebutan):
 {context_str}
 
 PERTANYAAN PENGGUNA:

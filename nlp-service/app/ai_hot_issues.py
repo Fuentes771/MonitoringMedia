@@ -136,3 +136,4 @@ def _heuristic_hot_issues_extraction(headlines: List[Dict[str, str]]) -> Dict[st
             break
 
     return {"hot_issues": issues, "engine": "heuristic-fallback"}
+

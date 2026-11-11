@@ -50,11 +50,11 @@ export function Topbar({
       <div className="flex items-center flex-wrap gap-3.5 text-xs">
         <div className="flex items-center gap-2 text-zinc-400">
           <img
-            src="/brand/logo-transparent.png"
-            alt="PulseScope"
-            className="w-5 h-5 object-contain filter drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]"
+            src="/brand/trinetra-logo.svg"
+            alt="TRINETRA"
+            className="w-5 h-5 object-contain filter drop-shadow-[0_0_8px_rgba(212,175,55,0.45)]"
           />
-          <span className="font-semibold text-zinc-300">PulseScope</span>
+          <span className="font-bold tracking-wider text-zinc-200">TRINETRA</span>
           <ChevronRight className="w-3.5 h-3.5 text-zinc-600" />
           <span className="font-bold text-white text-sm tracking-tight">
             {getTabLabel(currentTab)}

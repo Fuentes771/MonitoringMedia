@@ -79,15 +79,15 @@ export function ExecutiveBriefingCard({
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 flex items-center justify-center shrink-0">
             <img
-              src="/brand/logo-transparent.png"
-              alt="PulseScope Emblem"
-              className="w-full h-full object-contain filter drop-shadow-[0_0_12px_rgba(56,189,248,0.6)]"
+              src="/brand/trinetra-logo.svg"
+              alt="TRINETRA Emblem"
+              className="w-full h-full object-contain filter drop-shadow-[0_0_12px_rgba(212,175,55,0.45)]"
             />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/15 border border-blue-500/30 text-blue-400 text-[11px] font-mono-code font-semibold tracking-wider uppercase">
-                <Radio className="w-3 h-3 text-blue-400 animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] font-mono-code font-semibold tracking-wider uppercase">
+                <Radio className="w-3 h-3 text-amber-400 animate-pulse" />
                 <span>Executive Intelligence Briefing</span>
               </span>
               <span className="text-[11px] text-zinc-400 font-sans-ui hidden sm:inline">
@@ -95,7 +95,7 @@ export function ExecutiveBriefingCard({
               </span>
             </div>
             <div className="text-[10px] text-zinc-500 font-mono-code mt-0.5">
-              DATA TERVERIFIKASI &bull; PULSESCOPE SYSTEM
+              DATA TERVERIFIKASI &bull; TRINETRA SYSTEM
             </div>
           </div>
         </div>

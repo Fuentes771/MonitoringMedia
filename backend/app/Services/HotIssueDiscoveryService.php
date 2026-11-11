@@ -162,7 +162,7 @@ class HotIssueDiscoveryService
             try {
                 $response = Http::timeout(10)
                     ->withHeaders([
-                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) PulseScope/2.0 NewsDiscoveryBot',
+                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) TRINETRA/2.0 NewsDiscoveryBot',
                     ])
                     ->get($feedUrl);
 
@@ -353,3 +353,4 @@ class HotIssueDiscoveryService
         }
     }
 }
+

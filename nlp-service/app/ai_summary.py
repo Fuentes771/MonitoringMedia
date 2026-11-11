@@ -6,7 +6,7 @@ from .nine_router import nine_router_client, NineRouterClient
 
 logger = logging.getLogger("pulsescope.ai_summary")
 
-TOPIC_SUMMARY_PROMPT = """Anda adalah analis intelijen media senior di PulseScope.
+TOPIC_SUMMARY_PROMPT = """Anda adalah analis intelijen media senior di TRINETRA.
 Tugas Anda adalah membuat 'Executive Intelligence Briefing' mengenai persepsi publik dan pemberitaan terkini terkait topik program prioritas pemerintah: "{topic_name}".
 
 Anda DIBERIKAN kumpulan data sebutan (mentions) berita dan media sosial yang tersimpan dalam sistem.
@@ -41,7 +41,7 @@ def summarize_mention(
     messages = [
         {
             "role": "system",
-            "content": "Anda adalah asisten peringkas berita PulseScope. Buat ringkasan 1-2 kalimat bahasa Indonesia yang padat dan informatif dari teks berikut."
+            "content": "Anda adalah asisten peringkas berita TRINETRA. Buat ringkasan 1-2 kalimat bahasa Indonesia yang padat dan informatif dari teks berikut."
         },
         {"role": "user", "content": text[:1500]}
     ]
@@ -178,7 +178,7 @@ def summarize_daily_window(
     mentions_payload = "\n".join(context_lines)
 
     system_prompt = (
-        "Anda adalah PulseScope Intelligence Officer untuk pimpinan dan eksekutif kabinet.\n"
+        "Anda adalah TRINETRA Intelligence Officer untuk pimpinan dan eksekutif kabinet.\n"
         f"Tugas Anda: buat ringkasan eksekutif 2-3 kalimat padat, to-the-point, dan kaya fakta/angka mengenai dinamika peristiwa di lapangan selama periode: {window_label}.\n\n"
         "ATURAN MUTLAK:\n"
         "1. Tepat 2-3 kalimat lugas dan padat, tanpa kata pengantar klise.\n"

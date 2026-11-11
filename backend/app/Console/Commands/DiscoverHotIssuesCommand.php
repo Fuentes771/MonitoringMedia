@@ -44,3 +44,4 @@ class DiscoverHotIssuesCommand extends Command
         return 0;
     }
 }
+

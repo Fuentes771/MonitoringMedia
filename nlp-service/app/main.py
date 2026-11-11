@@ -14,7 +14,7 @@ from .ai_search import generate_search_queries, filter_relevance
 from .scrapers.router import router as scraper_router
 
 app = FastAPI(
-    title="PulseScope NLP & AI Intelligence Service",
+    title="TRINETRA NLP & AI Intelligence Service",
     version="2.0.0",
     description="Sentiment inference, 9Router AI gateway, topic executive digest, and context-bounded RAG chat."
 )

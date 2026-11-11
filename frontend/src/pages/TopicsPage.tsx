@@ -388,7 +388,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                           topic.id
                         )}
                         className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-cyan-500/30 bg-gradient-to-r from-cyan-500/20 to-blue-600/20 hover:from-cyan-500/30 hover:to-blue-600/30 text-xs text-cyan-200 font-semibold transition-all cursor-pointer shadow-xs"
-                        title="Tanyakan dan analisis topik ini langsung di Asisten AI PulseScope"
+                        title="Tanyakan dan analisis topik ini langsung di Asisten AI TRINETRA"
                       >
                         <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
                         <span>Tanya AI</span>

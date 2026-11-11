@@ -189,7 +189,7 @@ class AiIntelligenceService
             return [
                 'topic_name' => $topic->name,
                 'mentions_analyzed' => 0,
-                'executive_overview' => "Belum ada sebutan berita publik yang tersimpan untuk topik '{$topic->name}'. Silakan lakukan sinkronisasi data melalui tombol Sync atau 'php artisan pulsescope:sync-programs'.",
+                'executive_overview' => "Belum ada sebutan berita publik yang tersimpan untuk topik '{$topic->name}'. Silakan lakukan sinkronisasi data melalui tombol Sync atau 'php artisan trinetra:sync-programs'.",
                 'dominant_sentiment' => 'neutral',
                 'key_positive_themes' => [],
                 'key_critical_themes' => [],

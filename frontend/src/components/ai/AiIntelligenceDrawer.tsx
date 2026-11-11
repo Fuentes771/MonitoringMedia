@@ -46,7 +46,7 @@ export function AiIntelligenceDrawer({
     {
       id: 'init-1',
       role: 'assistant',
-      content: 'Halo, saya PulseScope AI. Siap menyajikan analisis intelijen dan rangkuman persepsi publik untuk 17 Program Prioritas Nasional.\n\nSilakan pilih topik atau ketik isu strategis yang ingin Anda telusuri hari ini.',
+      content: 'Halo, saya TRINETRA AI. Siap menyajikan analisis intelijen dan rangkuman persepsi publik secara real-time.\n\nSilakan pilih topik atau ketik isu strategis yang ingin Anda telusuri hari ini.',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     }
   ]);
@@ -173,7 +173,7 @@ export function AiIntelligenceDrawer({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-white text-[15px] tracking-tight">Asisten AI PulseScope</h3>
+                <h3 className="font-bold text-white text-[15px] tracking-tight">Asisten AI TRINETRA</h3>
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border ${
                   isOnline 
                     ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 

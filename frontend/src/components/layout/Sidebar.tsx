@@ -57,21 +57,21 @@ export function Sidebar({ currentTab, onSelectTab, onExportCsv, isExporting }: S
             {/* Borderless Transparent Vector Logo Mark (No Box / No Solid Background) */}
             <div className="w-9 h-9 flex items-center justify-center shrink-0">
               <img
-                src="/brand/logo-transparent.png"
-                alt="PulseScope Vector Logo"
-                className="w-full h-full object-contain filter drop-shadow-[0_0_12px_rgba(56,189,248,0.55)] transition-transform duration-300 hover:scale-110"
+                src="/brand/trinetra-logo.svg"
+                alt="TRINETRA Sacred Eye Logo"
+                className="w-full h-full object-contain filter drop-shadow-[0_0_12px_rgba(212,175,55,0.45)] transition-transform duration-300 hover:scale-110"
               />
             </div>
 
             <div>
-              <div className="font-bold text-white text-[15px] tracking-tight flex items-center gap-1.5">
-                <span>PulseScope</span>
-                <span className="text-[9px] font-mono-code px-1.5 py-0.2 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30 font-bold">
-                  PRO
+              <div className="font-extrabold text-white text-[15px] tracking-wider flex items-center gap-1.5">
+                <span className="bg-gradient-to-r from-white via-zinc-200 to-amber-200 bg-clip-text text-transparent">TRINETRA</span>
+                <span className="text-[8.5px] font-mono-code px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold tracking-normal">
+                  INTEL
                 </span>
               </div>
-              <div className="text-[11px] text-zinc-400 font-normal">
-                Media Intelligence
+              <div className="text-[10px] text-zinc-400 font-normal tracking-tight">
+                Public Discourse Intelligence
               </div>
             </div>
           </div>
@@ -218,9 +218,9 @@ export function Sidebar({ currentTab, onSelectTab, onExportCsv, isExporting }: S
         <div className="pt-2 flex items-center justify-between text-[11px] text-zinc-400 font-mono-code border-t border-white/[0.05]">
           <div className="flex items-center gap-2">
             <img
-              src="/brand/logo-transparent.png"
-              alt="PulseScope Emblem"
-              className="w-4 h-4 object-contain filter drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]"
+              src="/brand/trinetra-logo.svg"
+              alt="TRINETRA Emblem"
+              className="w-4 h-4 object-contain filter drop-shadow-[0_0_8px_rgba(212,175,55,0.45)]"
             />
             <span className="text-zinc-300 font-sans-ui text-xs font-medium">Console Analis</span>
           </div>
