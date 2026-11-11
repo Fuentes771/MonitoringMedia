@@ -15,3 +15,10 @@ Schedule::command('pulsescope:sync-programs')
     ->withoutOverlapping()
     ->runInBackground();
 
+// Deteksi otomatis isu hangat / breaking news dari Google News RSS setiap 1 jam
+Schedule::command('pulsescope:discover-hot-issues')
+    ->hourly()
+    ->timezone('Asia/Jakarta')
+    ->withoutOverlapping()
+    ->runInBackground();
+

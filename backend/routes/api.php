@@ -42,6 +42,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/trends', [TrendController::class, 'index']);
     Route::get('/hot-issues', [HotIssueController::class, 'index']);
     Route::post('/hot-issues', [HotIssueController::class, 'store']);
+    Route::post('/hot-issues/scan', [HotIssueController::class, 'scan']);
+    Route::delete('/hot-issues/{id}', [HotIssueController::class, 'destroy']);
 
     // 6. Connectors (Data Sources)
     Route::get('/connectors', [ConnectorController::class, 'index']);

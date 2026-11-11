@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   Activity,
   MessageSquareText,
+  Archive,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -33,6 +34,7 @@ export function HotIssuesPage() {
   const [description, setDescription] = useState('');
   const [keywords, setKeywords] = useState('');
   const [urgencyLevel, setUrgencyLevel] = useState<'normal' | 'elevated' | 'critical'>('elevated');
+  const [scanMessage, setScanMessage] = useState<string | null>(null);
 
   // Fetch Hot Issues
   const { data: radarResponse, isLoading } = useQuery({
@@ -44,6 +46,34 @@ export function HotIssuesPage() {
       return res.data.data;
     },
     refetchInterval: 15000, // Poll every 15s for breaking surges
+  });
+
+  // Automated Discovery Scan Mutation
+  const scanHotIssuesMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.post('/hot-issues/scan', { workspace_id: 1 });
+      return res.data;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['hot-issues-radar'] });
+      setScanMessage(data.message || 'Pemindaian berita Google News selesai.');
+      setTimeout(() => setScanMessage(null), 6000);
+    },
+    onError: () => {
+      setScanMessage('Gagal memindai berita. Silakan coba kembali.');
+      setTimeout(() => setScanMessage(null), 6000);
+    },
+  });
+
+  // Archive Hot Issue Mutation
+  const archiveHotIssueMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await api.delete(`/hot-issues/${id}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hot-issues-radar'] });
+    },
   });
 
   // Create Hot Issue Mutation
@@ -138,14 +168,41 @@ export function HotIssuesPage() {
           </div>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-bold text-xs shadow-xs transition-colors cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Pantau Isu Hangat Baru</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => scanHotIssuesMutation.mutate()}
+            disabled={scanHotIssuesMutation.isPending}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${scanHotIssuesMutation.isPending ? 'animate-spin' : ''}`} />
+            <span>{scanHotIssuesMutation.isPending ? 'Memindai Google News...' : 'Pindai Isu Terkini'}</span>
+          </button>
+
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-bold text-xs shadow-xs transition-colors cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Pantau Manual</span>
+          </button>
+        </div>
       </div>
+
+      {/* Toast Notification after Scan */}
+      {scanMessage && (
+        <div className="p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between shadow-xs animate-in fade-in duration-200">
+          <div className="flex items-center gap-2.5">
+            <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+            <span className="font-medium font-sans-ui">{scanMessage}</span>
+          </div>
+          <button
+            onClick={() => setScanMessage(null)}
+            className="text-zinc-400 hover:text-white text-xs font-mono-code cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* System Status Banner */}
       {isSurging ? (
@@ -195,12 +252,29 @@ export function HotIssuesPage() {
             ))}
           </div>
         ) : hotIssues.length === 0 ? (
-          <div className="bento-card p-12 text-center space-y-3 bg-[#0e1117]">
+          <div className="bento-card p-12 text-center space-y-4 bg-[#0e1117]">
             <Flame className="w-8 h-8 text-zinc-600 mx-auto" />
             <h3 className="font-editorial text-lg text-white font-medium">Belum Ada Isu Hangat Aktif</h3>
             <p className="text-xs text-zinc-400 max-w-md mx-auto">
-              Sistem akan otomatis menyoroti ketika terjadi lonjakan percakapan publik dadakan. Anda juga dapat menambahkan topik isu hangat baru secara manual.
+              Sistem mendeteksi lonjakan percakapan publik secara otomatis dari Google News. Anda dapat memicu pemindaian berita terkini sekarang atau mendaftarkan topik secara manual.
             </p>
+            <div className="pt-2 flex items-center justify-center gap-3">
+              <button
+                onClick={() => scanHotIssuesMutation.mutate()}
+                disabled={scanHotIssuesMutation.isPending}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <Sparkles className={`w-3.5 h-3.5 ${scanHotIssuesMutation.isPending ? 'animate-spin' : ''}`} />
+                <span>{scanHotIssuesMutation.isPending ? 'Sedang Memindai Google News...' : 'Pindai Berita Terhangat Sekarang'}</span>
+              </button>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-white font-semibold text-xs border border-white/[0.1] transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Tambah Manual</span>
+              </button>
+            </div>
           </div>
         ) : (
           hotIssues.map((issue: HotIssueItem) => {
@@ -235,9 +309,23 @@ export function HotIssuesPage() {
                     </span>
                   </div>
 
-                  <span className="text-xs font-mono-code text-zinc-400">
-                    Total Sebutan: <strong className="text-white">{issue.total_mentions_33h}</strong>
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-mono-code text-zinc-400">
+                      Total Sebutan: <strong className="text-white">{issue.total_mentions_33h}</strong>
+                    </span>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Arsipkan isu '${issue.title}' dari Radar Pantauan?`)) {
+                          archiveHotIssueMutation.mutate(issue.id);
+                        }
+                      }}
+                      title="Arsipkan dari Radar"
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-mono-code text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 border border-white/[0.06] hover:border-rose-500/20 transition-all cursor-pointer"
+                    >
+                      <Archive className="w-3 h-3" />
+                      <span>Arsipkan</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Title & Description */}

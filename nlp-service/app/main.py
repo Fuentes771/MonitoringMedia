@@ -8,6 +8,7 @@ from .keywords import extract_keywords
 from .nine_router import nine_router_client
 from .ai_sentiment import analyze_ai_sentiment
 from .ai_summary import summarize_mention, summarize_topic, summarize_daily_window
+from .ai_hot_issues import extract_hot_issues_from_headlines
 from .ai_chat import process_rag_chat
 from .ai_search import generate_search_queries, filter_relevance
 from .scrapers.router import router as scraper_router
@@ -67,6 +68,9 @@ class RelevanceCheckRequest(BaseModel):
 class DailySummaryRequest(BaseModel):
     mentions: List[Dict[str, Any]]
     window_label: Optional[str] = "33 jam terakhir"
+
+class HotIssuesClusterRequest(BaseModel):
+    headlines: List[Dict[str, Any]]
 
 # ----------------- Routes ----------------- #
 
@@ -183,6 +187,13 @@ def ai_daily_summary(req: DailySummaryRequest):
     Generate punchy 2-3 sentence executive factual summary of field events in the 33-hour window.
     """
     return summarize_daily_window(req.mentions, req.window_label or "33 jam terakhir")
+
+@app.post("/ai/cluster-hot-issues")
+def ai_cluster_hot_issues_endpoint(req: HotIssuesClusterRequest):
+    """
+    Extract and cluster top breaking hot issues from recent news headlines.
+    """
+    return extract_hot_issues_from_headlines(req.headlines)
 
 # Mount Social Media Scraper Router
 app.include_router(scraper_router, prefix="/api/v1/scraper", tags=["scraper"])

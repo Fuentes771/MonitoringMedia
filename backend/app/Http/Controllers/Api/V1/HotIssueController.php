@@ -4,6 +4,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Services\HotIssueService;
+use App\Services\HotIssueDiscoveryService;
+use App\Services\IngestionService;
+use App\Services\TrendService;
+use App\Services\AlertService;
 use App\Models\Topic;
 use App\Models\TopicKeyword;
 use Illuminate\Http\Request;
@@ -22,8 +26,12 @@ class HotIssueController extends Controller
         ]);
     }
 
-    public function store(Request $request)
-    {
+    public function store(
+        Request $request, 
+        IngestionService $ingestionService, 
+        TrendService $trendService, 
+        AlertService $alertService
+    ) {
         $workspaceId = (int)$request->input('workspace_id', 1);
 
         $validated = $request->validate([
@@ -56,11 +64,50 @@ class HotIssueController extends Controller
             ]);
         }
 
+        // Immediately trigger initial ingestion and trend calculation
+        $ingestionService->ingestTopic($topic);
+        $trendService->computeTopicTrend($topic);
+        $alertService->evaluateTopicAlerts($topic);
+
         return response()->json([
             'status' => 'success',
-            'message' => "Isu hangat '{$topic->name}' berhasil ditambahkan ke Radar Pantauan.",
+            'message' => "Isu hangat '{$topic->name}' berhasil ditambahkan ke Radar Pantauan dan data terbaru telah ditarik.",
             'data' => $topic->load('keywords'),
         ], 201);
     }
-}
 
+    /**
+     * Trigger immediate automated discovery & ingestion for hot issues from Google News.
+     */
+    public function scan(
+        Request $request, 
+        HotIssueDiscoveryService $discoveryService, 
+        HotIssueService $hotIssueService
+    ) {
+        $workspaceId = (int)$request->input('workspace_id', 1);
+
+        $result = $discoveryService->discoverAndIngest($workspaceId);
+        $radarData = $hotIssueService->getActiveHotIssues($workspaceId);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $result['message'],
+            'discovery' => $result,
+            'data' => $radarData,
+        ]);
+    }
+
+    /**
+     * Archive or dismiss a hot issue from active radar.
+     */
+    public function destroy($id)
+    {
+        $topic = Topic::where('category', 'trending_issue')->findOrFail($id);
+        $topic->update(['status' => 'archived']);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Isu '{$topic->name}' berhasil diarsipkan dari Radar Pantauan.",
+        ]);
+    }
+}
