@@ -39,7 +39,7 @@ services:
     restart: unless-stopped
     environment:
       - NINE_ROUTER_BASE_URL=http://bappisus-9router-1:20128/v1
-      - NINEROUTER_API_KEY=${NINEROUTER_API_KEY:-sk-00aa7ca271b1dbfa-ujt4xd-65b13ebe}
+      - NINEROUTER_API_KEY=${NINEROUTER_API_KEY:-}
       - NINEROUTER_MODEL=${NINEROUTER_MODEL:-ag/gemini-3.8-flash-medium}
       - NINEROUTER_TIMEOUT=180
     ports:

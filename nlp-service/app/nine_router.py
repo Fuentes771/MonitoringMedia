@@ -33,9 +33,8 @@ class NineRouterClient:
 
         configured_key = (
             api_key 
-            or os.getenv("NINE_ROUTER_API_KEY") 
             or os.getenv("NINEROUTER_API_KEY")
-            or "sk-00aa7ca271b1dbfa-ujt4xd-65b13ebe"
+            or os.getenv("NINE_ROUTER_API_KEY")
         )
         self.api_key = configured_key
 
