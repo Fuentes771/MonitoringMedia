@@ -140,11 +140,26 @@ export interface MentionItem {
   text: string;
   language: string;
   is_demo: boolean;
+  is_sarcasm?: boolean;
+  is_inauthentic?: boolean;
+  inauthentic_score?: number;
+  bot_cluster_id?: string | null;
   metadata_json?: {
     is_comment?: boolean;
     parent_external_id?: string;
     likes?: number;
     metrics?: Record<string, any>;
+    sarcasm_analysis?: {
+      is_sarcasm: boolean;
+      sarcasm_score: number;
+      sarcasm_reason: string;
+      sarcasm_markers?: string[];
+    };
+    bot_analysis?: {
+      is_inauthentic: boolean;
+      inauthentic_score: number;
+      bot_signals: string[];
+    };
     [key: string]: any;
   } | null;
   sentiment?: {
@@ -293,5 +308,71 @@ export interface HotIssuesRadarData {
   surging_count: number;
   hot_issues: HotIssueItem[];
 }
+
+export interface CopypastaCluster {
+  cluster_id: string;
+  canonical_text: string;
+  copy_count: number;
+  unique_accounts_count: number;
+  accounts: string[];
+  platforms: string[];
+  narrative_agenda: string;
+  similarity_avg: number;
+  topic_name: string;
+  first_seen: string;
+  last_seen: string;
+}
+
+export interface BurstTimelinePoint {
+  time_label: string;
+  organic: number;
+  inauthentic: number;
+  sarcasm: number;
+  total: number;
+}
+
+export interface SarcasmHighlight {
+  id: number;
+  provider: string;
+  author_name: string;
+  text: string;
+  source_url: string | null;
+  published_at?: string;
+  time_label: string;
+  sentiment: 'positive' | 'neutral' | 'negative' | 'unknown';
+  sarcasm_score: number;
+  sarcasm_reason: string;
+  sarcasm_markers: string[];
+  topic_name: string;
+}
+
+export interface SuspectedBotAccount {
+  author_name: string;
+  provider: string;
+  post_count: number;
+  avg_bot_score: number;
+  cluster_id: string | null;
+  signals: string[];
+  sample_text: string;
+}
+
+export interface BuzzerRadarOverview {
+  authenticity_index: {
+    total_mentions: number;
+    organic_count: number;
+    inauthentic_count: number;
+    sarcasm_count: number;
+    organic_percent: number;
+    inauthentic_percent: number;
+    sarcasm_percent: number;
+    threat_level: 'HIGH_ASTROTURFING' | 'ELEVATED_PROPAGANDA' | 'NORMAL_ORGANIC';
+    clusters_count: number;
+  };
+  copypasta_clusters: CopypastaCluster[];
+  burst_timeline: BurstTimelinePoint[];
+  sarcasm_highlights: SarcasmHighlight[];
+  suspected_accounts: SuspectedBotAccount[];
+}
+
 
 

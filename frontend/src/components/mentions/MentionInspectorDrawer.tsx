@@ -174,6 +174,58 @@ export function MentionInspectorDrawer({ mention, onClose, onAskAi }: MentionIns
               )}
             </div>
 
+            {/* Sarcasm & Bot Authenticity Telemetry Box */}
+            {(mention.is_sarcasm ||
+              mention.metadata_json?.sarcasm_analysis?.is_sarcasm ||
+              mention.is_inauthentic ||
+              mention.metadata_json?.bot_analysis?.is_inauthentic) && (
+              <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/[0.04] space-y-3 text-xs">
+                <div className="font-mono-code font-bold uppercase tracking-wider text-[10px] text-amber-300">
+                  Deteksi Keaslian Opini &amp; Ironi Politik
+                </div>
+
+                {(mention.is_sarcasm || mention.metadata_json?.sarcasm_analysis?.is_sarcasm) && (
+                  <div className="p-3 rounded-lg bg-[#08090d]/80 border border-amber-500/25 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-amber-300">🎭 Terdeteksi Sarkasme / Satir</span>
+                      <span className="font-mono-code text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
+                        Auto-Flip &rarr; NEGATIF
+                      </span>
+                    </div>
+                    <p className="text-zinc-300 text-[11px] leading-relaxed">
+                      {mention.metadata_json?.sarcasm_analysis?.sarcasm_reason ||
+                        'Komentar menggunakan pujian ironis untuk menyindir kebijakan publik.'}
+                    </p>
+                  </div>
+                )}
+
+                {(mention.is_inauthentic || mention.metadata_json?.bot_analysis?.is_inauthentic) && (
+                  <div className="p-3 rounded-lg bg-[#08090d]/80 border border-rose-500/25 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-rose-300">🤖 Terindikasi Amplifikasi Bot / Buzzer</span>
+                      <span className="font-mono-code text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
+                        Skor Bot:{' '}
+                        {Math.round(
+                          (mention.inauthentic_score ??
+                            mention.metadata_json?.bot_analysis?.inauthentic_score ??
+                            0.7) * 100
+                        )}
+                        %
+                      </span>
+                    </div>
+                    {mention.metadata_json?.bot_analysis?.bot_signals &&
+                      mention.metadata_json.bot_analysis.bot_signals.length > 0 && (
+                        <ul className="list-disc list-inside text-zinc-300 text-[11px] space-y-0.5">
+                          {mention.metadata_json.bot_analysis.bot_signals.map((sig, idx) => (
+                            <li key={idx}>{sig}</li>
+                          ))}
+                        </ul>
+                      )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Full Text Content */}
             <div className="space-y-1.5">
               <div className="text-xs font-semibold text-zinc-300">

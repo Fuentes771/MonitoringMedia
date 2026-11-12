@@ -198,12 +198,15 @@ class IngestionService
                 'language' => $mention->language,
                 'top_keywords' => 5,
                 'use_ai' => $useAi,
+                'author_name' => $mention->author_name,
+                'provider' => $mention->provider,
             ]);
 
             if ($response->successful()) {
                 $data = $response->json();
                 $sent = $data['sentiment'] ?? [];
                 $kws = $data['keywords'] ?? [];
+                $bot = $data['bot_analysis'] ?? [];
 
                 SentimentResult::updateOrCreate(
                     ['mention_id' => $mention->id],
@@ -216,17 +219,35 @@ class IngestionService
                     ]
                 );
 
-                // Store rich AI reasoning in mention metadata
-                if (isset($sent['aspect']) || isset($sent['key_reason'])) {
-                    $meta = $mention->metadata_json ?? [];
-                    $meta['ai_analysis'] = [
-                        'aspect' => $sent['aspect'] ?? 'umum',
-                        'key_reason' => $sent['key_reason'] ?? '',
-                        'urgency' => $sent['urgency'] ?? 'low',
-                        'engine' => $sent['engine'] ?? 'nlp-service',
-                    ];
-                    $mention->update(['metadata_json' => $meta]);
-                }
+                $isSarcasm = (bool)($sent['is_sarcasm'] ?? false);
+                $isInauthentic = (bool)($bot['is_inauthentic'] ?? false);
+                $inauthenticScore = (float)($bot['inauthentic_score'] ?? 0.0);
+
+                $meta = $mention->metadata_json ?? [];
+                $meta['ai_analysis'] = [
+                    'aspect' => $sent['aspect'] ?? 'umum',
+                    'key_reason' => $sent['key_reason'] ?? '',
+                    'urgency' => $sent['urgency'] ?? 'low',
+                    'engine' => $sent['engine'] ?? 'nlp-service',
+                ];
+                $meta['sarcasm_analysis'] = [
+                    'is_sarcasm' => $isSarcasm,
+                    'sarcasm_score' => (float)($sent['sarcasm_score'] ?? 0.0),
+                    'sarcasm_reason' => $sent['sarcasm_reason'] ?? '',
+                    'sarcasm_markers' => $sent['sarcasm_markers'] ?? [],
+                ];
+                $meta['bot_analysis'] = [
+                    'is_inauthentic' => $isInauthentic,
+                    'inauthentic_score' => $inauthenticScore,
+                    'bot_signals' => $bot['bot_signals'] ?? [],
+                ];
+
+                $mention->update([
+                    'is_sarcasm' => $isSarcasm,
+                    'is_inauthentic' => $isInauthentic,
+                    'inauthentic_score' => $inauthenticScore,
+                    'metadata_json' => $meta,
+                ]);
 
                 foreach ($kws as $kw) {
                     MentionKeyword::firstOrCreate(

@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\AlertController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\AiIntelligenceController;
 use App\Http\Controllers\Api\V1\HotIssueController;
+use App\Http\Controllers\Api\V1\BuzzerRadarController;
 
 Route::prefix('v1')->group(function () {
     // 1. Authentication
@@ -44,6 +45,8 @@ Route::prefix('v1')->group(function () {
     Route::post('/hot-issues', [HotIssueController::class, 'store']);
     Route::post('/hot-issues/scan', [HotIssueController::class, 'scan']);
     Route::delete('/hot-issues/{id}', [HotIssueController::class, 'destroy']);
+    Route::get('/buzzer-radar/overview', [BuzzerRadarController::class, 'overview']);
+    Route::post('/buzzer-radar/scan', [BuzzerRadarController::class, 'scan']);
 
     // 6. Connectors (Data Sources)
     Route::get('/connectors', [ConnectorController::class, 'index']);

@@ -1,4 +1,4 @@
-import { RefreshCw, Radio, Bell, ChevronRight } from 'lucide-react';
+import { RefreshCw, Radio, Bell, ChevronRight, ShieldCheck } from 'lucide-react';
 import { CoverageInfo } from '@/lib/api';
 import { NavTab } from './Sidebar';
 
@@ -10,6 +10,8 @@ interface TopbarProps {
   days: number;
   onChangeDays: (d: number) => void;
   onNavigateToAlerts?: () => void;
+  organicOnly?: boolean;
+  onToggleOrganicOnly?: () => void;
 }
 
 export function Topbar({
@@ -20,11 +22,17 @@ export function Topbar({
   days,
   onChangeDays,
   onNavigateToAlerts,
+  organicOnly = false,
+  onToggleOrganicOnly,
 }: TopbarProps) {
   const getTabLabel = (tab: NavTab) => {
     switch (tab) {
       case 'overview':
         return 'Ruang Intelijen';
+      case 'hot_issues':
+        return 'Radar Isu Hangat';
+      case 'bot_radar':
+        return 'Radar Buzzer & Jaringan Bot';
       case 'mentions':
         return 'Eksplorasi Sebutan';
       case 'topics':
@@ -80,8 +88,24 @@ export function Topbar({
         )}
       </div>
 
-      {/* Date Switchers, Alert Bell & Actions */}
-      <div className="flex items-center gap-2.5">
+      {/* Date Switchers, Organic Filter, Alert Bell & Actions */}
+      <div className="flex items-center flex-wrap gap-2.5">
+        {/* Global Organic Voice Filter Toggle */}
+        {onToggleOrganicOnly && (
+          <button
+            onClick={onToggleOrganicOnly}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+              organicOnly
+                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-xs'
+                : 'bg-white/[0.03] border-white/[0.08] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06]'
+            }`}
+            title="Sembunyikan akun terindikasi bot/buzzer copypasta dari metrik & daftar sebutan"
+          >
+            <ShieldCheck className={`w-3.5 h-3.5 ${organicOnly ? 'text-emerald-400' : 'text-zinc-500'}`} />
+            <span>{organicOnly ? 'Filter Organik: Aktif' : 'Filter Opini Organik'}</span>
+          </button>
+        )}
+
         {/* Quick Alert Bell */}
         {onNavigateToAlerts && (
           <button

@@ -11,9 +11,10 @@ import {
   Search,
   Activity,
   Flame,
+  ShieldAlert,
 } from 'lucide-react';
 
-export type NavTab = 'overview' | 'hot_issues' | 'mentions' | 'topics' | 'alerts' | 'sources';
+export type NavTab = 'overview' | 'hot_issues' | 'bot_radar' | 'mentions' | 'topics' | 'alerts' | 'sources';
 
 interface SidebarProps {
   currentTab: NavTab;
@@ -39,6 +40,7 @@ export function Sidebar({ currentTab, onSelectTab, onExportCsv, isExporting }: S
   const operationalNav: Array<{ id: NavTab; label: string; icon: React.ComponentType<{ className?: string }>; badge?: string }> = [
     { id: 'overview', label: 'Ruang Intelijen', icon: LayoutDashboard },
     { id: 'hot_issues', label: 'Radar Isu Hangat', icon: Flame, badge: hasSurge ? 'SURGE' : undefined },
+    { id: 'bot_radar', label: 'Radar Buzzer & Bot', icon: ShieldAlert },
     { id: 'mentions', label: 'Eksplorasi Sebutan', icon: MessageSquareText },
     { id: 'topics', label: 'Program Prioritas', icon: Target },
   ];
@@ -117,7 +119,19 @@ export function Sidebar({ currentTab, onSelectTab, onExportCsv, isExporting }: S
                 }`}
               >
                 <div className="flex items-center gap-3 truncate">
-                  <Icon className={`w-4 h-4 shrink-0 transition-colors ${item.id === 'hot_issues' ? (isActive ? 'text-amber-400' : 'text-amber-400') : (isActive ? 'text-blue-400' : 'text-zinc-400')}`} />
+                  <Icon
+                    className={`w-4 h-4 shrink-0 transition-colors ${
+                      item.id === 'hot_issues'
+                        ? 'text-amber-400'
+                        : item.id === 'bot_radar'
+                        ? isActive
+                          ? 'text-rose-400'
+                          : 'text-rose-400/80'
+                        : isActive
+                        ? 'text-blue-400'
+                        : 'text-zinc-400'
+                    }`}
+                  />
                   <span className="truncate">{item.label}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -154,7 +168,19 @@ export function Sidebar({ currentTab, onSelectTab, onExportCsv, isExporting }: S
                 }`}
               >
                 <div className="flex items-center gap-3 truncate">
-                  <Icon className={`w-4 h-4 shrink-0 transition-colors ${item.id === 'hot_issues' ? (isActive ? 'text-amber-400' : 'text-amber-400') : (isActive ? 'text-blue-400' : 'text-zinc-400')}`} />
+                  <Icon
+                    className={`w-4 h-4 shrink-0 transition-colors ${
+                      item.id === 'hot_issues'
+                        ? 'text-amber-400'
+                        : item.id === 'bot_radar'
+                        ? isActive
+                          ? 'text-rose-400'
+                          : 'text-rose-400/80'
+                        : isActive
+                        ? 'text-blue-400'
+                        : 'text-zinc-400'
+                    }`}
+                  />
                   <span className="truncate">{item.label}</span>
                 </div>
                 <div className="flex items-center gap-1.5">

@@ -11,6 +11,7 @@ from .ai_summary import summarize_mention, summarize_topic, summarize_daily_wind
 from .ai_hot_issues import extract_hot_issues_from_headlines
 from .ai_chat import process_rag_chat
 from .ai_search import generate_search_queries, filter_relevance
+from .bot_detection import evaluate_account_and_text_anomalies, analyze_buzzer_network
 from .scrapers.router import router as scraper_router
 
 app = FastAPI(
@@ -34,6 +35,8 @@ class AnalyzeRequest(BaseModel):
     language: Optional[str] = "id"
     top_keywords: Optional[int] = 5
     use_ai: Optional[bool] = True
+    author_name: Optional[str] = None
+    provider: Optional[str] = None
 
 class BatchAnalyzeItem(BaseModel):
     id: str | int
@@ -72,6 +75,9 @@ class DailySummaryRequest(BaseModel):
 class HotIssuesClusterRequest(BaseModel):
     headlines: List[Dict[str, Any]]
 
+class BuzzerNetworkRequest(BaseModel):
+    mentions: List[Dict[str, Any]]
+
 # ----------------- Routes ----------------- #
 
 @app.get("/health")
@@ -103,14 +109,24 @@ def analyze(req: AnalyzeRequest):
     else:
         sentiment = analyze_sentiment(req.text)
         sentiment["aspect"] = "general"
-        sentiment["key_reason"] = "Analisis leksikon lokal"
-        sentiment["urgency"] = "low"
+        sentiment["key_reason"] = (
+            f"[Sarkasme Terdeteksi] {sentiment['sarcasm_reason']}"
+            if sentiment.get("is_sarcasm") and sentiment.get("sarcasm_reason")
+            else "Analisis leksikon lokal"
+        )
+        sentiment["urgency"] = "medium" if sentiment.get("is_sarcasm") else "low"
 
     keywords = extract_keywords(req.text, top_n=req.top_keywords)
+    bot_analysis = evaluate_account_and_text_anomalies(
+        text=req.text,
+        author_name=req.author_name,
+        provider=req.provider
+    )
 
     return {
         "sentiment": sentiment,
-        "keywords": keywords
+        "keywords": keywords,
+        "bot_analysis": bot_analysis
     }
 
 @app.post("/batch-analyze")
@@ -194,6 +210,13 @@ def ai_cluster_hot_issues_endpoint(req: HotIssuesClusterRequest):
     Extract and cluster top breaking hot issues from recent news headlines.
     """
     return extract_hot_issues_from_headlines(req.headlines)
+
+@app.post("/ai/analyze-buzzer-network")
+def ai_analyze_buzzer_network_endpoint(req: BuzzerNetworkRequest):
+    """
+    Triple-Layer CIB, Copypasta & Bot Network Analyzer across mentions.
+    """
+    return analyze_buzzer_network(req.mentions)
 
 # Mount Social Media Scraper Router
 app.include_router(scraper_router, prefix="/api/v1/scraper", tags=["scraper"])

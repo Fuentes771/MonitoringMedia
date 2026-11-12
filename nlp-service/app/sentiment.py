@@ -4,6 +4,7 @@ from typing import Dict, Any, List
 from .dictionaries.slang import SLANG_SENTIMENT_MAP, SLANG_NORMALIZER
 from .dictionaries.negations import NEGATION_WORDS, INTENSIFIERS
 from .dictionaries.sentiment_lexicon import SENTIMENT_LEXICON
+from .dictionaries.sarcasm_markers import detect_sarcasm_heuristics
 
 MODEL_VERSION = "v1.0-hybrid-id"
 
@@ -132,6 +133,15 @@ def analyze_sentiment(text: str) -> Dict[str, Any]:
     if confidence < 0.55:
         label = "unknown"
 
+    # Evaluate Indonesian political sarcasm / satire
+    sarcasm = detect_sarcasm_heuristics(text, label)
+    if sarcasm["is_sarcasm"]:
+        label = "negative"
+        confidence = max(confidence, sarcasm["sarcasm_score"], 0.85)
+        p_neg = round(max(0.80, sarcasm["sarcasm_score"]), 4)
+        p_pos = round((1.0 - p_neg) * 0.3, 4)
+        p_neu = round(1.0 - p_neg - p_pos, 4)
+
     return {
         "label": label,
         "confidence": round(float(confidence), 2),
@@ -140,6 +150,10 @@ def analyze_sentiment(text: str) -> Dict[str, Any]:
             "neutral": p_neu,
             "negative": p_neg
         },
+        "is_sarcasm": sarcasm["is_sarcasm"],
+        "sarcasm_score": sarcasm["sarcasm_score"],
+        "sarcasm_reason": sarcasm["sarcasm_reason"],
+        "sarcasm_markers": sarcasm["matched_markers"],
         "model_version": MODEL_VERSION
     }
 

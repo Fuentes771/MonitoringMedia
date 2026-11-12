@@ -23,6 +23,7 @@ interface MentionsPageProps {
   initialKeyword?: string;
   initialTopicId?: number;
   initialSentiment?: string;
+  organicOnly?: boolean;
   onOpenAiWithQuery?: (query: string, topicId?: number) => void;
 }
 
@@ -30,12 +31,15 @@ export function MentionsPage({
   initialKeyword,
   initialTopicId,
   initialSentiment,
+  organicOnly = false,
   onOpenAiWithQuery,
 }: MentionsPageProps) {
   const [search, setSearch] = useState(initialKeyword || '');
   const [topicId, setTopicId] = useState<number | undefined>(initialTopicId);
   const [provider, setProvider] = useState<string>('');
   const [sentiment, setSentiment] = useState<string>(initialSentiment || '');
+  const [onlySarcasm, setOnlySarcasm] = useState<boolean>(false);
+  const [onlyInauthentic, setOnlyInauthentic] = useState<boolean>(false);
   const [page, setPage] = useState(1);
   const [selectedMentionId, setSelectedMentionId] = useState<number | null>(null);
 
@@ -57,7 +61,7 @@ export function MentionsPage({
 
   // Fetch mentions
   const { data, isLoading } = useQuery({
-    queryKey: ['mentions-explorer', page, topicId, provider, sentiment, search],
+    queryKey: ['mentions-explorer', page, topicId, provider, sentiment, search, organicOnly, onlySarcasm, onlyInauthentic],
     queryFn: async () => {
       const res = await api.get<{
         data: MentionItem[];
@@ -70,6 +74,9 @@ export function MentionsPage({
           provider: provider || undefined,
           sentiment: sentiment || undefined,
           search: search || undefined,
+          exclude_inauthentic: organicOnly || undefined,
+          only_sarcasm: onlySarcasm || undefined,
+          only_inauthentic: onlyInauthentic || undefined,
           per_page: 15,
         },
       });
@@ -85,10 +92,12 @@ export function MentionsPage({
     setTopicId(undefined);
     setProvider('');
     setSentiment('');
+    setOnlySarcasm(false);
+    setOnlyInauthentic(false);
     setPage(1);
   };
 
-  const hasActiveFilters = Boolean(search || topicId || provider || sentiment);
+  const hasActiveFilters = Boolean(search || topicId || provider || sentiment || onlySarcasm || onlyInauthentic);
 
   const getPlatformIcon = (prov: string) => {
     switch (prov.toLowerCase()) {
@@ -289,6 +298,32 @@ export function MentionsPage({
             >
               Negatif
             </button>
+            <button
+              onClick={() => {
+                setOnlySarcasm((prev) => !prev);
+                setPage(1);
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 border ${
+                onlySarcasm
+                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-300 shadow-xs'
+                  : 'border-white/[0.08] text-zinc-400 hover:text-amber-300 hover:bg-white/[0.04]'
+              }`}
+            >
+              🎭 Sarkasme
+            </button>
+            <button
+              onClick={() => {
+                setOnlyInauthentic((prev) => !prev);
+                setPage(1);
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 border ${
+                onlyInauthentic
+                  ? 'bg-rose-500/20 border-rose-500/40 text-rose-300 shadow-xs'
+                  : 'border-white/[0.08] text-zinc-400 hover:text-rose-300 hover:bg-white/[0.04]'
+              }`}
+            >
+              🤖 Indikasi Bot
+            </button>
           </div>
 
           {/* Topic Select */}
@@ -414,7 +449,23 @@ export function MentionsPage({
                             {extractDomain(item.source_url, item.author_name)}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center flex-wrap gap-1.5">
+                          {(item.is_sarcasm || item.metadata_json?.sarcasm_analysis?.is_sarcasm) && (
+                            <span
+                              title={item.metadata_json?.sarcasm_analysis?.sarcasm_reason || 'Sarkasme terdeteksi'}
+                              className="px-1.5 py-0.5 rounded text-[9px] font-mono-code font-bold bg-amber-500/20 text-amber-300 border border-amber-500/35"
+                            >
+                              🎭 SARKASME
+                            </span>
+                          )}
+                          {(item.is_inauthentic || item.metadata_json?.bot_analysis?.is_inauthentic) && (
+                            <span
+                              title={item.metadata_json?.bot_analysis?.bot_signals?.join(', ') || 'Indikasi Bot/Buzzer'}
+                              className="px-1.5 py-0.5 rounded text-[9px] font-mono-code font-bold bg-rose-500/20 text-rose-300 border border-rose-500/35"
+                            >
+                              🤖 BOT
+                            </span>
+                          )}
                           {item.metadata_json?.is_comment && (
                             <span className="px-1.5 py-0.5 rounded text-[9px] font-mono-code bg-blue-500/15 text-blue-300 border border-blue-500/25">
                               Komentar
@@ -599,6 +650,64 @@ export function MentionsPage({
                     </div>
                   )}
                 </div>
+
+                {/* Sarcasm & Bot Authenticity Telemetry Box */}
+                {(activeMention.is_sarcasm ||
+                  activeMention.metadata_json?.sarcasm_analysis?.is_sarcasm ||
+                  activeMention.is_inauthentic ||
+                  activeMention.metadata_json?.bot_analysis?.is_inauthentic) && (
+                  <div className="p-4 rounded-xl bg-amber-500/[0.04] border border-amber-500/30 space-y-3">
+                    <div className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-amber-300">
+                      Intelijen Keaslian Opini &amp; Pembedahan Sarkasme
+                    </div>
+
+                    {(activeMention.is_sarcasm ||
+                      activeMention.metadata_json?.sarcasm_analysis?.is_sarcasm) && (
+                      <div className="p-3 rounded-lg bg-[#08090d]/85 border border-amber-500/25 space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-amber-300">
+                            🎭 Terdeteksi Sarkasme / Satir Politik
+                          </span>
+                          <span className="font-mono-code text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
+                            Sentimen Dikoreksi &rarr; NEGATIF
+                          </span>
+                        </div>
+                        <p className="text-zinc-300 text-xs leading-relaxed">
+                          {activeMention.metadata_json?.sarcasm_analysis?.sarcasm_reason ||
+                            'Komentar menggunakan pujian ironis untuk menyindir kebijakan publik.'}
+                        </p>
+                      </div>
+                    )}
+
+                    {(activeMention.is_inauthentic ||
+                      activeMention.metadata_json?.bot_analysis?.is_inauthentic) && (
+                      <div className="p-3 rounded-lg bg-[#08090d]/85 border border-rose-500/25 space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-rose-300">
+                            🤖 Terindikasi Amplifikasi Bot / Buzzer
+                          </span>
+                          <span className="font-mono-code text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
+                            Skor Bot:{' '}
+                            {Math.round(
+                              (activeMention.inauthentic_score ??
+                                activeMention.metadata_json?.bot_analysis?.inauthentic_score ??
+                                0.7) * 100
+                            )}
+                            %
+                          </span>
+                        </div>
+                        {activeMention.metadata_json?.bot_analysis?.bot_signals &&
+                          activeMention.metadata_json.bot_analysis.bot_signals.length > 0 && (
+                            <ul className="list-disc list-inside text-zinc-300 text-xs space-y-0.5">
+                              {activeMention.metadata_json.bot_analysis.bot_signals.map((sig, idx) => (
+                                <li key={idx}>{sig}</li>
+                              ))}
+                            </ul>
+                          )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Extracted Keywords */}
                 {activeMention.keywords && activeMention.keywords.length > 0 && (

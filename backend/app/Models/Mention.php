@@ -26,6 +26,10 @@ class Mention extends Model
         'language',
         'deletion_status',
         'is_demo',
+        'is_inauthentic',
+        'inauthentic_score',
+        'is_sarcasm',
+        'bot_cluster_id',
         'metadata_json',
     ];
 
@@ -33,8 +37,19 @@ class Mention extends Model
         'published_at' => 'datetime',
         'collected_at' => 'datetime',
         'is_demo' => 'boolean',
+        'is_inauthentic' => 'boolean',
+        'inauthentic_score' => 'float',
+        'is_sarcasm' => 'boolean',
         'metadata_json' => 'array',
     ];
+
+    public function scopeOrganic($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('is_inauthentic', false)
+              ->orWhereNull('is_inauthentic');
+        });
+    }
 
     public function workspace(): BelongsTo
     {

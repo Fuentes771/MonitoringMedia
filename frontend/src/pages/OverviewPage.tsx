@@ -14,6 +14,7 @@ import { AlertCircle, RefreshCw, Filter, Flame, ShieldAlert, Layers } from 'luci
 
 interface OverviewPageProps {
   days: number;
+  organicOnly?: boolean;
   onNavigateToTopic: (topicId: number) => void;
   onNavigateToMentionsWithKeyword: (kw: string) => void;
   onOpenAiWithQuery?: (query: string, topicId?: number) => void;
@@ -23,6 +24,7 @@ type OperationalLens = 'all' | 'critical' | 'rising';
 
 export function OverviewPage({
   days,
+  organicOnly = false,
   onNavigateToTopic,
   onNavigateToMentionsWithKeyword,
   onOpenAiWithQuery,
@@ -32,10 +34,10 @@ export function OverviewPage({
 
   // 1. Fetch Overview KPIs
   const { data: overview, isLoading: isOverviewLoading, error: overviewError, refetch: refetchOverview } = useQuery({
-    queryKey: ['dashboard-overview', days],
+    queryKey: ['dashboard-overview', days, organicOnly],
     queryFn: async () => {
       const res = await api.get<DashboardOverview>('/dashboard/overview', {
-        params: { workspace_id: 1, days },
+        params: { workspace_id: 1, days, exclude_inauthentic: organicOnly || undefined },
       });
       return res.data;
     },
@@ -43,10 +45,10 @@ export function OverviewPage({
 
   // 2. Fetch Timeseries
   const { data: timeseriesData, isLoading: isTimeseriesLoading } = useQuery({
-    queryKey: ['dashboard-timeseries', days],
+    queryKey: ['dashboard-timeseries', days, organicOnly],
     queryFn: async () => {
       const res = await api.get<{ timeline: TimelinePoint[] }>('/dashboard/timeseries', {
-        params: { workspace_id: 1, days },
+        params: { workspace_id: 1, days, exclude_inauthentic: organicOnly || undefined },
       });
       return res.data;
     },
@@ -65,10 +67,10 @@ export function OverviewPage({
 
   // 4. Fetch Recent Mentions (for the live evidence rail & marquee)
   const { data: recentMentions, isLoading: isMentionsLoading } = useQuery({
-    queryKey: ['recent-mentions'],
+    queryKey: ['recent-mentions', organicOnly],
     queryFn: async () => {
       const res = await api.get<{ data: MentionItem[] }>('/mentions', {
-        params: { workspace_id: 1, per_page: 10 },
+        params: { workspace_id: 1, per_page: 10, exclude_inauthentic: organicOnly || undefined },
       });
       return res.data.data;
     },

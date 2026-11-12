@@ -122,7 +122,31 @@ export function MentionList({ mentions, isLoading }: MentionListProps) {
                 </span>
               </div>
 
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center flex-wrap gap-2">
+                {(item.is_sarcasm || item.metadata_json?.sarcasm_analysis?.is_sarcasm) && (
+                  <span
+                    title={
+                      item.metadata_json?.sarcasm_analysis?.sarcasm_reason ||
+                      'Terdeteksi pujian ironis / sarkasme politik, sentimen dikoreksi ke Negatif'
+                    }
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono-code font-bold bg-amber-500/15 text-amber-300 border border-amber-500/35"
+                  >
+                    <span>🎭 SARKASME</span>
+                  </span>
+                )}
+
+                {(item.is_inauthentic || item.metadata_json?.bot_analysis?.is_inauthentic) && (
+                  <span
+                    title={
+                      item.metadata_json?.bot_analysis?.bot_signals?.join(', ') ||
+                      'Terindikasi amplifikasi bot / copypasta'
+                    }
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono-code font-bold bg-rose-500/15 text-rose-300 border border-rose-500/35"
+                  >
+                    <span>🤖 TERINDIKASI BOT</span>
+                  </span>
+                )}
+
                 {getSentimentBadge(item.sentiment?.label, item.sentiment?.confidence)}
                 
                 <button

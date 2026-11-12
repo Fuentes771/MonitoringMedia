@@ -9,12 +9,14 @@ import { TopicsPage } from '@/pages/TopicsPage';
 import { AlertsPage } from '@/pages/AlertsPage';
 import { DataSourcesPage } from '@/pages/DataSourcesPage';
 import { HotIssuesPage } from '@/pages/HotIssuesPage';
+import { BuzzerRadarPage } from '@/pages/BuzzerRadarPage';
 import { AiIntelligenceDrawer } from '@/components/ai/AiIntelligenceDrawer';
 import { FloatingAiAssistantButton } from '@/components/ai/FloatingAiAssistantButton';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<NavTab>('overview');
   const [days, setDays] = useState(7);
+  const [organicOnly, setOrganicOnly] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
   const [aiInitialQuery, setAiInitialQuery] = useState<string | undefined>(undefined);
@@ -132,12 +134,15 @@ export default function App() {
           days={days}
           onChangeDays={setDays}
           onNavigateToAlerts={() => setCurrentTab('alerts')}
+          organicOnly={organicOnly}
+          onToggleOrganicOnly={() => setOrganicOnly((v) => !v)}
         />
 
         <main className="flex-1 p-6 sm:p-8 max-w-7xl w-full mx-auto overflow-y-auto">
           {currentTab === 'overview' && (
             <OverviewPage
               days={days}
+              organicOnly={organicOnly}
               onNavigateToTopic={handleNavigateToTopic}
               onNavigateToMentionsWithKeyword={handleNavigateToMentionsWithKeyword}
               onOpenAiWithQuery={handleOpenAiWithQuery}
@@ -146,11 +151,19 @@ export default function App() {
 
           {currentTab === 'hot_issues' && <HotIssuesPage />}
 
+          {currentTab === 'bot_radar' && (
+            <BuzzerRadarPage
+              days={days}
+              onOpenAiWithQuery={handleOpenAiWithQuery}
+            />
+          )}
+
           {currentTab === 'mentions' && (
             <MentionsPage
               initialKeyword={targetKeyword}
               initialTopicId={targetTopicId}
               initialSentiment={targetSentiment}
+              organicOnly={organicOnly}
               onOpenAiWithQuery={handleOpenAiWithQuery}
             />
           )}

@@ -4,23 +4,39 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Mention;
+use App\Services\BuzzerDetectionService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
 class MentionController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, BuzzerDetectionService $buzzerService)
     {
         $workspaceId = $request->input('workspace_id', 1);
         $topicId = $request->input('topic_id');
         $provider = $request->input('provider');
         $sentiment = $request->input('sentiment');
         $search = $request->input('search');
+        $excludeInauthentic = $request->boolean('exclude_inauthentic');
+        $onlySarcasm = $request->boolean('only_sarcasm');
+        $onlyInauthentic = $request->boolean('only_inauthentic');
         $perPage = min((int)$request->input('per_page', 20), 100);
 
         $query = Mention::where('workspace_id', $workspaceId)
             ->with(['sentiment', 'keywords' => fn($q) => $q->orderBy('score', 'desc')->limit(4), 'topics:id,name'])
             ->orderBy('published_at', 'desc');
+
+        if ($excludeInauthentic) {
+            $query->where('is_inauthentic', false);
+        }
+
+        if ($onlySarcasm) {
+            $query->where('is_sarcasm', true);
+        }
+
+        if ($onlyInauthentic) {
+            $query->where('is_inauthentic', true);
+        }
 
         if ($topicId) {
             $query->whereHas('topics', fn($q) => $q->where('topics.id', $topicId));
@@ -39,6 +55,9 @@ class MentionController extends Controller
         }
 
         $mentions = $query->paginate($perPage);
+
+        // Ensure current page mentions have up-to-date sarcasm & bot signals
+        $buzzerService->evaluateMentionsBatch(collect($mentions->items()));
 
         return response()->json([
             'status' => 'success',

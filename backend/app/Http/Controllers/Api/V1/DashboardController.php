@@ -19,14 +19,19 @@ class DashboardController extends Controller
         $workspaceId = $request->input('workspace_id', 1);
         $topicId = $request->input('topic_id');
         $provider = $request->input('provider');
+        $excludeInauthentic = $request->boolean('exclude_inauthentic');
         $fromStr = $request->input('from', Carbon::now('Asia/Jakarta')->subDays(7)->toIso8601String());
         $toStr = $request->input('to', Carbon::now('Asia/Jakarta')->toIso8601String());
 
         $from = Carbon::parse($fromStr)->setTimezone('Asia/Jakarta');
         $to = Carbon::parse($toStr)->setTimezone('Asia/Jakarta');
 
-        $query = Mention::where('workspace_id', $workspaceId)
-            ->whereBetween('published_at', [$from, $to]);
+        $query = Mention::where('mentions.workspace_id', $workspaceId)
+            ->whereBetween('mentions.published_at', [$from, $to]);
+
+        if ($excludeInauthentic) {
+            $query->where('mentions.is_inauthentic', false);
+        }
 
         if ($topicId) {
             $query->whereHas('topics', fn($q) => $q->where('topics.id', $topicId));
@@ -34,7 +39,7 @@ class DashboardController extends Controller
 
         if ($provider) {
             $providers = explode(',', $provider);
-            $query->whereIn('provider', $providers);
+            $query->whereIn('mentions.provider', $providers);
         }
 
         $totalMentions = (clone $query)->count();
@@ -46,6 +51,9 @@ class DashboardController extends Controller
 
         $prevQuery = Mention::where('workspace_id', $workspaceId)
             ->whereBetween('published_at', [$prevFrom, $prevTo]);
+        if ($excludeInauthentic) {
+            $prevQuery->where('is_inauthentic', false);
+        }
         if ($topicId) {
             $prevQuery->whereHas('topics', fn($q) => $q->where('topics.id', $topicId));
         }
@@ -253,14 +261,19 @@ class DashboardController extends Controller
         $workspaceId = $request->input('workspace_id', 1);
         $topicId = $request->input('topic_id');
         $provider = $request->input('provider');
+        $excludeInauthentic = $request->boolean('exclude_inauthentic');
         $days = (int)$request->input('days', 7);
 
         $now = Carbon::now('Asia/Jakarta');
         $start = $now->copy()->subDays($days)->startOfDay();
 
-        $query = Mention::where('workspace_id', $workspaceId)
-            ->where('published_at', '>=', $start)
+        $query = Mention::where('mentions.workspace_id', $workspaceId)
+            ->where('mentions.published_at', '>=', $start)
             ->leftJoin('sentiment_results', 'mentions.id', '=', 'sentiment_results.mention_id');
+
+        if ($excludeInauthentic) {
+            $query->where('mentions.is_inauthentic', false);
+        }
 
         if ($topicId) {
             $query->whereHas('topics', fn($q) => $q->where('topics.id', $topicId));
