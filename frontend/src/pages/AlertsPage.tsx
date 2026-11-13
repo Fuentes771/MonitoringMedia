@@ -149,7 +149,7 @@ export function AlertsPage({ onNavigateToMentions, onOpenAiWithQuery }: AlertsPa
               {events.length} <span className="text-xs font-normal text-zinc-400 font-sans-ui">Kejadian</span>
             </div>
           </div>
-          <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-400 flex items-center justify-center">
             <Activity className="w-4 h-4" />
           </div>
         </div>
@@ -369,7 +369,7 @@ export function AlertsPage({ onNavigateToMentions, onOpenAiWithQuery }: AlertsPa
                         title="Buka seluruh bukti percakapan berpolaritas negatif untuk topik ini"
                       >
                         <span>Lihat Bukti Negatif</span>
-                        <ArrowRight className="w-3.5 h-3.5 text-blue-400" />
+                        <ArrowRight className="w-3.5 h-3.5 text-amber-400" />
                       </button>
                     )}
                   </div>

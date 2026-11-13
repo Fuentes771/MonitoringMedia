@@ -298,7 +298,7 @@ export function HotIssuesPage() {
                       <span>{isCritical ? 'URGENSI KRITIS' : 'URGENSI TINGGI'}</span>
                     </span>
 
-                    <span className="px-2.5 py-1 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-mono-code font-bold flex items-center gap-1">
+                    <span className="px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono-code font-bold flex items-center gap-1">
                       <TrendingUp className="w-3.5 h-3.5" />
                       <span>{issue.surge_multiplier}x Lonjakan Tren</span>
                     </span>
@@ -365,10 +365,10 @@ export function HotIssuesPage() {
                   <div className="lg:col-span-2 p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
                     <div className="flex items-center justify-between text-[11px] font-mono-code">
                       <span className="font-bold uppercase text-zinc-400 flex items-center gap-1.5">
-                        <Activity className="w-3.5 h-3.5 text-blue-400" />
+                        <Activity className="w-3.5 h-3.5 text-amber-400" />
                         <span>Kurva Akselerasi Sebutan (Per 3 Jam)</span>
                       </span>
-                      <span className="text-blue-400 font-bold">Puncak Lonjakan Terdeteksi</span>
+                      <span className="text-amber-400 font-bold">Puncak Lonjakan Terdeteksi</span>
                     </div>
 
                     <div className="h-24 w-full">
@@ -405,9 +405,9 @@ export function HotIssuesPage() {
 
                 {/* AI Threat & Resistance Synthesis */}
                 {issue.ai_synthesis && (
-                  <div className="p-4 rounded-xl bg-gradient-to-r from-blue-950/20 via-cyan-950/15 to-transparent border border-cyan-500/25 space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-mono-code font-bold text-cyan-300 uppercase">
-                      <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-amber-950/20 via-zinc-900/30 to-transparent border border-amber-500/25 space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-mono-code font-bold text-amber-300 uppercase">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                       <span>Sintesis Intelijen AI: Pemetaan Risiko &amp; Resistensi Publik</span>
                     </div>
                     <p className="text-xs text-zinc-300 font-sans-ui leading-relaxed">
@@ -439,7 +439,7 @@ export function HotIssuesPage() {
                               {q.author}
                             </span>
                             {q.is_comment && (
-                              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono-code bg-blue-500/15 text-blue-300 border border-blue-500/25">
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono-code bg-amber-500/15 text-amber-300 border border-amber-500/25">
                                 Komentar
                               </span>
                             )}
@@ -474,7 +474,7 @@ export function HotIssuesPage() {
                               href={q.source_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                              className="text-amber-400 hover:text-amber-300 flex items-center gap-1"
                             >
                               <span>Tautan</span>
                               <ExternalLink className="w-2.5 h-2.5" />
@@ -588,9 +588,9 @@ export function HotIssuesPage() {
                       name="urgency"
                       checked={urgencyLevel === 'normal'}
                       onChange={() => setUrgencyLevel('normal')}
-                      className="text-blue-500 focus:ring-0"
+                      className="accent-amber-400 text-amber-400 focus:ring-0"
                     />
-                    <span className="text-blue-400 font-semibold">Normal</span>
+                    <span className="text-amber-300 font-semibold">Normal</span>
                   </label>
                 </div>
               </div>

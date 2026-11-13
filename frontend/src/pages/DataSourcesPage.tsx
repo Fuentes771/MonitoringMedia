@@ -212,7 +212,7 @@ export function DataSourcesPage() {
       {/* Page Header */}
       <div className="border-b border-white/[0.08] pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center shadow-xs">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-400 flex items-center justify-center shadow-xs">
             <Radio className="w-4 h-4" />
           </div>
           <div>
@@ -228,9 +228,9 @@ export function DataSourcesPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setActiveModalProvider('rapidapi')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600/30 to-purple-600/30 hover:from-blue-600/40 hover:to-purple-600/40 border border-blue-500/40 text-blue-300 hover:text-white text-xs font-semibold font-mono-code transition-all shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 hover:text-amber-200 text-xs font-semibold font-mono-code transition-all shadow-xs cursor-pointer"
           >
-            <KeyRound className="w-3.5 h-3.5 text-blue-400" />
+            <KeyRound className="w-3.5 h-3.5 text-amber-400" />
             <span>Setup Unified RapidAPI Hub</span>
           </button>
           <div className="flex items-center gap-2 text-xs font-mono-code bg-white/[0.03] px-3 py-1.5 rounded-xl border border-white/[0.08]">
@@ -255,8 +255,8 @@ export function DataSourcesPage() {
         />
 
         <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.08] relative z-10">
-          <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-blue-400" />
+          <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+            <Activity className="w-3.5 h-3.5 text-amber-400" />
             <span>Arsitektur Aliran Pipeline Ingesti Real-Time</span>
           </span>
           <span className="text-[11px] text-zinc-500 font-mono-code">Latency SLA: &lt; 2s</span>
@@ -281,11 +281,11 @@ export function DataSourcesPage() {
           {/* Node 2: NLP Classifier */}
           <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
             <div className="flex items-center justify-between text-xs font-mono-code">
-              <span className="text-blue-400 font-bold">TAHAP 2</span>
+              <span className="text-amber-400 font-bold">TAHAP 2</span>
               <span className="text-zinc-500">Inferensi</span>
             </div>
             <h4 className="font-semibold text-white text-sm font-sans-ui flex items-center gap-2">
-              <Cpu className="w-4 h-4 text-blue-400" />
+              <Cpu className="w-4 h-4 text-amber-400" />
               <span>IndoBERT Sentiment &amp; Slang</span>
             </h4>
             <p className="text-xs text-zinc-400 font-sans-ui">
@@ -379,12 +379,12 @@ export function DataSourcesPage() {
                           {isConnected ? 'TERHUBUNG' : isNeedsConfig ? 'PERLU KONFIGURASI' : 'NONAKTIF'}
                         </span>
                         {conn.has_local_engine && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono-code font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono-code font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
                             LOKAL AKTIF (100% FREE)
                           </span>
                         )}
                         {conn.has_rapidapi && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono-code font-bold bg-violet-500/15 text-violet-300 border border-violet-500/30">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono-code font-bold bg-white/[0.06] text-zinc-300 border border-white/[0.15]">
                             RAPIDAPI (CADANGAN)
                           </span>
                         )}
@@ -401,9 +401,9 @@ export function DataSourcesPage() {
                       <button
                         onClick={() => handleLivePreview(conn.provider)}
                         disabled={isPreviewLoading}
-                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-xs text-cyan-300 hover:text-white transition-all font-semibold shadow-xs cursor-pointer disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-xs text-amber-300 hover:text-amber-200 transition-all font-semibold shadow-xs cursor-pointer disabled:opacity-50"
                       >
-                        <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                        <Eye className="w-3.5 h-3.5 text-amber-400" />
                         <span>{isPreviewLoading && activePreviewProvider === conn.provider ? 'Mengambil Data...' : 'Live Preview Data Riil'}</span>
                       </button>
                     )}
@@ -413,7 +413,7 @@ export function DataSourcesPage() {
                       disabled={isTesting}
                       className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08] text-xs text-zinc-200 hover:text-white transition-all font-semibold shadow-xs cursor-pointer disabled:opacity-50"
                     >
-                      <Activity className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin text-blue-400' : 'text-blue-400'}`} />
+                      <Activity className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin text-amber-400' : 'text-amber-400'}`} />
                       <span>{isTesting ? 'Menguji...' : 'Uji Koneksi'}</span>
                     </button>
 
@@ -488,7 +488,7 @@ export function DataSourcesPage() {
           <div className="w-full max-w-md rounded-2xl border border-white/[0.12] bg-[#0c0e14] p-6 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-3.5">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center">
+                <div className="w-7 h-7 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center">
                   <KeyRound className="w-4 h-4" />
                 </div>
                 <h2 className="font-editorial text-lg font-medium text-white">
@@ -530,7 +530,7 @@ export function DataSourcesPage() {
                   }
                   value={apiKeyInput}
                   onChange={(e) => setApiKeyInput(e.target.value)}
-                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-blue-500 transition-colors shadow-xs font-mono-code"
+                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs font-mono-code"
                 />
               </div>
             </div>
@@ -565,13 +565,13 @@ export function DataSourcesPage() {
           <div className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl border border-white/[0.12] bg-[#0c0e14] p-6 space-y-4 shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-3.5 shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center">
                   <Eye className="w-4 h-4" />
                 </div>
                 <div>
                   <h2 className="font-editorial text-lg font-medium text-white flex items-center gap-2">
                     <span>Live Preview Data Riil: {previewData.provider.toUpperCase()}</span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono-code font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono-code font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
                       100% FREE LOCAL
                     </span>
                   </h2>
@@ -596,12 +596,12 @@ export function DataSourcesPage() {
                 value={previewQuery}
                 onChange={(e) => setPreviewQuery(e.target.value)}
                 placeholder="Ketik topik uji coba (misal: Makan Bergizi Gratis, Swasembada Pangan)..."
-                className="flex-1 bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-cyan-500 transition-colors shadow-xs font-mono-code"
+                className="flex-1 bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs font-mono-code"
               />
               <button
                 onClick={() => handleLivePreview(previewData.provider, previewQuery)}
                 disabled={isPreviewLoading}
-                className="px-3.5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-zinc-950 text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-zinc-950 text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
               >
                 {isPreviewLoading ? 'Mengambil...' : 'Cari Ulang'}
               </button>
@@ -621,7 +621,7 @@ export function DataSourcesPage() {
                   >
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-cyan-300 font-mono-code">{item.author_name}</span>
+                        <span className="font-semibold text-amber-300 font-mono-code">{item.author_name}</span>
                         <span className="text-[10px] text-zinc-500 font-mono-code">
                           {new Date(item.published_at).toLocaleString('id-ID', {
                             day: 'numeric',

@@ -99,7 +99,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex font-sans-ui relative bg-[#08090d] text-[#f4f5f8] selection:bg-cyan-500/20 selection:text-cyan-200">
+    <div className="min-h-screen flex font-sans-ui relative bg-[#08090d] text-[#f4f5f8] selection:bg-amber-500/20 selection:text-amber-200">
       {/* High-Visibility Ambient Telemetry Backdrop (Gambar 3) */}
       <div
         className="fixed top-0 left-0 right-0 h-[720px] pointer-events-none z-0 opacity-60 mix-blend-screen bg-cover bg-top bg-no-repeat transition-opacity duration-700"

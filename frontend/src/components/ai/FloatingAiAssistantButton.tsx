@@ -21,8 +21,8 @@ export function FloatingAiAssistantButton({ onClick, isOpen = false }: FloatingA
           isHovered ? 'opacity-100 scale-100 translate-x-0' : 'opacity-0 scale-95 translate-x-2 pointer-events-none'
         }`}
       >
-        <div className="px-3.5 py-1.5 rounded-full bg-zinc-900/95 border border-cyan-500/30 text-xs font-semibold text-cyan-200 shadow-xl shadow-cyan-950/50 backdrop-blur-md flex items-center gap-2 whitespace-nowrap">
-          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+        <div className="px-3.5 py-1.5 rounded-full bg-[#0e1117]/95 border border-amber-500/35 text-xs font-semibold text-amber-200 shadow-lg shadow-black/60 backdrop-blur-md flex items-center gap-2 whitespace-nowrap">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
           <span>Tanya Asisten AI Intelijen</span>
         </div>
       </div>
@@ -33,25 +33,25 @@ export function FloatingAiAssistantButton({ onClick, isOpen = false }: FloatingA
         onClick={onClick}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-tr from-cyan-600 via-blue-600 to-indigo-600 text-white shadow-[0_0_25px_rgba(6,182,212,0.45)] hover:shadow-[0_0_35px_rgba(6,182,212,0.7)] hover:scale-105 active:scale-95 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-[#08090d] cursor-pointer"
+        className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-tr from-amber-500 via-amber-400 to-zinc-200 text-zinc-950 shadow-[0_4px_20px_rgba(212,175,55,0.28)] hover:shadow-[0_6px_26px_rgba(212,175,55,0.45)] hover:scale-105 active:scale-95 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-[#08090d] cursor-pointer"
         aria-label="Buka Asisten AI TRINETRA"
       >
-        {/* Animated glowing backdrop ring */}
-        <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 opacity-60 blur-md group-hover:opacity-100 transition duration-500 group-hover:duration-200 animate-pulse" />
+        {/* Subtle metallic gold halo ring */}
+        <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-amber-500/50 via-zinc-300/30 to-amber-600/50 opacity-45 blur-sm group-hover:opacity-80 transition duration-500 group-hover:duration-200" />
 
-        {/* Inner button surface */}
-        <div className="relative flex items-center justify-center w-full h-full rounded-full bg-[#0a0f1d] border border-cyan-400/40 group-hover:border-cyan-300 transition-colors overflow-hidden">
-          {/* Subtle gradient sheen */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/20 via-transparent to-blue-500/30 opacity-70 group-hover:opacity-100 transition-opacity" />
+        {/* Inner obsidian surface */}
+        <div className="relative flex items-center justify-center w-full h-full rounded-full bg-[#0e1117] border border-amber-400/50 group-hover:border-amber-300 transition-colors overflow-hidden">
+          {/* Subtle gold sheen */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/15 via-transparent to-zinc-200/10 opacity-70 group-hover:opacity-100 transition-opacity" />
 
           {/* Icon */}
           <div className="relative flex items-center justify-center">
-            <Bot className="w-6 h-6 text-cyan-300 group-hover:scale-110 transition-transform duration-300" />
-            <Sparkles className="w-3.5 h-3.5 text-amber-300 absolute -top-1.5 -right-1.5 animate-spin transition-transform duration-1000" style={{ animationDuration: '6s' }} />
+            <Bot className="w-6 h-6 text-amber-300 group-hover:scale-110 transition-transform duration-300" />
+            <Sparkles className="w-3.5 h-3.5 text-zinc-100 absolute -top-1.5 -right-1.5 animate-spin transition-transform duration-1000" style={{ animationDuration: '6s' }} />
           </div>
 
           {/* Active status pip */}
-          <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-[#0a0f1d] shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+          <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-[#0e1117] shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
         </div>
       </button>
     </div>

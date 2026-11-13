@@ -63,7 +63,7 @@ export function MentionInspectorDrawer({ mention, onClose, onAskAi }: MentionIns
           {/* Header */}
           <div className="p-5 border-b border-white/[0.08] flex items-center justify-between bg-[#0e1117]/80 sticky top-0 z-10 backdrop-blur-md">
             <div>
-              <div className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-blue-400">Inspeksi Sebutan</div>
+              <div className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-amber-400">Inspeksi Sebutan</div>
               <h2 className="text-sm font-semibold text-white flex items-center gap-2">
                 <span>Rincian Bukti Percakapan</span>
                 <span className="text-xs text-zinc-400 font-mono-code font-medium">#{mention.id}</span>
@@ -285,9 +285,9 @@ export function MentionInspectorDrawer({ mention, onClose, onAskAi }: MentionIns
             <button
               type="button"
               onClick={() => onAskAi(mention)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold text-xs transition-all shadow-md shadow-cyan-500/20 cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-zinc-950 font-bold text-xs transition-all shadow-sm cursor-pointer"
             >
-              <Sparkles className="w-4 h-4 text-cyan-200" />
+              <Sparkles className="w-4 h-4 text-zinc-950" />
               <span>Tanyakan ke AI / Analisis Isu Ini</span>
             </button>
           )}

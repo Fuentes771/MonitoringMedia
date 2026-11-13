@@ -168,7 +168,7 @@ export function AiIntelligenceDrawer({
         {/* Drawer Header */}
         <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-[#10131e]">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-400 via-amber-500 to-amber-600 flex items-center justify-center text-zinc-950 shadow-sm shadow-amber-500/20">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
@@ -209,13 +209,13 @@ export function AiIntelligenceDrawer({
         {/* Filter Bar: Focused Program */}
         <div className="px-5 py-2.5 bg-[#08090d] border-b border-white/[0.06] flex items-center justify-between text-xs">
           <div className="flex items-center gap-2 text-zinc-400">
-            <ShieldCheck className="w-4 h-4 text-cyan-400 shrink-0" />
+            <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
             <span className="font-medium text-zinc-300">Fokus Program:</span>
           </div>
           <select
             value={activeTopicId || ''}
             onChange={(e) => setActiveTopicId(e.target.value ? Number(e.target.value) : undefined)}
-            className="bg-[#141724] border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white max-w-[280px] focus:outline-none focus:border-cyan-500 truncate"
+            className="bg-[#12151c] border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white max-w-[280px] focus:outline-none focus:border-amber-400/60 truncate"
           >
             <option value="">Semua 17 Program Prioritas</option>
             {topics.map(t => (
@@ -229,8 +229,8 @@ export function AiIntelligenceDrawer({
         {/* Curated Executive Strategic Presets (1-Klik) */}
         <div className="px-5 py-3 bg-[#0c0e17] border-b border-white/[0.08] space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[10.5px] font-mono-code font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="text-[10.5px] font-mono-code font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
               <span>Executive Strategic Toolkit (1-Klik)</span>
             </span>
             <span className="text-[10px] text-zinc-400 font-mono-code">AI SYNTHESIS</span>
@@ -240,10 +240,10 @@ export function AiIntelligenceDrawer({
               type="button"
               onClick={() => handleSend("Sajikan Executive 24h SitRep (Rangkuman 24 Jam) mengenai dinamika persepsi publik, isu terhangat, dan sentimen 17 program prioritas.")}
               disabled={isSubmitting}
-              className="p-2.5 rounded-xl bg-gradient-to-br from-blue-900/30 to-blue-950/40 border border-blue-500/30 hover:border-blue-400/60 text-left transition-all group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2.5 rounded-xl bg-gradient-to-br from-amber-950/30 to-zinc-900/50 border border-amber-500/30 hover:border-amber-400/55 text-left transition-all group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-300 group-hover:text-blue-200">
-                <FileText className="w-3.5 h-3.5 shrink-0 text-blue-400" />
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-300 group-hover:text-amber-200">
+                <FileText className="w-3.5 h-3.5 shrink-0 text-amber-400" />
                 <span className="truncate">Executive SitRep</span>
               </div>
               <p className="text-[10px] text-zinc-400 mt-1 line-clamp-1 leading-tight">
@@ -291,14 +291,14 @@ export function AiIntelligenceDrawer({
               className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {msg.role === 'assistant' && (
-                <div className="w-7 h-7 rounded-lg bg-cyan-600/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0 mt-0.5">
+                <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
                   <Bot className="w-4 h-4" />
                 </div>
               )}
 
               <div className={`max-w-[90%] rounded-2xl p-4 shadow-sm ${
                 msg.role === 'user'
-                  ? 'bg-blue-600 text-white rounded-br-none text-[13.5px]'
+                  ? 'bg-amber-500/15 border border-amber-500/35 text-amber-50 rounded-br-none text-[13.5px]'
                   : 'bg-[#121522] border border-white/10 text-zinc-100 rounded-bl-none w-full'
               }`}>
                 {msg.role === 'assistant' ? (
@@ -318,7 +318,7 @@ export function AiIntelligenceDrawer({
 
           {isSubmitting && (
             <div className="flex gap-3 justify-start items-center text-zinc-400 text-xs">
-              <div className="w-7 h-7 rounded-lg bg-cyan-600/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
                 <Loader2 className="w-4 h-4 animate-spin" />
               </div>
               <div className="bg-[#181b28] border border-white/10 rounded-2xl px-4 py-3 text-zinc-400 flex items-center gap-2">
@@ -339,7 +339,7 @@ export function AiIntelligenceDrawer({
             <button
               key={t.id}
               onClick={() => handleSend(`Bagaimana analisis sentimen publik dan perkembangan isu terkini terkait program ${t.name}?`)}
-              className="text-[11px] px-2.5 py-1 rounded-full bg-white/5 hover:bg-cyan-500/15 text-zinc-300 hover:text-cyan-200 border border-white/10 hover:border-cyan-500/30 shrink-0 transition-all font-medium cursor-pointer"
+              className="text-[11px] px-2.5 py-1 rounded-full bg-white/5 hover:bg-amber-500/15 text-zinc-300 hover:text-amber-200 border border-white/10 hover:border-amber-500/35 shrink-0 transition-all font-medium cursor-pointer"
             >
               {t.name} ({t.mentions_count})
             </button>
@@ -361,12 +361,12 @@ export function AiIntelligenceDrawer({
               onChange={(e) => setInputQuery(e.target.value)}
               placeholder="Tanyakan analisis sentimen 17 program prioritas..."
               disabled={isSubmitting}
-              className="flex-1 bg-[#1a1e2e] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 transition-colors"
+              className="flex-1 bg-[#12151c] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400/60 transition-colors"
             />
             <button
               type="submit"
               disabled={!inputQuery.trim() || isSubmitting}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium text-sm flex items-center gap-1.5 transition-all shadow-md shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-zinc-950 font-semibold text-sm flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
             >
               {isSubmitting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

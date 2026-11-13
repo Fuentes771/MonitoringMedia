@@ -156,7 +156,7 @@ export function MentionList({ mentions, isLoading }: MentionListProps) {
                   }}
                   className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white border border-white/[0.08] text-xs transition-colors cursor-pointer"
                 >
-                  <Eye className="w-3.5 h-3.5 text-blue-400" />
+                  <Eye className="w-3.5 h-3.5 text-amber-400" />
                   <span>Lihat Detail</span>
                 </button>
               </div>

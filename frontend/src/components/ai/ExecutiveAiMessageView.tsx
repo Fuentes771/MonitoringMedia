@@ -154,9 +154,9 @@ export function ExecutiveAiMessageView({ content }: ExecutiveAiMessageViewProps)
     <div className="space-y-3.5 text-zinc-100 font-sans-ui">
       {/* 1. Executive Summary Card */}
       {parsed.summary && (
-        <div className="p-3.5 rounded-xl bg-gradient-to-br from-cyan-950/30 via-[#0e1424] to-[#0a0f1d] border border-cyan-500/25 shadow-md">
-          <div className="flex items-center gap-2 mb-1.5 text-cyan-300 text-xs font-bold tracking-wide uppercase">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+        <div className="p-3.5 rounded-xl bg-gradient-to-br from-amber-950/25 via-[#12151c] to-[#0b0d12] border border-amber-500/25 shadow-sm">
+          <div className="flex items-center gap-2 mb-1.5 text-amber-300 text-xs font-bold tracking-wide uppercase">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             <span>Ringkasan Eksekutif</span>
           </div>
           <p className="text-[13px] text-zinc-200 leading-relaxed font-sans-ui">
@@ -228,14 +228,14 @@ export function ExecutiveAiMessageView({ content }: ExecutiveAiMessageViewProps)
                       : isNeg
                       ? 'bg-rose-950/25 border-rose-500/35'
                       : isPol
-                      ? 'bg-blue-950/25 border-blue-500/30'
+                      ? 'bg-amber-950/25 border-amber-500/30'
                       : 'bg-white/[0.02] border-white/10'
                   }`}
                 >
                   <div className="flex items-center gap-1.5 font-bold tracking-tight">
                     {isPos && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
                     {isNeg && <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />}
-                    {isPol && <Scale className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+                    {isPol && <Scale className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
                     {!isPos && !isNeg && !isPol && <Bookmark className="w-3.5 h-3.5 text-zinc-400 shrink-0" />}
 
                     <span
@@ -245,7 +245,7 @@ export function ExecutiveAiMessageView({ content }: ExecutiveAiMessageViewProps)
                           : isNeg
                           ? 'text-rose-300'
                           : isPol
-                          ? 'text-blue-300'
+                          ? 'text-amber-300'
                           : 'text-zinc-200'
                       }
                     >

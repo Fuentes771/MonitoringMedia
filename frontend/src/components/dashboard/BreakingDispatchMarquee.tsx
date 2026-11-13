@@ -71,7 +71,7 @@ export function BreakingDispatchMarquee({
               <button
                 type="button"
                 onClick={() => onSelectMention(item)}
-                className="truncate max-w-[340px] font-sans-ui text-zinc-200 hover:text-cyan-200 text-left cursor-pointer"
+                className="truncate max-w-[340px] font-sans-ui text-zinc-200 hover:text-amber-200 text-left cursor-pointer"
                 title="Klik untuk inspeksi rincian sebutan berita"
               >
                 {item.text}
@@ -81,7 +81,7 @@ export function BreakingDispatchMarquee({
                   type="button"
                   onClick={() => onAskAi(`Analisis kawat berita terkini: "${item.text}" dari ${extractDomain(item.source_url)}`)}
                   title="Tanyakan AI tentang kawat berita ini"
-                  className="p-1 rounded hover:bg-cyan-500/20 text-zinc-500 hover:text-cyan-300 cursor-pointer transition-colors"
+                  className="p-1 rounded hover:bg-amber-500/20 text-zinc-500 hover:text-amber-300 cursor-pointer transition-colors"
                 >
                   <Sparkles className="w-3 h-3" />
                 </button>

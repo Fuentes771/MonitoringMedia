@@ -38,7 +38,7 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-white/[0.08]">
         <div>
-          <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-blue-400 block mb-0.5">
+          <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-amber-400 block mb-0.5">
             Dinamika Telemetri
           </span>
           <h2 className="font-editorial text-xl sm:text-2xl font-medium tracking-tight text-white leading-tight">
@@ -129,8 +129,8 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
                     <stop offset="100%" stopColor="#f43f5e" stopOpacity={0.0} />
                   </linearGradient>
                   <linearGradient id="areaTot" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.0} />
+                    <stop offset="0%" stopColor="#d4af37" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#d4af37" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid vertical={false} stroke="rgba(255, 255, 255, 0.05)" strokeDasharray="3 3" />
@@ -151,7 +151,7 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
                       return (
                         <div className="bg-[#0a0c12]/95 border border-white/[0.12] p-3.5 rounded-xl shadow-2xl text-xs space-y-2 min-w-[200px] backdrop-blur-xl">
                           <div className="font-semibold text-white border-b border-white/[0.08] pb-1.5 flex items-center gap-1.5 font-mono-code text-[11px]">
-                            <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                            <Calendar className="w-3.5 h-3.5 text-amber-400" />
                             <span>{label}</span>
                           </div>
                           {payload.map((entry, idx) => (
@@ -201,7 +201,7 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
                     type="monotone"
                     dataKey="total"
                     name="Total Sebutan"
-                    stroke="#3b82f6"
+                    stroke="#d4af37"
                     strokeWidth={2.5}
                     fill="url(#areaTot)"
                   />
@@ -227,7 +227,7 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
                       return (
                         <div className="bg-[#0a0c12]/95 border border-white/[0.12] p-3.5 rounded-xl shadow-2xl text-xs space-y-2 min-w-[200px] backdrop-blur-xl">
                           <div className="font-semibold text-white border-b border-white/[0.08] pb-1.5 flex items-center gap-1.5 font-mono-code text-[11px]">
-                            <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                            <Calendar className="w-3.5 h-3.5 text-amber-400" />
                             <span>{label}</span>
                           </div>
                           {payload.map((entry, idx) => (
@@ -252,7 +252,7 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
                     <Bar dataKey="negative" name="Negatif" fill="#f43f5e" radius={[4, 4, 0, 0]} stackId="a" />
                   </>
                 ) : (
-                  <Bar dataKey="total" name="Total Sebutan" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="total" name="Total Sebutan" fill="#d4af37" radius={[4, 4, 0, 0]} />
                 )}
               </BarChart>
             )}
@@ -263,7 +263,7 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
       {/* Integrated Analytical Footnotes */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 mt-3 border-t border-white/[0.08]">
         <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] text-xs">
-          <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/25 flex items-center justify-center shrink-0">
             <TrendingUp className="w-3.5 h-3.5" />
           </div>
           <div>
@@ -323,7 +323,7 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
         </div>
 
         <div className="text-[11px] text-zinc-400 flex items-center gap-1.5 font-mono-code">
-          <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
           <span>Model: Multilingual Indobert + Slang Lexicon ID</span>
         </div>
       </div>

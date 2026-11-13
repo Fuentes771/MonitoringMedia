@@ -93,7 +93,7 @@ export function PlatformBreakdown({ platforms }: PlatformBreakdownProps) {
     <div className="bento-card p-5 sm:p-6 bg-[#0e1117] flex flex-col justify-between transition-all">
       <div>
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-blue-400 block">
+          <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-amber-400 block">
             Saluran Ingesti
           </span>
           <span className="text-xs text-zinc-400 font-mono-code">

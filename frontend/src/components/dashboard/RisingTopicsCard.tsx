@@ -64,7 +64,7 @@ export function RisingTopicsCard({ topics, onSelectTopic }: RisingTopicsCardProp
                     <span className="w-5 h-5 rounded-md bg-white/[0.06] text-zinc-300 text-[11px] font-bold flex items-center justify-center font-mono-code border border-white/[0.08]">
                       {index + 1}
                     </span>
-                    <span className="font-bold text-sm text-white group-hover:text-blue-400 transition-colors font-sans-ui">
+                    <span className="font-bold text-sm text-white group-hover:text-amber-300 transition-colors font-sans-ui">
                       {topic.name}
                     </span>
                   </div>
@@ -94,7 +94,7 @@ export function RisingTopicsCard({ topics, onSelectTopic }: RisingTopicsCardProp
                   </span>
                   <span className="text-zinc-300 group-hover:text-white flex items-center gap-1 font-semibold text-xs group-hover:translate-x-0.5 transition-transform">
                     <span>Telusuri Bukti</span>
-                    <ArrowUpRight className="w-3.5 h-3.5 text-blue-400" />
+                    <ArrowUpRight className="w-3.5 h-3.5 text-amber-400" />
                   </span>
                 </div>
               </div>

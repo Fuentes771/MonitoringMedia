@@ -11,17 +11,17 @@
 
     --border-hairline: rgba(255, 255, 255, 0.08);
     --border-medium: rgba(255, 255, 255, 0.16);
-    --border-focus: rgba(59, 130, 246, 0.6);
+    --border-focus: rgba(212, 175, 55, 0.55);
 
     --text-primary: #f4f5f8;
     --text-secondary: #9da3ae;
     --text-muted: #646b79;
     --text-micro: #474d5a;
 
-    /* Telemetry Accents */
-    --brand-primary: #3b82f6;
-    --brand-hover: #60a5fa;
-    --brand-subtle: rgba(59, 130, 246, 0.12);
+    /* Telemetry Accents - Metallic Gold */
+    --brand-primary: #d4af37;
+    --brand-hover: #e6ca65;
+    --brand-subtle: rgba(212, 175, 55, 0.12);
 
     --sentiment-pos: #10b981;
     --sentiment-pos-subtle: rgba(16, 185, 129, 0.12);

@@ -197,7 +197,7 @@ export function MentionsPage({
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center shadow-xs">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-400 flex items-center justify-center shadow-xs">
             <MessageSquareText className="w-4 h-4" />
           </div>
           <div>
@@ -231,7 +231,7 @@ export function MentionsPage({
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl pl-9 pr-9 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-blue-500 transition-colors shadow-xs"
+              className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl pl-9 pr-9 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-amber-400/50 transition-colors shadow-xs"
             />
             {search && (
               <button
@@ -333,7 +333,7 @@ export function MentionsPage({
               setTopicId(e.target.value ? Number(e.target.value) : undefined);
               setPage(1);
             }}
-            className="bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-blue-500 transition-colors shadow-xs"
+            className="bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-amber-400/50 transition-colors shadow-xs"
           >
             <option value="" className="bg-[#0e1117]">Semua Topik</option>
             {topics?.map((t) => (
@@ -350,7 +350,7 @@ export function MentionsPage({
               setProvider(e.target.value);
               setPage(1);
             }}
-            className="bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-blue-500 transition-colors shadow-xs"
+            className="bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-amber-400/50 transition-colors shadow-xs"
           >
             <option value="" className="bg-[#0e1117]">Semua Sumber</option>
             <option value="rss" className="bg-[#0e1117]">Media Berita (RSS)</option>
@@ -390,10 +390,10 @@ export function MentionsPage({
                   topicId
                 );
               }}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-600/20 hover:from-cyan-500/30 hover:to-blue-600/30 border border-cyan-500/40 text-cyan-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 ml-auto"
+              className="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-300 hover:text-amber-200 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 ml-auto"
               title="Sintesis seluruh hasil pencarian aktif ini menggunakan AI"
             >
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               <span>Sintesis Hasil ({data?.pagination.total ?? mentionsList.length})</span>
             </button>
           )}
@@ -438,7 +438,7 @@ export function MentionsPage({
                       onClick={() => setSelectedMentionId(item.id)}
                       className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
                         isSelected
-                          ? 'bg-blue-500/10 border-blue-500/40 shadow-sm'
+                          ? 'bg-amber-500/10 border-amber-500/40 shadow-sm'
                           : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05] hover:border-white/[0.14]'
                       }`}
                     >
@@ -467,7 +467,7 @@ export function MentionsPage({
                             </span>
                           )}
                           {item.metadata_json?.is_comment && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono-code bg-blue-500/15 text-blue-300 border border-blue-500/25">
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono-code bg-amber-500/15 text-amber-300 border border-amber-500/25">
                               Komentar
                             </span>
                           )}
@@ -483,7 +483,7 @@ export function MentionsPage({
                                   tId
                                 );
                               }}
-                              className="p-1 rounded hover:bg-cyan-500/20 text-zinc-500 hover:text-cyan-300 transition-colors cursor-pointer"
+                              className="p-1 rounded hover:bg-amber-500/20 text-zinc-500 hover:text-amber-300 transition-colors cursor-pointer"
                               title="Tanyakan AI tentang sebutan ini"
                             >
                               <Sparkles className="w-3 h-3" />
@@ -550,7 +550,7 @@ export function MentionsPage({
                       <span>{extractDomain(activeMention.source_url, activeMention.author_name)}</span>
                     </span>
                     {activeMention.metadata_json?.is_comment && (
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-mono-code bg-blue-500/15 text-blue-300 border border-blue-500/25">
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-mono-code bg-amber-500/15 text-amber-300 border border-amber-500/25">
                         💬 Komentar Netizen
                       </span>
                     )}
@@ -571,10 +571,10 @@ export function MentionsPage({
                             tId
                           );
                         }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-600/20 hover:from-cyan-500/30 hover:to-blue-600/30 border border-cyan-500/40 text-cyan-300 hover:text-white text-xs font-semibold transition-all shadow-xs cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-300 hover:text-amber-200 text-xs font-semibold transition-all shadow-xs cursor-pointer"
                         title="Analisis sebutan ini secara mendalam dengan AI"
                       >
-                        <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                         <span>Analisis dengan AI</span>
                       </button>
                     )}
@@ -584,7 +584,7 @@ export function MentionsPage({
                         href={activeMention.source_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs font-semibold transition-all cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.12] text-zinc-200 hover:text-white text-xs font-semibold transition-all cursor-pointer"
                       >
                         <span>Kunjungi Tautan Asli</span>
                         <ExternalLink className="w-3.5 h-3.5" />
@@ -595,7 +595,7 @@ export function MentionsPage({
 
                 {/* Full Article Headline */}
                 <div>
-                  <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-blue-400 block mb-1">
+                  <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-amber-400 block mb-1">
                     Isi &amp; Kutipan Lengkap
                   </span>
                   <h2 className="font-editorial text-xl sm:text-2xl font-medium text-white leading-relaxed">
@@ -721,7 +721,7 @@ export function MentionsPage({
                           key={i}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs font-mono-code text-zinc-200"
                         >
-                          <Hash className="w-3 h-3 text-blue-400" />
+                          <Hash className="w-3 h-3 text-amber-400" />
                           <span>{kw.keyword}</span>
                         </span>
                       ))}
@@ -739,9 +739,9 @@ export function MentionsPage({
                       {activeMention.topics.map((t) => (
                         <span
                           key={t.id}
-                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-500/10 border border-blue-500/25 text-xs font-medium text-blue-300"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/25 text-xs font-medium text-amber-300"
                         >
-                          <Tag className="w-3 h-3 text-blue-400" />
+                          <Tag className="w-3 h-3 text-amber-400" />
                           <span>{t.name}</span>
                         </span>
                       ))}

@@ -91,7 +91,7 @@ export function Sidebar({ currentTab, onSelectTab, onExportCsv, isExporting }: S
             className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-white/[0.18] hover:bg-white/[0.05] transition-all text-xs text-zinc-400 hover:text-zinc-200 group cursor-pointer shadow-xs"
           >
             <div className="flex items-center gap-2">
-              <Search className="w-3.5 h-3.5 text-zinc-400 group-hover:text-blue-400 transition-colors" />
+              <Search className="w-3.5 h-3.5 text-zinc-400 group-hover:text-amber-400 transition-colors" />
               <span className="text-[11px]">Cari sebutan / isu...</span>
             </div>
             <kbd className="px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/[0.1] text-[10px] font-mono-code text-zinc-400">
@@ -128,7 +128,7 @@ export function Sidebar({ currentTab, onSelectTab, onExportCsv, isExporting }: S
                           ? 'text-rose-400'
                           : 'text-rose-400/80'
                         : isActive
-                        ? 'text-blue-400'
+                        ? 'text-amber-400'
                         : 'text-zinc-400'
                     }`}
                   />
@@ -141,7 +141,7 @@ export function Sidebar({ currentTab, onSelectTab, onExportCsv, isExporting }: S
                     </span>
                   )}
                   {isActive && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-sm shadow-blue-400/50" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400/40" />
                   )}
                 </div>
               </button>
@@ -177,7 +177,7 @@ export function Sidebar({ currentTab, onSelectTab, onExportCsv, isExporting }: S
                           ? 'text-rose-400'
                           : 'text-rose-400/80'
                         : isActive
-                        ? 'text-blue-400'
+                        ? 'text-amber-400'
                         : 'text-zinc-400'
                     }`}
                   />
@@ -190,7 +190,7 @@ export function Sidebar({ currentTab, onSelectTab, onExportCsv, isExporting }: S
                     </span>
                   )}
                   {isActive && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-sm shadow-blue-400/50" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400/40" />
                   )}
                 </div>
               </button>
@@ -205,7 +205,7 @@ export function Sidebar({ currentTab, onSelectTab, onExportCsv, isExporting }: S
         <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2 text-xs">
           <div className="flex items-center justify-between text-[10px] font-mono-code text-zinc-400">
             <span className="flex items-center gap-1.5">
-              <Activity className="w-3 h-3 text-blue-400" />
+              <Activity className="w-3 h-3 text-amber-400" />
               <span>Status Telemetri</span>
             </span>
             <span className="text-emerald-400 font-semibold">99.8%</span>
@@ -217,7 +217,7 @@ export function Sidebar({ currentTab, onSelectTab, onExportCsv, isExporting }: S
           </div>
 
           <div className="w-full h-1 bg-white/[0.06] rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 w-[78%] rounded-full" />
+            <div className="h-full bg-gradient-to-r from-amber-400 to-emerald-500 w-[78%] rounded-full" />
           </div>
         </div>
 

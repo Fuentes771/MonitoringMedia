@@ -144,7 +144,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
       {/* Page Header */}
       <div className="border-b border-white/[0.08] pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center shadow-xs">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-400 flex items-center justify-center shadow-xs">
             <Target className="w-4 h-4" />
           </div>
           <div>
@@ -189,7 +189,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
               {topicItems.length} <span className="text-xs font-normal text-zinc-400 font-sans-ui">Entitas</span>
             </div>
           </div>
-          <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-400 flex items-center justify-center">
             <Target className="w-4 h-4" />
           </div>
         </div>
@@ -372,10 +372,10 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                       <button
                         type="button"
                         onClick={() => onNavigateToMentions(topic.id)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-xs text-blue-300 font-semibold transition-all cursor-pointer shadow-xs"
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-xs text-amber-300 font-semibold transition-all cursor-pointer shadow-xs"
                         title="Buka seluruh dokumen sebutan topik ini di Mentions Explorer"
                       >
-                        <MessageSquareText className="w-3.5 h-3.5 text-blue-400" />
+                        <MessageSquareText className="w-3.5 h-3.5 text-amber-400" />
                         <span>Sebutan</span>
                       </button>
                     )}
@@ -387,10 +387,10 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                           `Konsultasi intelijen strategis untuk program ${topic.name}: jelaskan dinamika polaritas sentimen publik, isu paling kontroversial atau apresiatif, dan saran tindak lanjut komunikasinya.`,
                           topic.id
                         )}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-cyan-500/30 bg-gradient-to-r from-cyan-500/20 to-blue-600/20 hover:from-cyan-500/30 hover:to-blue-600/30 text-xs text-cyan-200 font-semibold transition-all cursor-pointer shadow-xs"
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-amber-500/35 bg-amber-500/15 hover:bg-amber-500/25 text-xs text-amber-200 font-semibold transition-all cursor-pointer shadow-xs"
                         title="Tanyakan dan analisis topik ini langsung di Asisten AI TRINETRA"
                       >
-                        <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                         <span>Tanya AI</span>
                       </button>
                     )}
@@ -411,7 +411,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                       disabled={isSyncing}
                       className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08] text-xs text-white font-semibold transition-all disabled:opacity-50 cursor-pointer shadow-xs"
                     >
-                      <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-blue-400' : ''}`} />
+                      <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-amber-400' : ''}`} />
                       <span>{isSyncing ? 'Sinkron...' : 'Sinkron'}</span>
                     </button>
                   </div>
@@ -428,7 +428,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
           <div className="w-full max-w-lg rounded-2xl border border-white/[0.12] bg-[#0c0e14] p-6 space-y-5 shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-3.5">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center">
                   <Target className="w-4 h-4" />
                 </div>
                 <h2 className="font-editorial text-lg font-medium text-white">
@@ -454,7 +454,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                   placeholder="Contoh: Kualitas Kebijakan Publik"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-blue-500 transition-colors shadow-xs"
+                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs"
                 />
               </div>
 
@@ -467,7 +467,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                   placeholder="Catatan tujuan atau fokus pemantauan isu..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-blue-500 transition-colors shadow-xs"
+                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs"
                 />
               </div>
 
@@ -480,7 +480,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                   placeholder="Contoh: Pemerintah, kebijakan, anggaran"
                   value={includeKeywords}
                   onChange={(e) => setIncludeKeywords(e.target.value)}
-                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-blue-500 transition-colors shadow-xs"
+                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs"
                 />
               </div>
 
@@ -493,7 +493,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                   placeholder="Contoh: lowongan, karir, promo, spam"
                   value={excludeKeywords}
                   onChange={(e) => setExcludeKeywords(e.target.value)}
-                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-blue-500 transition-colors shadow-xs"
+                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs"
                 />
               </div>
 
@@ -507,7 +507,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                       type="checkbox"
                       checked={selectedProviders.includes('rss')}
                       onChange={() => toggleProvider('rss')}
-                      className="rounded border-white/[0.1] bg-white/[0.05] text-blue-500 focus:ring-0"
+                      className="rounded border-white/[0.1] bg-white/[0.05] accent-amber-400 text-amber-400 focus:ring-0"
                     />
                     <span>Media Berita (RSS)</span>
                   </label>
@@ -516,7 +516,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                       type="checkbox"
                       checked={selectedProviders.includes('youtube')}
                       onChange={() => toggleProvider('youtube')}
-                      className="rounded border-white/[0.1] bg-white/[0.05] text-blue-500 focus:ring-0"
+                      className="rounded border-white/[0.1] bg-white/[0.05] accent-amber-400 text-amber-400 focus:ring-0"
                     />
                     <span>YouTube</span>
                   </label>
@@ -525,7 +525,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                       type="checkbox"
                       checked={selectedProviders.includes('x')}
                       onChange={() => toggleProvider('x')}
-                      className="rounded border-white/[0.1] bg-white/[0.05] text-blue-500 focus:ring-0"
+                      className="rounded border-white/[0.1] bg-white/[0.05] accent-amber-400 text-amber-400 focus:ring-0"
                     />
                     <span>Twitter / X</span>
                   </label>
@@ -534,7 +534,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                       type="checkbox"
                       checked={selectedProviders.includes('tiktok')}
                       onChange={() => toggleProvider('tiktok')}
-                      className="rounded border-white/[0.1] bg-white/[0.05] text-blue-500 focus:ring-0"
+                      className="rounded border-white/[0.1] bg-white/[0.05] accent-amber-400 text-amber-400 focus:ring-0"
                     />
                     <span>TikTok</span>
                   </label>
@@ -543,7 +543,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                       type="checkbox"
                       checked={selectedProviders.includes('instagram')}
                       onChange={() => toggleProvider('instagram')}
-                      className="rounded border-white/[0.1] bg-white/[0.05] text-blue-500 focus:ring-0"
+                      className="rounded border-white/[0.1] bg-white/[0.05] accent-amber-400 text-amber-400 focus:ring-0"
                     />
                     <span>Instagram</span>
                   </label>
@@ -552,7 +552,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                       type="checkbox"
                       checked={selectedProviders.includes('facebook')}
                       onChange={() => toggleProvider('facebook')}
-                      className="rounded border-white/[0.1] bg-white/[0.05] text-blue-500 focus:ring-0"
+                      className="rounded border-white/[0.1] bg-white/[0.05] accent-amber-400 text-amber-400 focus:ring-0"
                     />
                     <span>Facebook</span>
                   </label>
@@ -589,7 +589,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
             {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-white/[0.08] pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shadow-xs">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-400 flex items-center justify-center shadow-xs">
                   <Sparkles className="w-4 h-4" />
                 </div>
                 <div>
@@ -597,7 +597,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                     <h2 className="font-editorial text-xl font-medium text-white tracking-tight">
                       Executive Intelligence Briefing
                     </h2>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono-code font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono-code font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
                       SINTESIS INTELIJEN AI
                     </span>
                   </div>
@@ -614,7 +614,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                   className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
                   title="Regenerate summary live"
                 >
-                  <RefreshCw className={`w-4 h-4 ${isSummaryLoading ? 'animate-spin text-cyan-400' : ''}`} />
+                  <RefreshCw className={`w-4 h-4 ${isSummaryLoading ? 'animate-spin text-amber-400' : ''}`} />
                 </button>
                 <button
                   onClick={() => setSummaryTopic(null)}
@@ -628,7 +628,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
             {/* Modal Body */}
             {isSummaryLoading ? (
               <div className="py-12 flex flex-col items-center justify-center gap-3 text-zinc-400 text-xs">
-                <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+                <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
                 <span>Sedang merangkum sebutan dan sentimen terkini...</span>
               </div>
             ) : summaryData ? (
@@ -654,7 +654,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
 
                 {/* Executive Overview */}
                 <div className="p-4 rounded-xl bg-[#131622] border border-white/[0.08] space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-cyan-400 font-semibold uppercase text-[11px] tracking-wider">
+                  <div className="flex items-center gap-1.5 text-amber-400 font-semibold uppercase text-[11px] tracking-wider">
                     <FileText className="w-3.5 h-3.5" />
                     <span>Ringkasan Situasi Publik</span>
                   </div>
@@ -715,7 +715,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                     <ul className="space-y-1 text-zinc-300">
                       {summaryData.strategic_recommendations.map((rec, i) => (
                         <li key={i} className="flex items-start gap-2">
-                          <span className="text-cyan-400 mt-0.5">→</span>
+                          <span className="text-amber-400 mt-0.5">→</span>
                           <span>{rec}</span>
                         </li>
                       ))}

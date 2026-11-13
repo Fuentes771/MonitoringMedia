@@ -114,18 +114,18 @@ export function ExecutiveBriefingCard({
 
       {/* Executive Daily Briefing (00:00 Kemarin s/d 09:00 WIB Hari Ini) */}
       {dailyBriefing && (
-        <div className="relative z-10 mb-6 p-5 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-blue-950/30 to-indigo-950/20 border border-cyan-500/30 shadow-xl shadow-cyan-950/30 space-y-4">
+        <div className="relative z-10 mb-6 p-5 rounded-2xl bg-gradient-to-r from-amber-950/30 via-[#12151c] to-zinc-900/40 border border-amber-500/25 shadow-lg shadow-black/40 space-y-4">
           {/* Top Row: Window Label & Quick KPIs */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+              <div className="p-2 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30">
                 <CalendarClock className="w-4 h-4" />
               </div>
               <div>
                 <span className="text-xs font-bold text-white tracking-wide uppercase">
                   Ringkasan Harian Intelijen
                 </span>
-                <span className="text-[11px] text-cyan-300 font-mono-code ml-2 px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20">
+                <span className="text-[11px] text-amber-300 font-mono-code ml-2 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
                   {dailyBriefing.window_label}
                 </span>
               </div>
@@ -133,7 +133,7 @@ export function ExecutiveBriefingCard({
 
             <div className="flex items-center gap-2">
               <span className="text-xs text-zinc-400">Total Sebutan:</span>
-              <span className="text-sm font-bold font-mono-code text-cyan-300 px-2.5 py-0.5 rounded-lg bg-cyan-400/10 border border-cyan-400/25">
+              <span className="text-sm font-bold font-mono-code text-amber-300 px-2.5 py-0.5 rounded-lg bg-amber-400/10 border border-amber-400/25">
                 {dailyBriefing.total_mentions} sebutan
               </span>
             </div>
@@ -141,9 +141,9 @@ export function ExecutiveBriefingCard({
 
           {/* AI-Generated Daily Executive Synthesis */}
           {dailyBriefing.ai_summary && (
-            <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-r from-cyan-950/40 via-blue-950/20 to-black/40 border border-cyan-500/25 relative overflow-hidden shadow-sm">
-              <div className="flex items-center gap-2 mb-1.5 text-cyan-300 text-xs font-bold tracking-wide uppercase font-mono-code">
-                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-r from-amber-950/25 via-zinc-900/50 to-black/40 border border-amber-500/20 relative overflow-hidden shadow-sm">
+              <div className="flex items-center gap-2 mb-1.5 text-amber-300 text-xs font-bold tracking-wide uppercase font-mono-code">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                 <span>Sintesis Intelijen AI (33 Jam)</span>
               </div>
               <p className="text-[12.5px] sm:text-[13px] text-zinc-200 leading-relaxed font-sans-ui">
@@ -158,7 +158,7 @@ export function ExecutiveBriefingCard({
             <div className="lg:col-span-7 p-3 rounded-xl bg-black/40 border border-white/[0.08] space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-[11px] font-semibold text-zinc-300 uppercase tracking-wider font-mono-code flex items-center gap-1.5">
-                  <Zap className="w-3.5 h-3.5 text-cyan-400" />
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
                   Kurva Aktivitas Jam-ke-Jam (33 Jam)
                 </span>
                 <span className="text-[10px] text-zinc-500 font-mono-code">
@@ -172,8 +172,8 @@ export function ExecutiveBriefingCard({
                     <AreaChart data={velocityData} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
                       <defs>
                         <linearGradient id="velocityGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.6} />
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0} />
+                          <stop offset="5%" stopColor="#d4af37" stopOpacity={0.55} />
+                          <stop offset="95%" stopColor="#d4af37" stopOpacity={0.0} />
                         </linearGradient>
                       </defs>
                       <XAxis
@@ -198,12 +198,12 @@ export function ExecutiveBriefingCard({
                           color: '#fff',
                         }}
                         formatter={(val: any) => [`${val} sebutan`, 'Volume']}
-                        labelStyle={{ color: '#38bdf8', fontWeight: 600 }}
+                        labelStyle={{ color: '#e6ca65', fontWeight: 600 }}
                       />
                       <Area
                         type="monotone"
                         dataKey="count"
-                        stroke="#22d3ee"
+                        stroke="#d4af37"
                         strokeWidth={2}
                         fillOpacity={1}
                         fill="url(#velocityGradient)"
@@ -224,7 +224,7 @@ export function ExecutiveBriefingCard({
                 <span className="text-[11px] font-semibold text-zinc-300 uppercase tracking-wider">
                   Distribusi Sentimen
                 </span>
-                <span className="text-cyan-300 text-[11px] font-bold">
+                <span className="text-amber-300 text-[11px] font-bold">
                   {dailyBriefing.pos_percent}% Positif
                 </span>
               </div>
@@ -255,10 +255,10 @@ export function ExecutiveBriefingCard({
                     key={tp.id}
                     type="button"
                     onClick={() => onAskAi?.(`Analisis mendalam persepsi publik, isu kunci, dan dinamika sentimen pada program prioritas ${tp.name}`, tp.id)}
-                    className="font-semibold text-white truncate max-w-[200px] px-2 py-0.5 rounded bg-white/5 hover:bg-cyan-500/20 border border-white/10 hover:border-cyan-500/40 text-[11px] flex items-center gap-1.5 cursor-pointer transition-colors"
+                    className="font-semibold text-white truncate max-w-[200px] px-2 py-0.5 rounded bg-white/5 hover:bg-amber-500/20 border border-white/10 hover:border-amber-500/40 text-[11px] flex items-center gap-1.5 cursor-pointer transition-colors"
                     title={`Klik untuk menganalisis ${tp.name} dengan AI`}
                   >
-                    <Sparkles className="w-3 h-3 text-cyan-400 shrink-0" />
+                    <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
                     <span className="truncate">{tp.name} ({tp.mentions})</span>
                   </button>
                 ))}
@@ -269,8 +269,8 @@ export function ExecutiveBriefingCard({
           {/* Kronologi Kejadian Nyata yang Terjadi (Factual Chronicle) */}
           {events.length > 0 && (
             <div className="pt-3 border-t border-white/10 space-y-2">
-              <div className="text-[11px] font-semibold text-cyan-300 uppercase tracking-wider font-mono-code flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-cyan-400" />
+              <div className="text-[11px] font-semibold text-amber-300 uppercase tracking-wider font-mono-code flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
                 <span>Kronologi Peristiwa Lapangan (Apa yang Terjadi Selama 33 Jam Terakhir)</span>
               </div>
 
@@ -279,11 +279,11 @@ export function ExecutiveBriefingCard({
                   <div
                     key={ev.id}
                     onClick={() => onSelectEventMention?.(ev.id)}
-                    className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-cyan-500/30 transition-all text-xs space-y-1.5 flex flex-col justify-between group cursor-pointer"
+                    className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-amber-500/30 transition-all text-xs space-y-1.5 flex flex-col justify-between group cursor-pointer"
                   >
                     <div>
                       <div className="flex items-center justify-between text-[10px] text-zinc-400 mb-1">
-                        <span className="font-mono-code text-cyan-300">{ev.time_label}</span>
+                        <span className="font-mono-code text-amber-300">{ev.time_label}</span>
                         <span className={`px-1.5 py-0.5 rounded uppercase font-bold text-[9px] ${
                           ev.sentiment === 'positive'
                             ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
@@ -299,7 +299,7 @@ export function ExecutiveBriefingCard({
                         {ev.program_name}
                       </div>
 
-                      <p className="text-[12px] text-white font-medium line-clamp-2 leading-snug group-hover:text-cyan-200 transition-colors">
+                      <p className="text-[12px] text-white font-medium line-clamp-2 leading-snug group-hover:text-amber-200 transition-colors">
                         {ev.headline}
                       </p>
                     </div>
@@ -315,9 +315,9 @@ export function ExecutiveBriefingCard({
                               onAskAi(`Analisis konteks dan dampak peristiwa: "${ev.headline}" pada program ${ev.program_name}`);
                             }}
                             title="Tanyakan AI tentang kronologi ini"
-                            className="p-1 rounded bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/20 flex items-center gap-1 text-[10px] font-mono-code cursor-pointer transition-colors"
+                            className="p-1 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/25 flex items-center gap-1 text-[10px] font-mono-code cursor-pointer transition-colors"
                           >
-                            <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
+                            <Sparkles className="w-2.5 h-2.5 text-amber-400" />
                             <span>Tanya AI</span>
                           </button>
                         )}
@@ -327,7 +327,7 @@ export function ExecutiveBriefingCard({
                             target="_blank"
                             rel="noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="text-zinc-400 hover:text-cyan-300 flex items-center gap-0.5"
+                            className="text-zinc-400 hover:text-amber-300 flex items-center gap-0.5"
                           >
                             <span>Link</span>
                             <ExternalLink className="w-2.5 h-2.5" />
@@ -406,7 +406,7 @@ export function ExecutiveBriefingCard({
             {isPositiveGrowth ? `+${changePercent}%` : `${changePercent}%`}
           </div>
           <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-400">
-            <Activity className="w-3 h-3 text-blue-400" />
+            <Activity className="w-3 h-3 text-amber-400" />
             <span className="text-[11px]">{isPositiveGrowth ? 'Eskalasi aktif' : 'Volume stabil'}</span>
           </div>
         </div>
