@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, HotIssuesRadarData, HotIssueItem } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 import {
   Flame,
   TrendingUp,
@@ -9,16 +10,14 @@ import {
   Sparkles,
   Clock,
   Plus,
-  ExternalLink,
-  Rss,
-  Video,
-  Globe,
   X,
   CheckCircle2,
   Activity,
   MessageSquareText,
   Archive,
 } from 'lucide-react';
+import { PlatformBadge } from '@/components/common/PlatformBadge';
+import { LinkVerificationBadge } from '@/components/common/LinkVerificationBadge';
 import {
   AreaChart,
   Area,
@@ -29,6 +28,8 @@ import {
 
 export function HotIssuesPage() {
   const queryClient = useQueryClient();
+  const { activeWorkspace } = useAuth();
+  const workspaceId = activeWorkspace?.id;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -38,10 +39,11 @@ export function HotIssuesPage() {
 
   // Fetch Hot Issues
   const { data: radarResponse, isLoading } = useQuery({
-    queryKey: ['hot-issues-radar'],
+    queryKey: ['hot-issues-radar', workspaceId],
+    enabled: Boolean(workspaceId),
     queryFn: async () => {
       const res = await api.get<{ data: HotIssuesRadarData }>('/hot-issues', {
-        params: { workspace_id: 1 },
+        params: { workspace_id: workspaceId },
       });
       return res.data.data;
     },
@@ -51,7 +53,7 @@ export function HotIssuesPage() {
   // Automated Discovery Scan Mutation
   const scanHotIssuesMutation = useMutation({
     mutationFn: async () => {
-      const res = await api.post('/hot-issues/scan', { workspace_id: 1 });
+      const res = await api.post('/hot-issues/scan', { workspace_id: workspaceId });
       return res.data;
     },
     onSuccess: (data: any) => {
@@ -85,7 +87,7 @@ export function HotIssuesPage() {
         .filter((k) => k.length > 0);
 
       const res = await api.post('/hot-issues', {
-        workspace_id: 1,
+        workspace_id: workspaceId,
         name,
         description,
         urgency_level: urgencyLevel,
@@ -101,44 +103,6 @@ export function HotIssuesPage() {
       setKeywords('');
     },
   });
-
-  const getPlatformIcon = (prov: string) => {
-    switch (prov.toLowerCase()) {
-      case 'rss':
-        return <Rss className="w-3.5 h-3.5 text-amber-400" />;
-      case 'youtube':
-        return <Video className="w-3.5 h-3.5 text-rose-500" />;
-      case 'x':
-      case 'twitter':
-        return (
-          <svg className="w-3.5 h-3.5 text-zinc-100" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-          </svg>
-        );
-      case 'tiktok':
-        return (
-          <svg className="w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
-          </svg>
-        );
-      case 'instagram':
-        return (
-          <svg className="w-3.5 h-3.5 text-pink-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-            <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-          </svg>
-        );
-      case 'facebook':
-        return (
-          <svg className="w-3.5 h-3.5 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.82 0-1.666.28-1.666 1.369v2.611h3.708l-.571 3.667h-3.137v7.98H9.101z" />
-          </svg>
-        );
-      default:
-        return <Globe className="w-3.5 h-3.5 text-zinc-400" />;
-    }
-  };
 
   const hotIssues = radarResponse?.hot_issues || [];
   const isSurging = radarResponse?.system_state === 'surging_detected';
@@ -433,21 +397,21 @@ export function HotIssuesPage() {
                         className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-white/[0.12] transition-colors space-y-2"
                       >
                         <div className="flex items-center justify-between text-[11px]">
-                          <div className="flex items-center gap-2">
-                            {getPlatformIcon(q.platform)}
-                            <span className="font-semibold text-zinc-200 font-mono-code truncate max-w-[150px]">
+                          <div className="flex items-center flex-wrap gap-2">
+                            <PlatformBadge
+                              provider={q.platform}
+                              size="xs"
+                              compactLabel
+                              isComment={q.is_comment}
+                            />
+                            <span className="font-semibold text-zinc-200 font-mono-code truncate max-w-[140px]">
                               {q.author}
                             </span>
-                            {q.is_comment && (
-                              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono-code bg-amber-500/15 text-amber-300 border border-amber-500/25">
-                                Komentar
-                              </span>
-                            )}
                           </div>
 
                           <div className="flex items-center gap-2 font-mono-code text-[10px]">
-                            {q.likes > 0 && (
-                              <span className="text-zinc-400">❤️ {q.likes.toLocaleString('id-ID')}</span>
+                            {q.metrics_available !== false && q.likes !== null && q.likes > 0 && (
+                              <span className="text-zinc-400 font-tabular">❤️ {q.likes.toLocaleString('id-ID')}</span>
                             )}
                             <span
                               className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
@@ -467,19 +431,16 @@ export function HotIssuesPage() {
                           &ldquo;{q.text}&rdquo;
                         </p>
 
-                        <div className="flex items-center justify-between text-[10px] text-zinc-500 font-mono-code pt-1 border-t border-white/[0.04]">
+                        <div className="flex items-center justify-between gap-2 text-[10px] text-zinc-500 font-mono-code pt-1 border-t border-white/[0.04]">
                           <span>{q.time_label}</span>
-                          {q.source_url && (
-                            <a
-                              href={q.source_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-amber-400 hover:text-amber-300 flex items-center gap-1"
-                            >
-                              <span>Tautan</span>
-                              <ExternalLink className="w-2.5 h-2.5" />
-                            </a>
-                          )}
+                          <LinkVerificationBadge
+                            provider={q.platform}
+                            sourceUrl={q.source_url}
+                            linkStatus={q.link_status}
+                            compact
+                            showActionLink
+                            actionLabel="Tautan"
+                          />
                         </div>
                       </div>
                     ))}

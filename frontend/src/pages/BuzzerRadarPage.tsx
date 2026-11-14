@@ -7,6 +7,7 @@ import {
   CopypastaCluster,
   SarcasmHighlight,
 } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -26,10 +27,11 @@ import {
   AlertTriangle,
   Users,
   MessageSquareWarning,
-  ExternalLink,
   CheckCircle2,
   Activity,
 } from 'lucide-react';
+import { PlatformBadge } from '@/components/common/PlatformBadge';
+import { LinkVerificationBadge } from '@/components/common/LinkVerificationBadge';
 
 interface BuzzerRadarPageProps {
   days: number;
@@ -38,25 +40,29 @@ interface BuzzerRadarPageProps {
 
 export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProps) {
   const queryClient = useQueryClient();
+  const { activeWorkspace } = useAuth();
+  const workspaceId = activeWorkspace?.id;
   const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
   const [scanBanner, setScanBanner] = useState<string | null>(null);
 
   // Fetch topics for filter dropdown
   const { data: topics } = useQuery({
-    queryKey: ['topics-list'],
+    queryKey: ['topics-list', workspaceId],
+    enabled: Boolean(workspaceId),
     queryFn: async () => {
-      const res = await api.get<{ data: TopicItem[] }>('/workspaces/1/topics');
+      const res = await api.get<{ data: TopicItem[] }>(`/workspaces/${workspaceId}/topics`);
       return res.data.data;
     },
   });
 
   // Fetch Buzzer & Sarcasm Radar Overview
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['buzzer-radar-overview', days, selectedTopicId],
+    queryKey: ['buzzer-radar-overview', workspaceId, days, selectedTopicId],
+    enabled: Boolean(workspaceId),
     queryFn: async () => {
       const res = await api.get<{ data: BuzzerRadarOverview }>('/buzzer-radar/overview', {
         params: {
-          workspace_id: 1,
+          workspace_id: workspaceId,
           days,
           topic_id: selectedTopicId,
         },
@@ -71,7 +77,7 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
       const res = await api.post<{ message: string; data: BuzzerRadarOverview }>(
         '/buzzer-radar/scan',
         {
-          workspace_id: 1,
+          workspace_id: workspaceId,
           days,
           topic_id: selectedTopicId,
         }
@@ -80,7 +86,7 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
     },
     onSuccess: (resData) => {
       setScanBanner(resData.message);
-      queryClient.setQueryData(['buzzer-radar-overview', days, selectedTopicId], resData.data);
+      queryClient.setQueryData(['buzzer-radar-overview', workspaceId, days, selectedTopicId], resData.data);
       queryClient.invalidateQueries({ queryKey: ['mentions-explorer'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] });
     },
@@ -393,7 +399,7 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
           <div className="flex items-center justify-between border-b border-white/[0.08] pb-3.5">
             <div>
               <span className="text-[10px] font-mono-code uppercase tracking-wider text-rose-400 block">
-                Layer 1 &amp; 3 — Deteksi Amplifikasi Seragam
+                Layer 1 &amp; 3: Deteksi Amplifikasi Seragam
               </span>
               <h3 className="text-base font-semibold text-white flex items-center gap-2">
                 <Copy className="w-4 h-4 text-rose-400" />
@@ -520,9 +526,7 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-white/[0.06] border border-white/[0.1] text-zinc-200 font-mono-code text-[10px] uppercase">
-                        {item.provider}
-                      </span>
+                      <PlatformBadge provider={item.provider} size="xs" compactLabel />
                       <span className="font-semibold text-white">{item.author_name}</span>
                       <span className="text-[11px] text-zinc-400 font-mono-code">{item.time_label}</span>
                     </div>
@@ -543,7 +547,7 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
                   </p>
 
                   {/* Sarcasm Explanation Box */}
-                  <div className="flex items-start justify-between gap-3 pt-1 text-[11px]">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-1 text-[11px]">
                     <div className="text-amber-200/90 flex items-start gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
                       <span>
@@ -551,17 +555,14 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
                       </span>
                     </div>
 
-                    {item.source_url && (
-                      <a
-                        href={item.source_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-zinc-400 hover:text-white inline-flex items-center gap-1 shrink-0"
-                      >
-                        <span>Sumber</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
+                    <LinkVerificationBadge
+                      provider={item.provider}
+                      sourceUrl={item.source_url}
+                      linkStatus={item.link_status}
+                      compact
+                      showActionLink
+                      actionLabel="Sumber"
+                    />
                   </div>
                 </div>
               ))}
@@ -575,7 +576,7 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/[0.08] pb-3.5">
           <div>
             <span className="text-[10px] font-mono-code uppercase tracking-wider text-zinc-400 block">
-              Layer 2 — Anomali Akun &amp; Frekuensi
+              Layer 2: Anomali Akun &amp; Frekuensi
             </span>
             <h3 className="text-base font-semibold text-white flex items-center gap-2">
               <Bot className="w-4 h-4 text-rose-400" />
@@ -611,9 +612,7 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
                       {acc.author_name}
                     </td>
                     <td className="py-3 px-3">
-                      <span className="px-2 py-0.5 rounded bg-white/[0.05] border border-white/[0.08] font-mono-code text-[10px] uppercase text-zinc-300">
-                        {acc.provider}
-                      </span>
+                      <PlatformBadge provider={acc.provider} size="xs" compactLabel />
                     </td>
                     <td className="py-3 px-3 font-mono-code text-zinc-200">
                       {acc.post_count} dok
@@ -648,3 +647,4 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
     </div>
   );
 }
+

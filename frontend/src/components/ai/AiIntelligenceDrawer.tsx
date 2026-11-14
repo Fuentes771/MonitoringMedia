@@ -15,6 +15,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { api, AiGatewayStatus, AiChatResponse, AiCitation, TopicItem } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 import { ExecutiveAiMessageView } from './ExecutiveAiMessageView';
 
 interface Message {
@@ -96,10 +97,14 @@ export function AiIntelligenceDrawer({
   });
 
   // Fetch Topics for the Selector
+  const { activeWorkspace } = useAuth();
+  const workspaceId = activeWorkspace?.id;
+
   const { data: topics = [] } = useQuery({
-    queryKey: ['active-topics'],
+    queryKey: ['active-topics', workspaceId],
+    enabled: Boolean(workspaceId),
     queryFn: async () => {
-      const res = await api.get<{ status: string; data: TopicItem[] }>('/workspaces/1/topics');
+      const res = await api.get<{ status: string; data: TopicItem[] }>(`/workspaces/${workspaceId}/topics`);
       return res.data.data.filter(t => t.status === 'active');
     },
   });
@@ -126,6 +131,7 @@ export function AiIntelligenceDrawer({
       }));
 
       const res = await api.post<{ status: string; data: AiChatResponse }>('/ai/chat', {
+        workspace_id: workspaceId,
         query: textToSend.trim(),
         topic_id: activeTopicId || undefined,
         conversation_history: historyPayload,

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getAuthToken } from './authStorage';
 
 export const api = axios.create({
   baseURL: '/api/v1',
@@ -7,6 +8,75 @@ export const api = axios.create({
     'Accept': 'application/json',
   },
 });
+
+type UnauthorizedHandler = () => void;
+let unauthorizedHandler: UnauthorizedHandler | null = null;
+
+export function registerUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+  unauthorizedHandler = handler;
+}
+
+api.interceptors.request.use((config) => {
+  const token = getAuthToken();
+  if (token) {
+    config.headers = config.headers ?? {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const requestUrl = String(error?.config?.url ?? '');
+    const isAuthMutation =
+      requestUrl.includes('/auth/login') || requestUrl.includes('/auth/logout');
+
+    if (status === 401 && !isAuthMutation && unauthorizedHandler) {
+      unauthorizedHandler();
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+export type WorkspaceRole = 'operator';
+
+export interface AuthUser {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export interface WorkspaceInfo {
+  id: number;
+  name: string;
+  slug: string;
+  role: WorkspaceRole;
+}
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+  remember: boolean;
+}
+
+export interface LoginResponse {
+  status: string;
+  token: string;
+  expires_at: string;
+  user: AuthUser;
+  active_workspace: WorkspaceInfo | null;
+  workspaces: WorkspaceInfo[];
+}
+
+export interface AuthMeResponse {
+  user: AuthUser;
+  active_workspace: WorkspaceInfo | null;
+  workspaces: WorkspaceInfo[];
+  token_expires_at?: string | null;
+}
 
 export interface MetaInfo {
   timezone: string;
@@ -29,19 +99,30 @@ export interface ConnectorStatus {
   capabilities?: Record<string, any>;
 }
 
+export type SocialLinkStatusType =
+  | 'verified_post'
+  | 'verified_article'
+  | 'search_fallback'
+  | 'broken_legacy'
+  | 'demo_placeholder'
+  | 'unavailable';
+
 export interface LivePreviewItem {
   id: string;
   provider: string;
   author_name: string;
-  source_url: string;
+  author_handle?: string;
+  source_url: string | null;
+  link_status?: SocialLinkStatusType;
   text: string;
   published_at: string;
+  metrics_available?: boolean;
   metrics?: {
-    likes?: number;
-    shares?: number;
-    comments?: number;
-    views?: number;
-  };
+    likes?: number | null;
+    shares?: number | null;
+    comments?: number | null;
+    views?: number | null;
+  } | null;
   source?: string;
 }
 
@@ -52,6 +133,10 @@ export interface LivePreviewResponse {
   latency_ms: number;
   engine: string;
   count: number;
+  verified_count?: number;
+  fallback_count?: number;
+  engine_status?: string;
+  status_message?: string;
   items: LivePreviewItem[];
 }
 
@@ -71,6 +156,8 @@ export interface ChronologicalEvent {
   sentiment: 'positive' | 'neutral' | 'negative' | 'unknown';
   source: string;
   url: string | null;
+  provider?: string;
+  link_status?: SocialLinkStatusType;
 }
 
 export interface HourlyVelocityPoint {
@@ -135,6 +222,7 @@ export interface MentionItem {
   provider: string;
   external_id: string;
   source_url: string | null;
+  link_status?: SocialLinkStatusType;
   author_name: string | null;
   published_at: string;
   text: string;
@@ -147,8 +235,13 @@ export interface MentionItem {
   metadata_json?: {
     is_comment?: boolean;
     parent_external_id?: string;
-    likes?: number;
-    metrics?: Record<string, any>;
+    likes?: number | null;
+    metrics?: Record<string, any> | null;
+    metrics_available?: boolean;
+    link_status?: SocialLinkStatusType;
+    link_checked_at?: string;
+    link_reason?: string | null;
+    author_handle?: string;
     sarcasm_analysis?: {
       is_sarcasm: boolean;
       sarcasm_score: number;
@@ -266,9 +359,11 @@ export interface HotIssueQuote {
   platform: string;
   author: string;
   source_url: string | null;
+  link_status?: SocialLinkStatusType;
   text: string;
   sentiment: 'positive' | 'neutral' | 'negative';
-  likes: number;
+  likes: number | null;
+  metrics_available?: boolean;
   is_comment: boolean;
   time_label: string;
 }
@@ -337,6 +432,7 @@ export interface SarcasmHighlight {
   author_name: string;
   text: string;
   source_url: string | null;
+  link_status?: SocialLinkStatusType;
   published_at?: string;
   time_label: string;
   sentiment: 'positive' | 'neutral' | 'negative' | 'unknown';

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ConnectorStatus, LivePreviewResponse } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 import {
   Radio,
   Rss,
@@ -15,11 +16,14 @@ import {
   Cpu,
   Database,
   Eye,
-  ExternalLink,
 } from 'lucide-react';
+import { PlatformBadge, SocialEngagementBar } from '@/components/common/PlatformBadge';
+import { LinkVerificationBadge } from '@/components/common/LinkVerificationBadge';
 
 export function DataSourcesPage() {
   const queryClient = useQueryClient();
+  const { activeWorkspace } = useAuth();
+  const workspaceId = activeWorkspace?.id;
   const [activeModalProvider, setActiveModalProvider] = useState<string | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [testingProvider, setTestingProvider] = useState<string | null>(null);
@@ -35,13 +39,25 @@ export function DataSourcesPage() {
   const [activePreviewProvider, setActivePreviewProvider] = useState<string | null>(null);
   const [previewQuery, setPreviewQuery] = useState('Makan Bergizi Gratis');
 
+  // Escape closes modals cleanly (Antislop R-32)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (previewData) setPreviewData(null);
+        else if (activeModalProvider) setActiveModalProvider(null);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [previewData, activeModalProvider]);
+
   const handleLivePreview = async (provider: string, customQuery?: string) => {
     setActivePreviewProvider(provider);
     setIsPreviewLoading(true);
     const targetQuery = customQuery || previewQuery || 'Makan Bergizi Gratis';
     try {
       const res = await api.post<LivePreviewResponse>(`/connectors/${provider}/live-preview`, {
-        workspace_id: 1,
+        workspace_id: workspaceId,
         query: targetQuery,
       });
       setPreviewData(res.data);
@@ -58,10 +74,11 @@ export function DataSourcesPage() {
 
   // Fetch Connectors
   const { data: connectors, isLoading } = useQuery({
-    queryKey: ['connectors-list'],
+    queryKey: ['connectors-list', workspaceId],
+    enabled: Boolean(workspaceId),
     queryFn: async () => {
       const res = await api.get<{ data: ConnectorStatus[] }>('/connectors', {
-        params: { workspace_id: 1 },
+        params: { workspace_id: workspaceId },
       });
       return res.data.data;
     },
@@ -71,7 +88,7 @@ export function DataSourcesPage() {
   const saveCredentialsMutation = useMutation({
     mutationFn: async ({ provider, apiKey }: { provider: string; apiKey: string }) => {
       const res = await api.post(`/connectors/${provider}/credentials`, {
-        workspace_id: 1,
+        workspace_id: workspaceId,
         api_key: apiKey,
       });
       return res.data;
@@ -95,7 +112,7 @@ export function DataSourcesPage() {
     setTestingProvider(provider);
     const start = performance.now();
     try {
-      const res = await api.post(`/connectors/${provider}/test`, { workspace_id: 1 });
+      const res = await api.post(`/connectors/${provider}/test`, { workspace_id: workspaceId });
       const duration = Math.round(performance.now() - start);
       setTestResult({
         provider,
@@ -126,10 +143,10 @@ export function DataSourcesPage() {
         };
       case 'youtube':
         return {
-          title: 'YouTube Data API v3',
-          desc: 'Pencarian video publik, metadata deskripsi, dan statistik engagement resmi melalui Google Developers API.',
+          title: 'YouTube Data API v3 & Public Stream',
+          desc: 'Pencarian video publik, metadata channel, dan komentar netizen. Menggunakan YouTube Data API v3 jika kunci dipasang, atau ekstraksi publik otomatis tanpa biaya.',
           icon: <Video className="w-5 h-5 text-rose-500" />,
-          sources: ['YouTube Search Endpoint', 'Video Metadata', 'Comments Public Stream'],
+          sources: ['YouTube Search Endpoint', 'Video Metadata (API / Publik)', 'Comments Public Stream'],
         };
       case 'x':
       case 'twitter':
@@ -380,12 +397,12 @@ export function DataSourcesPage() {
                         </span>
                         {conn.has_local_engine && (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-mono-code font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                            LOKAL AKTIF (100% FREE)
+                            EKSTRAKSI PUBLIK GRATIS
                           </span>
                         )}
                         {conn.has_rapidapi && (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-mono-code font-bold bg-white/[0.06] text-zinc-300 border border-white/[0.15]">
-                            RAPIDAPI (CADANGAN)
+                            RAPIDAPI AKTIF
                           </span>
                         )}
                       </div>
@@ -397,8 +414,9 @@ export function DataSourcesPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-                    {['x', 'tiktok', 'instagram', 'facebook'].includes(conn.provider) && (
+                    {['x', 'tiktok', 'instagram', 'facebook', 'youtube'].includes(conn.provider) && (
                       <button
+                        type="button"
                         onClick={() => handleLivePreview(conn.provider)}
                         disabled={isPreviewLoading}
                         className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-xs text-amber-300 hover:text-amber-200 transition-all font-semibold shadow-xs cursor-pointer disabled:opacity-50"
@@ -409,6 +427,7 @@ export function DataSourcesPage() {
                     )}
 
                     <button
+                      type="button"
                       onClick={() => testConnection(conn.provider)}
                       disabled={isTesting}
                       className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08] text-xs text-zinc-200 hover:text-white transition-all font-semibold shadow-xs cursor-pointer disabled:opacity-50"
@@ -419,6 +438,7 @@ export function DataSourcesPage() {
 
                     {conn.provider === 'youtube' && (
                       <button
+                        type="button"
                         onClick={() => setActiveModalProvider(conn.provider)}
                         className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-bold transition-all shadow-xs cursor-pointer"
                       >
@@ -465,7 +485,7 @@ export function DataSourcesPage() {
                   <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
                     <span className="text-[10px] text-zinc-400 block mb-1">Metode Pengumpulan</span>
                     <span className="font-semibold text-white text-xs">
-                      {conn.provider === 'rss' ? 'RSS/Atom Feeds' : 'REST API v3'}
+                      {conn.provider === 'rss' ? 'RSS/Atom Feeds' : 'API Resmi + Verifikasi Publik'}
                     </span>
                   </div>
 
@@ -569,18 +589,32 @@ export function DataSourcesPage() {
                   <Eye className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="font-editorial text-lg font-medium text-white flex items-center gap-2">
-                    <span>Live Preview Data Riil: {previewData.provider.toUpperCase()}</span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono-code font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                      100% FREE LOCAL
+                  <h2 className="font-editorial text-lg font-medium text-white flex items-center flex-wrap gap-2">
+                    <span>Live Preview:</span>
+                    <PlatformBadge provider={previewData.provider} size="sm" />
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono-code font-bold border ${
+                        previewData.engine_status === 'ok'
+                          ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                          : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                      }`}
+                    >
+                      {previewData.engine_status === 'ok'
+                        ? 'PENARIKAN REAL-TIME'
+                        : previewData.engine_status === 'rate_limited'
+                        ? 'LIMIT PENCARIAN'
+                        : previewData.engine_status === 'fallback_only'
+                        ? 'PERLU VERIFIKASI'
+                        : 'VERIFIKASI TERBATAS'}
                     </span>
                   </h2>
-                  <p className="text-[11px] text-zinc-400 font-mono-code">
-                    Latensi: {previewData.latency_ms}ms | Ditemukan: {previewData.count} data | Mesin: {previewData.engine}
+                  <p className="text-[11px] text-zinc-400 font-mono-code mt-0.5 font-tabular">
+                    Latensi: {previewData.latency_ms}ms | Total: {previewData.count} item | Terverifikasi: {previewData.verified_count ?? 0} | Perlu Verifikasi: {previewData.fallback_count ?? 0}
                   </p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setPreviewData(null)}
                 className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
                 aria-label="Tutup jendela preview"
@@ -588,6 +622,18 @@ export function DataSourcesPage() {
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {previewData.status_message && (
+              <div
+                className={`p-3 rounded-xl border text-xs font-sans-ui shrink-0 ${
+                  previewData.engine_status && previewData.engine_status !== 'ok'
+                    ? 'bg-amber-500/10 border-amber-500/25 text-amber-200'
+                    : 'bg-white/[0.03] border-white/[0.08] text-zinc-300'
+                }`}
+              >
+                {previewData.status_message}
+              </div>
+            )}
 
             {/* Keyword tester input */}
             <div className="flex items-center gap-2 shrink-0">
@@ -599,6 +645,7 @@ export function DataSourcesPage() {
                 className="flex-1 bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs font-mono-code"
               />
               <button
+                type="button"
                 onClick={() => handleLivePreview(previewData.provider, previewQuery)}
                 disabled={isPreviewLoading}
                 className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-zinc-950 text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
@@ -610,19 +657,30 @@ export function DataSourcesPage() {
             {/* Scraped Items List */}
             <div className="flex-1 overflow-y-auto space-y-3 pr-1">
               {previewData.items.length === 0 ? (
-                <div className="py-12 text-center text-zinc-500 text-xs font-mono-code">
-                  Tidak ada data postingan ditemukan untuk kata kunci ini.
+                <div className="py-12 text-center text-zinc-400 text-xs font-mono-code space-y-2">
+                  <div>Tidak ada postingan terverifikasi ditemukan untuk kata kunci ini secara lokal.</div>
+                  <div className="text-zinc-500 text-[11px]">
+                    Sistem tidak lagi membuat tautan palsu. Coba kata kunci lebih spesifik atau pasang kunci API resmi/RapidAPI.
+                  </div>
                 </div>
               ) : (
                 previewData.items.map((item, idx) => (
                   <div
-                    key={idx}
-                    className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.12] transition-all space-y-2"
+                    key={item.id || idx}
+                    className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.12] transition-all space-y-2.5"
                   >
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-amber-300 font-mono-code">{item.author_name}</span>
-                        <span className="text-[10px] text-zinc-500 font-mono-code">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center flex-wrap gap-2">
+                        <span className="font-semibold text-amber-300 font-mono-code">
+                          {item.author_name}
+                        </span>
+                        {item.author_handle &&
+                          !item.author_name.toLowerCase().includes(item.author_handle.toLowerCase()) && (
+                            <span className="text-[11px] text-zinc-400 font-mono-code">
+                              {item.author_handle}
+                            </span>
+                          )}
+                        <span className="text-[10px] text-zinc-500 font-mono-code font-tabular">
                           {new Date(item.published_at).toLocaleString('id-ID', {
                             day: 'numeric',
                             month: 'short',
@@ -631,29 +689,28 @@ export function DataSourcesPage() {
                           })}
                         </span>
                       </div>
-                      {item.source_url && (
-                        <a
-                          href={item.source_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-white transition-colors"
-                        >
-                          <span>Buka Asli</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
+                      <LinkVerificationBadge
+                        provider={item.provider || previewData.provider}
+                        sourceUrl={item.source_url}
+                        linkStatus={item.link_status}
+                        fallbackQuery={previewData.query}
+                        showCopyButton
+                        showActionLink
+                      />
                     </div>
 
                     <p className="text-xs text-zinc-200 leading-relaxed font-sans-ui">{item.text}</p>
 
-                    {item.metrics && (
-                      <div className="flex items-center gap-4 text-[11px] text-zinc-400 font-mono-code pt-1 border-t border-white/[0.04]">
-                        {item.metrics.likes !== undefined && <span>❤️ {item.metrics.likes.toLocaleString()} Suka</span>}
-                        {item.metrics.comments !== undefined && <span>💬 {item.metrics.comments.toLocaleString()} Komentar</span>}
-                        {item.metrics.shares !== undefined && <span>🔁 {item.metrics.shares.toLocaleString()} Bagikan</span>}
-                        {item.metrics.views !== undefined && <span>👁️ {item.metrics.views.toLocaleString()} Tayangan</span>}
-                      </div>
-                    )}
+                    <div className="pt-1.5 border-t border-white/[0.04] flex items-center justify-between gap-2">
+                      <SocialEngagementBar
+                        metrics={item.metrics}
+                        metricsAvailable={item.metrics_available}
+                        showUnavailableHint
+                      />
+                      {item.source && (
+                        <span className="text-[10px] text-zinc-500 font-mono-code">{item.source}</span>
+                      )}
+                    </div>
                   </div>
                 ))
               )}
@@ -661,9 +718,10 @@ export function DataSourcesPage() {
 
             <div className="pt-3 border-t border-white/[0.08] flex items-center justify-between shrink-0 text-xs">
               <span className="text-zinc-500 text-[11px] font-mono-code">
-                Data ditarik secara real-time melalui mesin ekstraksi lokal Python.
+                Mesin: {previewData.engine} | Tautan melewati validasi kanonik server.
               </span>
               <button
+                type="button"
                 onClick={() => setPreviewData(null)}
                 className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-white text-xs font-semibold transition-colors cursor-pointer"
               >

@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { ExternalLink, Rss, Video, Globe, Calendar, Tag, Eye, MessageSquare } from 'lucide-react';
+import { Calendar, Tag, Eye, MessageSquare } from 'lucide-react';
 import { MentionItem } from '@/lib/api';
 import { MentionInspectorDrawer } from './MentionInspectorDrawer';
+import { PlatformBadge, SocialEngagementBar } from '@/components/common/PlatformBadge';
+import { LinkVerificationBadge } from '@/components/common/LinkVerificationBadge';
 
 interface MentionListProps {
   mentions: MentionItem[];
@@ -10,17 +12,6 @@ interface MentionListProps {
 
 export function MentionList({ mentions, isLoading }: MentionListProps) {
   const [selectedMention, setSelectedMention] = useState<MentionItem | null>(null);
-
-  const getPlatformIcon = (provider: string) => {
-    switch (provider.toLowerCase()) {
-      case 'rss':
-        return <Rss className="w-3.5 h-3.5 text-amber-400" />;
-      case 'youtube':
-        return <Video className="w-3.5 h-3.5 text-rose-500" />;
-      default:
-        return <Globe className="w-3.5 h-3.5 text-zinc-400" />;
-    }
-  };
 
   const getSentimentBadge = (label?: string, confidence?: number) => {
     const confStr = confidence ? `${Math.round(confidence * 100)}%` : '';
@@ -105,10 +96,11 @@ export function MentionList({ mentions, isLoading }: MentionListProps) {
             {/* Header Telemetry Row */}
             <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
               <div className="flex items-center flex-wrap gap-2.5">
-                <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-zinc-300 font-medium text-[11px] font-mono-code">
-                  {getPlatformIcon(item.provider)}
-                  <span className="capitalize">{item.provider}</span>
-                </span>
+                <PlatformBadge
+                  provider={item.provider}
+                  size="xs"
+                  isComment={Boolean(item.metadata_json?.is_comment)}
+                />
 
                 {item.author_name && (
                   <span className="text-white font-semibold text-xs">
@@ -148,8 +140,9 @@ export function MentionList({ mentions, isLoading }: MentionListProps) {
                 )}
 
                 {getSentimentBadge(item.sentiment?.label, item.sentiment?.confidence)}
-                
+
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedMention(item);
@@ -169,9 +162,15 @@ export function MentionList({ mentions, isLoading }: MentionListProps) {
               </p>
             </div>
 
-            {/* Topics & Keywords Tags */}
+            {/* Topics, Keywords & Verified Link Footer */}
             <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <SocialEngagementBar
+                  metrics={item.metadata_json?.metrics}
+                  likesFallback={item.metadata_json?.likes}
+                  metricsAvailable={item.metadata_json?.metrics_available}
+                />
+
                 {item.topics && item.topics.length > 0 && (
                   <div className="flex items-center gap-1">
                     <Tag className="w-3 h-3 text-zinc-400" />
@@ -194,18 +193,15 @@ export function MentionList({ mentions, isLoading }: MentionListProps) {
                 )}
               </div>
 
-              {item.source_url && (
-                <a
-                  href={item.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="text-xs text-zinc-400 hover:text-zinc-100 flex items-center gap-1 transition-colors"
-                >
-                  <span>Buka Sumber</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
+              <LinkVerificationBadge
+                provider={item.provider}
+                sourceUrl={item.source_url}
+                linkStatus={item.link_status || item.metadata_json?.link_status}
+                isDemo={item.is_demo}
+                compact
+                showActionLink
+                stopPropagation
+              />
             </div>
           </article>
         ))}

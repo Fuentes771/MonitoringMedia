@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, AlertEventItem } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 import {
   AlertTriangle,
   ShieldAlert,
@@ -22,13 +23,16 @@ interface AlertsPageProps {
 
 export function AlertsPage({ onNavigateToMentions, onOpenAiWithQuery }: AlertsPageProps = {}) {
   const queryClient = useQueryClient();
+  const { activeWorkspace } = useAuth();
+  const workspaceId = activeWorkspace?.id;
   const [feedback, setFeedback] = useState<string | null>(null);
   const [incidentFilter, setIncidentFilter] = useState<'all' | 'active' | 'resolved'>('all');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['alerts-data'],
+    queryKey: ['alerts-data', workspaceId],
+    enabled: Boolean(workspaceId),
     queryFn: async () => {
-      const res = await api.get('/alerts', { params: { workspace_id: 1 } });
+      const res = await api.get('/alerts', { params: { workspace_id: workspaceId } });
       return res.data.data;
     },
   });

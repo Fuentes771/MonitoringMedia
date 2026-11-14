@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api, HotIssuesRadarData } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 import {
   LayoutDashboard,
   MessageSquareText,
@@ -12,6 +13,7 @@ import {
   Activity,
   Flame,
   ShieldAlert,
+  LogOut,
 } from 'lucide-react';
 
 export type NavTab = 'overview' | 'hot_issues' | 'bot_radar' | 'mentions' | 'topics' | 'alerts' | 'sources';
@@ -24,11 +26,15 @@ interface SidebarProps {
 }
 
 export function Sidebar({ currentTab, onSelectTab, onExportCsv, isExporting }: SidebarProps) {
+  const { user, activeWorkspace, workspaces, switchWorkspace, logout, isLoggingOut } = useAuth();
+  const workspaceId = activeWorkspace?.id;
+
   const { data: hotIssuesData } = useQuery({
-    queryKey: ['hot-issues-radar'],
+    queryKey: ['hot-issues-radar', workspaceId],
+    enabled: Boolean(workspaceId),
     queryFn: async () => {
       const res = await api.get<{ data: HotIssuesRadarData }>('/hot-issues', {
-        params: { workspace_id: 1 },
+        params: { workspace_id: workspaceId },
       });
       return res.data.data;
     },
@@ -240,17 +246,76 @@ export function Sidebar({ currentTab, onSelectTab, onExportCsv, isExporting }: S
           )}
         </button>
 
-        {/* Workspace & Operator Pill with Transparent Emblem */}
-        <div className="pt-2 flex items-center justify-between text-[11px] text-zinc-400 font-mono-code border-t border-white/[0.05]">
-          <div className="flex items-center gap-2">
-            <img
-              src="/brand/trinetra-logo.svg"
-              alt="TRINETRA Emblem"
-              className="w-4 h-4 object-contain filter drop-shadow-[0_0_8px_rgba(212,175,55,0.45)]"
-            />
-            <span className="text-zinc-300 font-sans-ui text-xs font-medium">Console Analis</span>
+        {/* Active Workspace, Operator Profile & Logout */}
+        <div className="pt-3 space-y-2.5 border-t border-white/[0.06]">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[10px] font-mono-code text-[#9da3ae]">
+              <span>WORKSPACE AKTIF</span>
+              {activeWorkspace?.role && (
+                <span className="uppercase px-1.5 py-0.5 rounded bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/30 font-semibold">
+                  {activeWorkspace.role}
+                </span>
+              )}
+            </div>
+
+            {workspaces.length > 1 ? (
+              <div>
+                <label htmlFor="sidebar-workspace-select" className="sr-only">
+                  Pilih workspace aktif
+                </label>
+                <select
+                  id="sidebar-workspace-select"
+                  value={activeWorkspace?.id ?? ''}
+                  onChange={(e) => switchWorkspace(Number(e.target.value))}
+                  className="w-full min-h-11 rounded-lg bg-[#141822] border border-[#5e6575] px-2.5 py-2 text-xs text-[#f4f5f8] focus:outline-none focus:border-[#d4af37]"
+                >
+                  {workspaces.map((ws) => (
+                    <option key={ws.id} value={ws.id}>
+                      {ws.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-[#f4f5f8] font-medium truncate">
+                <img
+                  src="/brand/trinetra-logo.svg"
+                  alt=""
+                  aria-hidden="true"
+                  width={16}
+                  height={16}
+                  className="w-4 h-4 object-contain shrink-0"
+                />
+                <span className="truncate">{activeWorkspace?.name ?? 'Workspace'}</span>
+              </div>
+            )}
           </div>
-          <span className="text-zinc-400 font-mono-code text-[10px]">WS-01</span>
+
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <div className="min-w-0">
+              <div className="text-xs font-semibold text-[#f4f5f8] truncate">
+                {user?.name ?? 'Operator'}
+              </div>
+              <div className="text-[11px] text-[#9da3ae] truncate">
+                {user?.email ?? ''}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void logout()}
+              disabled={isLoggingOut}
+              aria-label="Keluar dari konsol"
+              className="min-h-11 px-3 rounded-xl border border-[#5e6575] bg-white/[0.04] hover:bg-rose-500/15 hover:border-rose-400/50 text-xs font-semibold text-[#f4f5f8] hover:text-[#fda4af] flex items-center gap-1.5 shrink-0 transition-colors motion-reduce:transition-none disabled:opacity-50"
+            >
+              {isLoggingOut ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
+              )}
+              <span>{isLoggingOut ? 'Keluar...' : 'Keluar'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </aside>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, TopicItem, AiTopicSummary } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 import {
   Plus,
   RefreshCw,
@@ -17,6 +18,10 @@ import {
   FileText,
   MessageSquareText,
 } from 'lucide-react';
+import { PlatformBadge } from '@/components/common/PlatformBadge';
+
+const DEFAULT_TOPIC_PROVIDERS = ['rss', 'youtube', 'x', 'tiktok', 'instagram', 'facebook'];
+const SOCIAL_ONLY_PROVIDERS = ['youtube', 'x', 'tiktok', 'instagram', 'facebook'];
 
 interface TopicsPageProps {
   onNavigateToMentions?: (topicId: number) => void;
@@ -25,6 +30,8 @@ interface TopicsPageProps {
 
 export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPageProps = {}) {
   const queryClient = useQueryClient();
+  const { activeWorkspace } = useAuth();
+  const workspaceId = activeWorkspace?.id;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [syncingTopicId, setSyncingTopicId] = useState<number | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
@@ -39,7 +46,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
   const [description, setDescription] = useState('');
   const [includeKeywords, setIncludeKeywords] = useState('');
   const [excludeKeywords, setExcludeKeywords] = useState('');
-  const [selectedProviders, setSelectedProviders] = useState<string[]>(['rss']);
+  const [selectedProviders, setSelectedProviders] = useState<string[]>(DEFAULT_TOPIC_PROVIDERS);
 
   // Handle escape key to close modal (R-32)
   useEffect(() => {
@@ -54,9 +61,10 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
 
   // Fetch Topics
   const { data: topics, isLoading } = useQuery({
-    queryKey: ['topics-list'],
+    queryKey: ['topics-list', workspaceId],
+    enabled: Boolean(workspaceId),
     queryFn: async () => {
-      const res = await api.get<{ data: TopicItem[] }>('/workspaces/1/topics');
+      const res = await api.get<{ data: TopicItem[] }>(`/workspaces/${workspaceId}/topics`);
       return res.data.data;
     },
   });
@@ -67,7 +75,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
       const inc = includeKeywords.split(',').map((s) => s.trim()).filter(Boolean);
       const exc = excludeKeywords.split(',').map((s) => s.trim()).filter(Boolean);
 
-      const res = await api.post('/workspaces/1/topics', {
+      const res = await api.post(`/workspaces/${workspaceId}/topics`, {
         name,
         description,
         include_keywords: inc,
@@ -83,6 +91,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
       setDescription('');
       setIncludeKeywords('');
       setExcludeKeywords('');
+      setSelectedProviders(DEFAULT_TOPIC_PROVIDERS);
       setFeedbackMsg('Topik pemantauan baru berhasil dibuat dan diaktifkan.');
       setTimeout(() => setFeedbackMsg(null), 4000);
     },
@@ -363,9 +372,11 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
 
                 {/* Bottom Row: Actions */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 mt-3 border-t border-white/[0.06]">
-                  <span className="text-[10px] text-zinc-500 font-mono-code">
-                    Sumber: {topic.providers?.join(', ').toUpperCase() || 'RSS'}
-                  </span>
+                  <div className="flex items-center flex-wrap gap-1">
+                    {(topic.providers && topic.providers.length > 0 ? topic.providers : ['rss']).map((prov) => (
+                      <PlatformBadge key={prov} provider={prov} size="xs" compactLabel />
+                    ))}
+                  </div>
 
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {onNavigateToMentions && (
@@ -498,9 +509,34 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
               </div>
 
               <div>
-                <label className="block text-zinc-300 font-semibold mb-2 text-xs">
-                  Pilih Platform Sumber Data
-                </label>
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <label className="block text-zinc-300 font-semibold text-xs">
+                    Pilih Platform Sumber Data ({selectedProviders.length}/6 aktif)
+                  </label>
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono-code">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProviders(DEFAULT_TOPIC_PROVIDERS)}
+                      className="px-2 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.08] text-zinc-300 cursor-pointer transition-colors"
+                    >
+                      Semua
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProviders(SOCIAL_ONLY_PROVIDERS)}
+                      className="px-2 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.08] text-zinc-300 cursor-pointer transition-colors"
+                    >
+                      Sosial Saja
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProviders(['rss'])}
+                      className="px-2 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.08] text-zinc-300 cursor-pointer transition-colors"
+                    >
+                      Berita Saja
+                    </button>
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   <label className="flex items-center gap-2 cursor-pointer text-zinc-300 text-xs p-2 rounded-lg bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.05]">
                     <input
@@ -570,7 +606,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
               </button>
               <button
                 type="button"
-                disabled={!name.trim() || !includeKeywords.trim() || createTopicMutation.isPending}
+                disabled={!name.trim() || !includeKeywords.trim() || selectedProviders.length === 0 || createTopicMutation.isPending}
                 onClick={() => createTopicMutation.mutate()}
                 className="px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-bold disabled:opacity-50 transition-colors shadow-xs cursor-pointer"
               >

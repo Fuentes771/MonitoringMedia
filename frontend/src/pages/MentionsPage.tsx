@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api, MentionItem, TopicItem } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 import {
   Search,
   ChevronLeft,
@@ -9,15 +10,20 @@ import {
   MessageSquareText,
   ExternalLink,
   Calendar,
-  Rss,
-  Video,
-  Globe,
   Tag,
   Hash,
   ShieldCheck,
   RotateCcw,
   Sparkles,
 } from 'lucide-react';
+import {
+  PlatformBadge,
+  SocialEngagementBar,
+  getPlatformMeta,
+  isSocialProvider,
+} from '@/components/common/PlatformBadge';
+import { LinkVerificationBadge } from '@/components/common/LinkVerificationBadge';
+import { inspectSocialLink } from '@/utils/socialLink';
 
 interface MentionsPageProps {
   initialKeyword?: string;
@@ -37,6 +43,8 @@ export function MentionsPage({
   const [search, setSearch] = useState(initialKeyword || '');
   const [topicId, setTopicId] = useState<number | undefined>(initialTopicId);
   const [provider, setProvider] = useState<string>('');
+  const [interactionType, setInteractionType] = useState<string>('');
+  const [linkStatus, setLinkStatus] = useState<string>('');
   const [sentiment, setSentiment] = useState<string>(initialSentiment || '');
   const [onlySarcasm, setOnlySarcasm] = useState<boolean>(false);
   const [onlyInauthentic, setOnlyInauthentic] = useState<boolean>(false);
@@ -50,28 +58,48 @@ export function MentionsPage({
     if (initialSentiment !== undefined) setSentiment(initialSentiment);
   }, [initialTopicId, initialKeyword, initialSentiment]);
 
+  const { activeWorkspace } = useAuth();
+  const workspaceId = activeWorkspace?.id;
+
   // Fetch topics for filter dropdown
   const { data: topics } = useQuery({
-    queryKey: ['topics-list'],
+    queryKey: ['topics-list', workspaceId],
+    enabled: Boolean(workspaceId),
     queryFn: async () => {
-      const res = await api.get<{ data: TopicItem[] }>('/workspaces/1/topics');
+      const res = await api.get<{ data: TopicItem[] }>(`/workspaces/${workspaceId}/topics`);
       return res.data.data;
     },
   });
 
   // Fetch mentions
   const { data, isLoading } = useQuery({
-    queryKey: ['mentions-explorer', page, topicId, provider, sentiment, search, organicOnly, onlySarcasm, onlyInauthentic],
+    queryKey: [
+      'mentions-explorer',
+      workspaceId,
+      page,
+      topicId,
+      provider,
+      interactionType,
+      linkStatus,
+      sentiment,
+      search,
+      organicOnly,
+      onlySarcasm,
+      onlyInauthentic,
+    ],
+    enabled: Boolean(workspaceId),
     queryFn: async () => {
       const res = await api.get<{
         data: MentionItem[];
         pagination: { current_page: number; last_page: number; total: number; per_page: number };
       }>('/mentions', {
         params: {
-          workspace_id: 1,
+          workspace_id: workspaceId,
           page,
           topic_id: topicId,
           provider: provider || undefined,
+          interaction_type: interactionType || undefined,
+          link_status: linkStatus || undefined,
           sentiment: sentiment || undefined,
           search: search || undefined,
           exclude_inauthentic: organicOnly || undefined,
@@ -86,65 +114,41 @@ export function MentionsPage({
 
   const mentionsList = data?.data || [];
   const activeMention = mentionsList.find((m) => m.id === selectedMentionId) || mentionsList[0] || null;
+  const activeLink = activeMention
+    ? inspectSocialLink({
+        provider: activeMention.provider,
+        sourceUrl: activeMention.source_url,
+        linkStatus: activeMention.link_status || activeMention.metadata_json?.link_status,
+        isDemo: activeMention.is_demo,
+      })
+    : null;
+  const activeIsSocial = activeMention ? isSocialProvider(activeMention.provider) : false;
 
   const clearFilters = () => {
     setSearch('');
     setTopicId(undefined);
     setProvider('');
+    setInteractionType('');
+    setLinkStatus('');
     setSentiment('');
     setOnlySarcasm(false);
     setOnlyInauthentic(false);
     setPage(1);
   };
 
-  const hasActiveFilters = Boolean(search || topicId || provider || sentiment || onlySarcasm || onlyInauthentic);
+  const hasActiveFilters = Boolean(
+    search || topicId || provider || interactionType || linkStatus || sentiment || onlySarcasm || onlyInauthentic
+  );
 
-  const getPlatformIcon = (prov: string) => {
-    switch (prov.toLowerCase()) {
-      case 'rss':
-        return <Rss className="w-3.5 h-3.5 text-amber-400" />;
-      case 'youtube':
-        return <Video className="w-3.5 h-3.5 text-rose-500" />;
-      case 'x':
-      case 'twitter':
-        return (
-          <svg className="w-3.5 h-3.5 text-zinc-100" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-          </svg>
-        );
-      case 'tiktok':
-        return (
-          <svg className="w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
-          </svg>
-        );
-      case 'instagram':
-        return (
-          <svg className="w-3.5 h-3.5 text-pink-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-            <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-          </svg>
-        );
-      case 'facebook':
-        return (
-          <svg className="w-3.5 h-3.5 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.82 0-1.666.28-1.666 1.369v2.611h3.708l-.571 3.667h-3.137v7.98H9.101z" />
-          </svg>
-        );
-      default:
-        return <Globe className="w-3.5 h-3.5 text-zinc-400" />;
-    }
-  };
-
-  const extractDomain = (url?: string | null, authorName?: string | null) => {
-    if (authorName && (authorName.startsWith('@') || authorName.length < 24)) return authorName;
-    if (!url) return authorName || 'Media Publik';
+  const extractDomain = (url?: string | null, authorName?: string | null, prov?: string | null) => {
+    if (authorName && authorName.trim()) return authorName;
+    if (prov && isSocialProvider(prov)) return getPlatformMeta(prov).label;
+    if (!url) return 'Media Publik';
     try {
       const parsed = new URL(url);
       return parsed.hostname.replace('www.', '');
     } catch {
-      return authorName || 'Media Publik';
+      return 'Media Publik';
     }
   };
 
@@ -205,14 +209,14 @@ export function MentionsPage({
               Eksplorasi Sebutan &amp; Investigasi Bukti
             </h1>
             <p className="text-xs text-zinc-400 font-sans-ui">
-              Studio pembacaan dan analisis mendalam bukti percakapan berita media nasional
+              Studio pembacaan dan analisis mendalam percakapan media sosial serta pemberitaan media nasional
             </p>
           </div>
         </div>
 
         {data?.pagination && (
           <div className="text-xs text-zinc-400 font-mono-code bg-white/[0.03] px-3 py-1.5 rounded-xl border border-white/[0.08]">
-            Total: <span className="font-bold text-white">{data.pagination.total.toLocaleString('id-ID')}</span> Dokumen
+            Total: <span className="font-bold text-white font-tabular">{data.pagination.total.toLocaleString('id-ID')}</span> Dokumen
           </div>
         )}
       </div>
@@ -225,7 +229,7 @@ export function MentionsPage({
             <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Cari kata kunci, topik, atau isi narasi berita..."
+              placeholder="Cari kata kunci, akun, atau isi opini media sosial dan berita..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -235,6 +239,7 @@ export function MentionsPage({
             />
             {search && (
               <button
+                type="button"
                 onClick={() => setSearch('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white cursor-pointer"
                 aria-label="Hapus kata kunci"
@@ -244,9 +249,55 @@ export function MentionsPage({
             )}
           </div>
 
-          {/* Quick Sentiment Lenses */}
+          {/* Quick Channel & Sentiment Lenses */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
             <button
+              type="button"
+              onClick={() => {
+                setProvider('');
+                setPage(1);
+              }}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 border ${
+                provider === ''
+                  ? 'bg-amber-400/15 border-amber-400/40 text-amber-300'
+                  : 'border-white/[0.08] text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+              }`}
+            >
+              Semua Kanal
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setProvider('social');
+                setPage(1);
+              }}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 border ${
+                provider === 'social'
+                  ? 'bg-amber-400/15 border-amber-400/40 text-amber-300'
+                  : 'border-white/[0.08] text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+              }`}
+            >
+              Media Sosial
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setProvider('rss');
+                setPage(1);
+              }}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 border ${
+                provider === 'rss'
+                  ? 'bg-amber-400/15 border-amber-400/40 text-amber-300'
+                  : 'border-white/[0.08] text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+              }`}
+            >
+              Berita RSS
+            </button>
+
+            <span className="h-4 w-px bg-white/[0.08] mx-1 shrink-0" />
+
+            <button
+              type="button"
               onClick={() => {
                 setSentiment('');
                 setPage(1);
@@ -260,6 +311,7 @@ export function MentionsPage({
               Semua Sentimen
             </button>
             <button
+              type="button"
               onClick={() => {
                 setSentiment('positive');
                 setPage(1);
@@ -273,6 +325,7 @@ export function MentionsPage({
               Positif
             </button>
             <button
+              type="button"
               onClick={() => {
                 setSentiment('neutral');
                 setPage(1);
@@ -286,6 +339,7 @@ export function MentionsPage({
               Netral
             </button>
             <button
+              type="button"
               onClick={() => {
                 setSentiment('negative');
                 setPage(1);
@@ -299,6 +353,7 @@ export function MentionsPage({
               Negatif
             </button>
             <button
+              type="button"
               onClick={() => {
                 setOnlySarcasm((prev) => !prev);
                 setPage(1);
@@ -312,6 +367,7 @@ export function MentionsPage({
               🎭 Sarkasme
             </button>
             <button
+              type="button"
               onClick={() => {
                 setOnlyInauthentic((prev) => !prev);
                 setPage(1);
@@ -328,6 +384,7 @@ export function MentionsPage({
 
           {/* Topic Select */}
           <select
+            aria-label="Filter topik"
             value={topicId || ''}
             onChange={(e) => {
               setTopicId(e.target.value ? Number(e.target.value) : undefined);
@@ -345,6 +402,7 @@ export function MentionsPage({
 
           {/* Provider Select */}
           <select
+            aria-label="Filter sumber platform"
             value={provider}
             onChange={(e) => {
               setProvider(e.target.value);
@@ -353,6 +411,7 @@ export function MentionsPage({
             className="bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-amber-400/50 transition-colors shadow-xs"
           >
             <option value="" className="bg-[#0e1117]">Semua Sumber</option>
+            <option value="social" className="bg-[#0e1117]">Semua Media Sosial</option>
             <option value="rss" className="bg-[#0e1117]">Media Berita (RSS)</option>
             <option value="youtube" className="bg-[#0e1117]">YouTube</option>
             <option value="x" className="bg-[#0e1117]">Twitter / X</option>
@@ -362,11 +421,44 @@ export function MentionsPage({
             <option value="reddit" className="bg-[#0e1117]">Reddit</option>
           </select>
 
+          {/* Interaction Type Select */}
+          <select
+            aria-label="Filter tipe interaksi"
+            value={interactionType}
+            onChange={(e) => {
+              setInteractionType(e.target.value);
+              setPage(1);
+            }}
+            className="bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-amber-400/50 transition-colors shadow-xs"
+          >
+            <option value="" className="bg-[#0e1117]">Semua Interaksi</option>
+            <option value="post" className="bg-[#0e1117]">Postingan Utama</option>
+            <option value="comment" className="bg-[#0e1117]">Komentar Netizen</option>
+          </select>
+
+          {/* Link Verification Status Select */}
+          <select
+            aria-label="Filter status tautan"
+            value={linkStatus}
+            onChange={(e) => {
+              setLinkStatus(e.target.value);
+              setPage(1);
+            }}
+            className="bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-amber-400/50 transition-colors shadow-xs"
+          >
+            <option value="" className="bg-[#0e1117]">Semua Tautan</option>
+            <option value="verified_post" className="bg-[#0e1117]">Post Terverifikasi</option>
+            <option value="verified_article" className="bg-[#0e1117]">Artikel Media</option>
+            <option value="search_fallback" className="bg-[#0e1117]">Perlu Verifikasi</option>
+          </select>
+
           {hasActiveFilters && (
             <button
+              type="button"
               onClick={clearFilters}
               className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors cursor-pointer"
               title="Reset Semua Filter"
+              aria-label="Reset semua filter"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
@@ -408,7 +500,13 @@ export function MentionsPage({
           <div className="bento-card bg-[#0e1117] overflow-hidden flex flex-col h-[760px]">
             {/* Subheader */}
             <div className="p-4 border-b border-white/[0.08] flex items-center justify-between text-xs text-zinc-400 font-mono-code">
-              <span>Arus Sebutan Berita</span>
+              <span>
+                {provider === 'social' || isSocialProvider(provider)
+                  ? 'Arus Sebutan Media Sosial'
+                  : provider === 'rss'
+                  ? 'Arus Sebutan Berita'
+                  : 'Arus Sebutan & Media Sosial'}
+              </span>
               <span>Hal. {page} dari {data?.pagination.last_page || 1}</span>
             </div>
 
@@ -443,10 +541,15 @@ export function MentionsPage({
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2 mb-1.5 text-[11px]">
-                        <div className="flex items-center gap-1.5 text-zinc-400 font-mono-code">
-                          {getPlatformIcon(item.provider)}
+                        <div className="flex items-center gap-2 min-w-0">
+                          <PlatformBadge
+                            provider={item.provider}
+                            size="xs"
+                            compactLabel
+                            isComment={Boolean(item.metadata_json?.is_comment)}
+                          />
                           <span className="font-semibold text-zinc-200 truncate max-w-[140px]">
-                            {extractDomain(item.source_url, item.author_name)}
+                            {extractDomain(item.source_url, item.author_name, item.provider)}
                           </span>
                         </div>
                         <div className="flex items-center flex-wrap gap-1.5">
@@ -466,11 +569,6 @@ export function MentionsPage({
                               🤖 BOT
                             </span>
                           )}
-                          {item.metadata_json?.is_comment && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono-code bg-amber-500/15 text-amber-300 border border-amber-500/25">
-                              Komentar
-                            </span>
-                          )}
                           {getSentimentPill(item.sentiment?.label)}
                           {onOpenAiWithQuery && (
                             <button
@@ -478,13 +576,18 @@ export function MentionsPage({
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const tId = item.topics?.[0]?.id;
+                                const srcLabel = extractDomain(item.source_url, item.author_name, item.provider);
+                                const isSoc = isSocialProvider(item.provider);
                                 onOpenAiWithQuery(
-                                  `Analisis sebutan berita: "${item.text}" dari ${extractDomain(item.source_url)}`,
+                                  isSoc
+                                    ? `Analisis opini media sosial (${getPlatformMeta(item.provider).label}): "${item.text}" dari ${srcLabel}`
+                                    : `Analisis sebutan berita: "${item.text}" dari ${srcLabel}`,
                                   tId
                                 );
                               }}
                               className="p-1 rounded hover:bg-amber-500/20 text-zinc-500 hover:text-amber-300 transition-colors cursor-pointer"
                               title="Tanyakan AI tentang sebutan ini"
+                              aria-label="Analisis dengan AI"
                             >
                               <Sparkles className="w-3 h-3" />
                             </button>
@@ -496,13 +599,29 @@ export function MentionsPage({
                         {item.text}
                       </h4>
 
-                      <div className="mt-2 flex items-center justify-between text-[10px] text-zinc-400 font-mono-code pt-1">
-                        <span>{formatTimestamp(item.published_at)}</span>
-                        {item.sentiment?.confidence && (
-                          <span className="text-zinc-400">
-                            Akurasi: {Math.round(item.sentiment.confidence * 100)}%
-                          </span>
-                        )}
+                      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-zinc-400 font-mono-code pt-1">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <span>{formatTimestamp(item.published_at)}</span>
+                          <SocialEngagementBar
+                            metrics={item.metadata_json?.metrics}
+                            likesFallback={item.metadata_json?.likes}
+                            metricsAvailable={item.metadata_json?.metrics_available}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <LinkVerificationBadge
+                            provider={item.provider}
+                            sourceUrl={item.source_url}
+                            linkStatus={item.link_status || item.metadata_json?.link_status}
+                            isDemo={item.is_demo}
+                            compact
+                          />
+                          {item.sentiment?.confidence && (
+                            <span className="text-zinc-400 font-tabular">
+                              {Math.round(item.sentiment.confidence * 100)}%
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -514,9 +633,10 @@ export function MentionsPage({
             {data?.pagination && data.pagination.last_page > 1 && (
               <div className="p-3 border-t border-white/[0.08] flex items-center justify-between text-xs font-mono-code">
                 <button
+                  type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.08] text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1"
+                  className="px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.08] text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                   <span>Sebelumnya</span>
@@ -525,9 +645,10 @@ export function MentionsPage({
                   Hal. {page} dari {data.pagination.last_page}
                 </span>
                 <button
+                  type="button"
                   onClick={() => setPage((p) => Math.min(data.pagination.last_page, p + 1))}
                   disabled={page >= data.pagination.last_page}
-                  className="px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.08] text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1"
+                  className="px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.08] text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
                 >
                   <span>Selanjutnya</span>
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -544,30 +665,42 @@ export function MentionsPage({
               <div className="space-y-6">
                 {/* Meta Ribbon */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/[0.08]">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-1 rounded-lg bg-white/[0.05] border border-white/[0.08] text-white text-xs font-semibold font-mono-code flex items-center gap-1.5">
-                      {getPlatformIcon(activeMention.provider)}
-                      <span>{extractDomain(activeMention.source_url, activeMention.author_name)}</span>
+                  <div className="flex items-center flex-wrap gap-2">
+                    <PlatformBadge
+                      provider={activeMention.provider}
+                      size="sm"
+                      isComment={Boolean(activeMention.metadata_json?.is_comment)}
+                    />
+                    <span className="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs font-semibold font-mono-code">
+                      {extractDomain(activeMention.source_url, activeMention.author_name, activeMention.provider)}
                     </span>
-                    {activeMention.metadata_json?.is_comment && (
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-mono-code bg-amber-500/15 text-amber-300 border border-amber-500/25">
-                        💬 Komentar Netizen
-                      </span>
-                    )}
                     <span className="text-zinc-400 text-xs font-mono-code flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5 text-zinc-500" />
                       <span>{formatTimestamp(activeMention.published_at)}</span>
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center flex-wrap gap-2">
+                    <LinkVerificationBadge
+                      provider={activeMention.provider}
+                      sourceUrl={activeMention.source_url}
+                      linkStatus={activeMention.link_status || activeMention.metadata_json?.link_status}
+                      isDemo={activeMention.is_demo}
+                      showCopyButton
+                    />
+
                     {onOpenAiWithQuery && (
                       <button
                         type="button"
                         onClick={() => {
                           const tId = activeMention.topics?.[0]?.id;
+                          const srcLabel =
+                            activeMention.author_name ||
+                            extractDomain(activeMention.source_url, activeMention.author_name, activeMention.provider);
                           onOpenAiWithQuery(
-                            `Bedah dan analisis secara mendalam artikel/sebutan ini: "${activeMention.text}" (Sumber: ${activeMention.author_name || extractDomain(activeMention.source_url)}, Sentimen: ${activeMention.sentiment?.label || 'Netral'}). Jelaskan implikasi isu, potensi resistensi publik, dan poin kebijakan terkait.`,
+                            activeIsSocial
+                              ? `Bedah dan analisis opini media sosial (${getPlatformMeta(activeMention.provider).label}) ini: "${activeMention.text}" (Akun: ${srcLabel}, Sentimen: ${activeMention.sentiment?.label || 'Netral'}). Jelaskan konteks sentimen netizen, potensi eskalasi isu, dan respons komunikasi yang disarankan.`
+                              : `Bedah dan analisis secara mendalam artikel/sebutan ini: "${activeMention.text}" (Sumber: ${srcLabel}, Sentimen: ${activeMention.sentiment?.label || 'Netral'}). Jelaskan implikasi isu, potensi resistensi publik, dan poin kebijakan terkait.`,
                             tId
                           );
                         }}
@@ -579,28 +712,51 @@ export function MentionsPage({
                       </button>
                     )}
 
-                    {activeMention.source_url && (
+                    {activeLink?.isExternalNavigable && activeLink.href && (
                       <a
-                        href={activeMention.source_url}
+                        href={activeLink.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.12] text-zinc-200 hover:text-white text-xs font-semibold transition-all cursor-pointer"
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                          activeLink.isSearchFallback
+                            ? 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-200'
+                            : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/[0.12] text-zinc-200 hover:text-white'
+                        }`}
                       >
-                        <span>Kunjungi Tautan Asli</span>
+                        <span>
+                          {activeLink.isSearchFallback
+                            ? 'Cari di Platform'
+                            : activeIsSocial
+                            ? 'Buka Postingan Asli'
+                            : 'Kunjungi Tautan Asli'}
+                        </span>
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
                     )}
                   </div>
                 </div>
 
-                {/* Full Article Headline */}
-                <div>
-                  <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-amber-400 block mb-1">
-                    Isi &amp; Kutipan Lengkap
-                  </span>
-                  <h2 className="font-editorial text-xl sm:text-2xl font-medium text-white leading-relaxed">
-                    &ldquo;{activeMention.text}&rdquo;
-                  </h2>
+                {/* Full Article / Post Content */}
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-amber-400 block mb-1">
+                      {activeIsSocial ? 'Isi Postingan / Komentar Netizen' : 'Isi & Kutipan Lengkap'}
+                    </span>
+                    <h2 className="font-editorial text-xl sm:text-2xl font-medium text-white leading-relaxed">
+                      &ldquo;{activeMention.text}&rdquo;
+                    </h2>
+                  </div>
+
+                  {(activeIsSocial || activeMention.metadata_json?.metrics) && (
+                    <div className="pt-1 flex items-center gap-3">
+                      <SocialEngagementBar
+                        metrics={activeMention.metadata_json?.metrics}
+                        likesFallback={activeMention.metadata_json?.likes}
+                        metricsAvailable={activeMention.metadata_json?.metrics_available}
+                        showUnavailableHint={activeIsSocial}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* NLP Sentiment Verdict & Deep Probabilities */}
@@ -753,9 +909,9 @@ export function MentionsPage({
               {/* Bottom Context Badge */}
               <div className="pt-4 mt-6 border-t border-white/[0.08] flex items-center justify-between text-[11px] text-zinc-400 font-mono-code">
                 <span>Dokumen ID: #{activeMention.id}</span>
-                <span className="flex items-center gap-1 text-emerald-400">
+                <span className={`flex items-center gap-1 ${activeLink?.isVerifiedDirect ? 'text-emerald-400' : 'text-amber-300'}`}>
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Diverifikasi oleh Pipeline</span>
+                  <span>{activeLink?.isVerifiedDirect ? 'Tautan Terverifikasi' : activeLink?.reason || 'Pipeline Ingesti'}</span>
                 </span>
               </div>
             </div>

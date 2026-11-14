@@ -1,5 +1,7 @@
-import { ArrowRight, Rss, Radio, ChevronRight, Newspaper, Sparkles } from 'lucide-react';
+import { ArrowRight, Radio, ChevronRight, Newspaper, Sparkles } from 'lucide-react';
 import { MentionItem } from '@/lib/api';
+import { PlatformBadge, getPlatformMeta, isSocialProvider } from '@/components/common/PlatformBadge';
+import { LinkVerificationBadge } from '@/components/common/LinkVerificationBadge';
 
 interface LiveEvidenceRailProps {
   mentions: MentionItem[];
@@ -63,10 +65,16 @@ export function LiveEvidenceRail({
     }
   };
 
-  const extractDomain = (url?: string | null) => {
-    if (!url) return 'Media Berita';
+  const resolveSourceLabel = (item: MentionItem) => {
+    if (item.author_name && item.author_name.trim()) {
+      return item.author_name;
+    }
+    if (isSocialProvider(item.provider)) {
+      return getPlatformMeta(item.provider).shortLabel;
+    }
+    if (!item.source_url) return 'Media Berita';
     try {
-      const parsed = new URL(url);
+      const parsed = new URL(item.source_url);
       return parsed.hostname.replace('www.', '');
     } catch {
       return 'Media Berita';
@@ -80,21 +88,22 @@ export function LiveEvidenceRail({
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
             <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
-            <span>Kawat Berita Realtime</span>
+            <span>Kawat Media &amp; Opini Publik</span>
           </span>
           <button
+            type="button"
             onClick={onViewAllMentions}
-            className="text-[11px] font-mono-code text-zinc-400 hover:text-white transition-colors flex items-center gap-1"
+            className="text-[11px] font-mono-code text-zinc-400 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
           >
             <span>Semua</span>
             <ArrowRight className="w-3 h-3" />
           </button>
         </div>
         <h3 className="font-editorial text-lg sm:text-xl font-medium tracking-tight text-white">
-          Arus Liputan Media Indonesia
+          Arus Pemberitaan &amp; Media Sosial
         </h3>
         <p className="text-[11px] text-zinc-400 font-sans-ui mt-0.5">
-          Artikel dan kutipan langsung yang baru diekstraksi
+          Artikel media nasional dan percakapan publik lintas platform
         </p>
       </div>
 
@@ -118,6 +127,8 @@ export function LiveEvidenceRail({
         ) : (
           mentions.map((item, idx) => {
             const firstKeyword = item.keywords && item.keywords.length > 0 ? item.keywords[0].keyword : null;
+            const sourceLabel = resolveSourceLabel(item);
+            const isSoc = isSocialProvider(item.provider);
             return (
               <div
                 key={item.id || idx}
@@ -126,10 +137,15 @@ export function LiveEvidenceRail({
               >
                 {/* Meta Top */}
                 <div className="flex items-center justify-between gap-2 mb-1.5 text-[11px]">
-                  <div className="flex items-center gap-1.5 text-zinc-400 font-mono-code">
-                    <Rss className="w-3 h-3 text-amber-400 shrink-0" />
-                    <span className="font-semibold text-zinc-200 truncate max-w-[130px]">
-                      {extractDomain(item.source_url)}
+                  <div className="flex items-center gap-1.5 text-zinc-400 font-mono-code min-w-0">
+                    <PlatformBadge
+                      provider={item.provider}
+                      size="xs"
+                      compactLabel
+                      isComment={Boolean(item.metadata_json?.is_comment)}
+                    />
+                    <span className="font-semibold text-zinc-200 truncate max-w-[120px]">
+                      {sourceLabel}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -146,24 +162,33 @@ export function LiveEvidenceRail({
                 </h4>
 
                 {/* Sub info */}
-                <div className="mt-2 flex items-center justify-between text-[10px] text-zinc-400 pt-1">
-                  <span className="text-zinc-400 font-mono-code">
+                <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-zinc-400 pt-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
                     {firstKeyword ? (
-                      <span className="inline-flex items-center gap-1 text-zinc-300 bg-white/[0.04] px-1.5 py-0.5 rounded">
+                      <span className="inline-flex items-center gap-1 text-zinc-300 bg-white/[0.04] px-1.5 py-0.5 rounded font-mono-code">
                         <span className="text-amber-400">#</span>
-                        <span>{firstKeyword}</span>
+                        <span className="truncate max-w-[90px]">{firstKeyword}</span>
                       </span>
-                    ) : (
-                      <span>Bahasa Indonesia</span>
-                    )}
-                  </span>
-                  <div className="flex items-center gap-2">
+                    ) : null}
+                    <LinkVerificationBadge
+                      provider={item.provider}
+                      sourceUrl={item.source_url}
+                      linkStatus={item.link_status || item.metadata_json?.link_status}
+                      isDemo={item.is_demo}
+                      compact
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
                     {onAskAi && (
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onAskAi(`Analisis sebutan berita: "${item.text}" dari sumber ${extractDomain(item.source_url)}`);
+                          onAskAi(
+                            isSoc
+                              ? `Analisis opini media sosial (${getPlatformMeta(item.provider).label}): "${item.text}" dari akun ${sourceLabel}`
+                              : `Analisis sebutan berita: "${item.text}" dari sumber ${sourceLabel}`
+                          );
                         }}
                         title="Tanyakan AI tentang sebutan ini"
                         className="px-1.5 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/25 hover:border-amber-400/45 transition-colors flex items-center gap-1 font-mono-code cursor-pointer"
@@ -187,8 +212,9 @@ export function LiveEvidenceRail({
       {/* Footer Action */}
       <div className="pt-3 mt-2 border-t border-white/[0.08]">
         <button
+          type="button"
           onClick={onViewAllMentions}
-          className="w-full py-2.5 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.2] text-xs font-semibold text-zinc-200 hover:text-white flex items-center justify-center gap-2 transition-all shadow-xs"
+          className="w-full py-2.5 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.2] text-xs font-semibold text-zinc-200 hover:text-white flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
         >
           <span>Eksplorasi Seluruh Sebutan</span>
           <ArrowRight className="w-3.5 h-3.5 text-amber-400" />

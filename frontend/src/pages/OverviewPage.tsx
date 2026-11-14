@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api, DashboardOverview, TimelinePoint, MentionItem } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 import { ExecutiveBriefingCard } from '@/components/dashboard/ExecutiveBriefingCard';
 import { BreakingDispatchMarquee } from '@/components/dashboard/BreakingDispatchMarquee';
 import { TimeseriesChart } from '@/components/dashboard/TimeseriesChart';
@@ -29,15 +30,18 @@ export function OverviewPage({
   onNavigateToMentionsWithKeyword,
   onOpenAiWithQuery,
 }: OverviewPageProps) {
+  const { activeWorkspace } = useAuth();
+  const workspaceId = activeWorkspace?.id;
   const [activeLens, setActiveLens] = useState<OperationalLens>('all');
   const [selectedMention, setSelectedMention] = useState<MentionItem | null>(null);
 
   // 1. Fetch Overview KPIs
   const { data: overview, isLoading: isOverviewLoading, error: overviewError, refetch: refetchOverview } = useQuery({
-    queryKey: ['dashboard-overview', days, organicOnly],
+    queryKey: ['dashboard-overview', workspaceId, days, organicOnly],
+    enabled: Boolean(workspaceId),
     queryFn: async () => {
       const res = await api.get<DashboardOverview>('/dashboard/overview', {
-        params: { workspace_id: 1, days, exclude_inauthentic: organicOnly || undefined },
+        params: { workspace_id: workspaceId, days, exclude_inauthentic: organicOnly || undefined },
       });
       return res.data;
     },
@@ -45,10 +49,11 @@ export function OverviewPage({
 
   // 2. Fetch Timeseries
   const { data: timeseriesData, isLoading: isTimeseriesLoading } = useQuery({
-    queryKey: ['dashboard-timeseries', days, organicOnly],
+    queryKey: ['dashboard-timeseries', workspaceId, days, organicOnly],
+    enabled: Boolean(workspaceId),
     queryFn: async () => {
       const res = await api.get<{ timeline: TimelinePoint[] }>('/dashboard/timeseries', {
-        params: { workspace_id: 1, days, exclude_inauthentic: organicOnly || undefined },
+        params: { workspace_id: workspaceId, days, exclude_inauthentic: organicOnly || undefined },
       });
       return res.data;
     },
@@ -56,10 +61,11 @@ export function OverviewPage({
 
   // 3. Fetch Trends
   const { data: trendsData, isLoading: isTrendsLoading } = useQuery({
-    queryKey: ['trends'],
+    queryKey: ['trends', workspaceId],
+    enabled: Boolean(workspaceId),
     queryFn: async () => {
       const res = await api.get('/trends', {
-        params: { workspace_id: 1 },
+        params: { workspace_id: workspaceId },
       });
       return res.data.data;
     },
@@ -67,10 +73,11 @@ export function OverviewPage({
 
   // 4. Fetch Recent Mentions (for the live evidence rail & marquee)
   const { data: recentMentions, isLoading: isMentionsLoading } = useQuery({
-    queryKey: ['recent-mentions', organicOnly],
+    queryKey: ['recent-mentions', workspaceId, organicOnly],
+    enabled: Boolean(workspaceId),
     queryFn: async () => {
       const res = await api.get<{ data: MentionItem[] }>('/mentions', {
-        params: { workspace_id: 1, per_page: 10, exclude_inauthentic: organicOnly || undefined },
+        params: { workspace_id: workspaceId, per_page: 10, exclude_inauthentic: organicOnly || undefined },
       });
       return res.data.data;
     },

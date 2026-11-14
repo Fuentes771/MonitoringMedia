@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Loader2 } from 'lucide-react';
 import { api, DashboardOverview } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
+import { LoginPage } from '@/pages/LoginPage';
 import { Sidebar, NavTab } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 import { OverviewPage } from '@/pages/OverviewPage';
@@ -14,6 +17,9 @@ import { AiIntelligenceDrawer } from '@/components/ai/AiIntelligenceDrawer';
 import { FloatingAiAssistantButton } from '@/components/ai/FloatingAiAssistantButton';
 
 export default function App() {
+  const { status, activeWorkspace } = useAuth();
+  const workspaceId = activeWorkspace?.id;
+
   const [currentTab, setCurrentTab] = useState<NavTab>('overview');
   const [days, setDays] = useState(7);
   const [organicOnly, setOrganicOnly] = useState(false);
@@ -37,12 +43,13 @@ export default function App() {
   const [targetKeyword, setTargetKeyword] = useState<string | undefined>(undefined);
   const [targetSentiment, setTargetSentiment] = useState<string | undefined>(undefined);
 
-  // Fetch overview data for topbar coverage strip
+  // Fetch overview data for topbar coverage strip only after authentication succeeds
   const { data: overview, refetch: refetchOverview, isFetching } = useQuery({
-    queryKey: ['dashboard-overview', days],
+    queryKey: ['dashboard-overview', workspaceId, days],
+    enabled: status === 'authenticated' && Boolean(workspaceId),
     queryFn: async () => {
       const res = await api.get<DashboardOverview>('/dashboard/overview', {
-        params: { workspace_id: 1, days },
+        params: { workspace_id: workspaceId, days },
       });
       return res.data;
     },
@@ -77,11 +84,12 @@ export default function App() {
 
   // CSV Export action
   const handleExportCsv = async () => {
+    if (!workspaceId) return;
     setIsExporting(true);
     try {
       const response = await api.post(
         '/reports/export',
-        { workspace_id: 1 },
+        { workspace_id: workspaceId },
         { responseType: 'blob' }
       );
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -97,6 +105,30 @@ export default function App() {
       setIsExporting(false);
     }
   };
+
+  if (status === 'booting') {
+    return (
+      <div className="min-h-dvh bg-[#08090d] text-[#f4f5f8] font-sans-ui flex items-center justify-center p-6">
+        <div className="flex flex-col items-center gap-4 text-center" role="status" aria-live="polite">
+          <img
+            src="/brand/trinetra-logo.svg"
+            alt="Lambang TRINETRA"
+            width={48}
+            height={48}
+            className="w-12 h-12 object-contain"
+          />
+          <div className="flex items-center gap-2 text-sm text-[#9da3ae]">
+            <Loader2 className="w-4 h-4 animate-spin text-[#d4af37]" aria-hidden="true" />
+            <span>Memverifikasi sesi...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'unauthenticated') {
+    return <LoginPage />;
+  }
 
   return (
     <div className="min-h-screen flex font-sans-ui relative bg-[#08090d] text-[#f4f5f8] selection:bg-amber-500/20 selection:text-amber-200">

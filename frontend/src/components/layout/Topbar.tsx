@@ -1,5 +1,6 @@
-import { RefreshCw, Radio, Bell, ChevronRight, ShieldCheck } from 'lucide-react';
+import { RefreshCw, Radio, Bell, ChevronRight, ShieldCheck, LogOut, Loader2 } from 'lucide-react';
 import { CoverageInfo } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 import { NavTab } from './Sidebar';
 
 interface TopbarProps {
@@ -25,6 +26,7 @@ export function Topbar({
   organicOnly = false,
   onToggleOrganicOnly,
 }: TopbarProps) {
+  const { user, activeWorkspace, logout, isLoggingOut } = useAuth();
   const getTabLabel = (tab: NavTab) => {
     switch (tab) {
       case 'overview':
@@ -150,6 +152,33 @@ export function Topbar({
         >
           <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-zinc-400' : ''}`} />
         </button>
+
+        {/* Compact Account & Logout Control (always accessible on desktop and narrow screens) */}
+        <div className="flex items-center gap-2 pl-2 border-l border-white/10">
+          <div className="hidden md:flex flex-col items-end leading-tight max-w-36">
+            <span className="text-xs font-semibold text-[#f4f5f8] truncate max-w-full">
+              {user?.name ?? 'Operator'}
+            </span>
+            <span className="text-[10px] font-mono-code uppercase text-[#d4af37]">
+              {activeWorkspace?.role ?? 'operator'}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void logout()}
+            disabled={isLoggingOut}
+            aria-label="Keluar dari konsol"
+            title="Keluar dari konsol"
+            className="min-h-11 sm:min-h-9 px-3 rounded-xl border border-[#5e6575] bg-white/[0.03] hover:bg-rose-500/15 hover:border-rose-400/50 text-xs font-semibold text-[#f4f5f8] hover:text-[#fda4af] flex items-center gap-1.5 transition-colors motion-reduce:transition-none disabled:opacity-50"
+          >
+            {isLoggingOut ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
+            )}
+            <span className="hidden sm:inline">{isLoggingOut ? 'Keluar...' : 'Keluar'}</span>
+          </button>
+        </div>
       </div>
     </header>
   );
