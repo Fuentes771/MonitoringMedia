@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Api\V1\Concerns\ResolvesAuthorizedWorkspace;
 use App\Http\Controllers\Controller;
 use App\Models\Topic;
 use App\Models\TopicKeyword;
@@ -12,8 +13,11 @@ use Illuminate\Http\Request;
 
 class TopicController extends Controller
 {
+    use ResolvesAuthorizedWorkspace;
+
     public function index(Request $request, $workspaceId)
     {
+        $workspaceId = $this->resolveAuthorizedWorkspaceId($request, $workspaceId);
         $status = $request->input('status', 'active');
         $query = Topic::where('workspace_id', $workspaceId)
             ->with(['keywords', 'trendSnapshots' => fn($q) => $q->latest()->limit(1)])
@@ -40,6 +44,7 @@ class TopicController extends Controller
 
     public function store(Request $request, $workspaceId)
     {
+        $workspaceId = $this->resolveAuthorizedWorkspaceId($request, $workspaceId);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -51,13 +56,16 @@ class TopicController extends Controller
             'match_mode' => 'nullable|in:any,all',
         ]);
 
+        $defaultProviders = ['rss', 'youtube', 'x', 'tiktok', 'instagram', 'facebook'];
+        $providers = !empty($validated['providers']) ? $validated['providers'] : $defaultProviders;
+
         $topic = Topic::create([
             'workspace_id' => $workspaceId,
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'status' => 'active',
             'match_mode' => $validated['match_mode'] ?? 'any',
-            'providers' => $validated['providers'] ?? ['rss'],
+            'providers' => $providers,
             'language_filters' => ['id'],
             'is_demo' => false,
         ]);
@@ -87,11 +95,12 @@ class TopicController extends Controller
         ], 201);
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
         $topic = Topic::with(['keywords', 'trendSnapshots' => fn($q) => $q->latest()->limit(1)])
             ->withCount('mentions')
             ->findOrFail($id);
+        $this->authorizeResourceWorkspace($request, (int) $topic->workspace_id);
 
         return response()->json([
             'status' => 'success',
@@ -102,6 +111,7 @@ class TopicController extends Controller
     public function update(Request $request, $id)
     {
         $topic = Topic::findOrFail($id);
+        $this->authorizeResourceWorkspace($request, (int) $topic->workspace_id);
 
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
@@ -119,9 +129,10 @@ class TopicController extends Controller
         ]);
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $topic = Topic::findOrFail($id);
+        $this->authorizeResourceWorkspace($request, (int) $topic->workspace_id);
         $topic->update(['status' => 'archived']);
 
         return response()->json([
@@ -133,6 +144,7 @@ class TopicController extends Controller
     public function sync(Request $request, $id, IngestionService $ingestionService, TrendService $trendService, AlertService $alertService)
     {
         $topic = Topic::findOrFail($id);
+        $this->authorizeResourceWorkspace($request, (int) $topic->workspace_id);
 
         $ingestionResults = $ingestionService->ingestTopic($topic);
         $trendSnapshot = $trendService->computeTopicTrend($topic);

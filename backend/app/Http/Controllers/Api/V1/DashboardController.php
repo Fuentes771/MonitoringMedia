@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Api\V1\Concerns\ResolvesAuthorizedWorkspace;
 use App\Http\Controllers\Controller;
 use App\Models\Mention;
 use App\Models\Connector;
@@ -14,9 +15,11 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
+    use ResolvesAuthorizedWorkspace;
+
     public function overview(Request $request)
     {
-        $workspaceId = $request->input('workspace_id', 1);
+        $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
         $topicId = $request->input('topic_id');
         $provider = $request->input('provider');
         $excludeInauthentic = $request->boolean('exclude_inauthentic');
@@ -148,6 +151,9 @@ class DashboardController extends Controller
                     $headline = substr($headline, 0, 107) . '...';
                 }
 
+                $linkValidator = app(\App\Services\SocialLinkValidator::class);
+                $meta = is_array($m->metadata_json) ? $m->metadata_json : [];
+
                 return [
                     'id' => $m->id,
                     'time_label' => $m->published_at ? $m->published_at->timezone('Asia/Jakarta')->format('d M H:i') . ' WIB' : 'Waktu tidak diketahui',
@@ -156,6 +162,7 @@ class DashboardController extends Controller
                     'sentiment' => $m->sentiment?->label ?? 'neutral',
                     'source' => $m->author_name ?? ucfirst($m->provider),
                     'url' => $m->source_url,
+                    'link_status' => $linkValidator->resolveEffectiveStatus($m->provider, $m->source_url, $meta, (bool) $m->is_demo),
                 ];
             });
 
@@ -258,7 +265,7 @@ class DashboardController extends Controller
 
     public function timeseries(Request $request)
     {
-        $workspaceId = $request->input('workspace_id', 1);
+        $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
         $topicId = $request->input('topic_id');
         $provider = $request->input('provider');
         $excludeInauthentic = $request->boolean('exclude_inauthentic');

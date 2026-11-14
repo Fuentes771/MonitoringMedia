@@ -114,4 +114,16 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Single Operator Credentials (Seed Source)
+    |--------------------------------------------------------------------------
+    */
+
+    'operator' => [
+        'name' => env('OPERATOR_NAME', 'Operator TRINETRA'),
+        'email' => env('OPERATOR_EMAIL', 'operator@pulsescope.local'),
+        'password' => env('OPERATOR_PASSWORD', 'password'),
+    ],
+
 ];

@@ -10,28 +10,32 @@ use App\Models\Workspace;
 use App\Models\SentimentResult;
 use Database\Seeders\NationalPriorityProgramsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 
 class AiIntelligenceTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected User $operator;
     protected Workspace $workspace;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $owner = User::create([
-            'name' => 'Budi Pratama',
-            'email' => 'owner@pulsescope.local',
+        $this->operator = User::create([
+            'name' => 'Operator TRINETRA',
+            'email' => 'operator@pulsescope.local',
             'password' => bcrypt('password'),
         ]);
 
         $this->workspace = Workspace::create([
             'name' => 'PulseScope Intelligence Hub',
             'slug' => 'pulsescope-hub',
-            'owner_id' => $owner->id,
+            'owner_id' => $this->operator->id,
         ]);
+
+        Sanctum::actingAs($this->operator);
 
         // Seed the 17 programs
         $seeder = new NationalPriorityProgramsSeeder();

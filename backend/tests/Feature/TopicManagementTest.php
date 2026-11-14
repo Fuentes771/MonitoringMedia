@@ -8,11 +8,14 @@ use App\Models\Workspace;
 use App\Models\Topic;
 use App\Models\TopicKeyword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 
 class TopicManagementTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected User $userA;
+    protected User $userB;
     protected Workspace $workspaceA;
     protected Workspace $workspaceB;
 
@@ -20,8 +23,8 @@ class TopicManagementTest extends TestCase
     {
         parent::setUp();
 
-        $userA = User::create([
-            'name' => 'Owner Alpha',
+        $this->userA = User::create([
+            'name' => 'Operator Alpha',
             'email' => 'alpha@pulsescope.id',
             'password' => bcrypt('password'),
         ]);
@@ -29,11 +32,11 @@ class TopicManagementTest extends TestCase
         $this->workspaceA = Workspace::create([
             'name' => 'Workspace Alpha',
             'slug' => 'workspace-alpha',
-            'owner_id' => $userA->id,
+            'owner_id' => $this->userA->id,
         ]);
 
-        $userB = User::create([
-            'name' => 'Owner Beta',
+        $this->userB = User::create([
+            'name' => 'Operator Beta',
             'email' => 'beta@pulsescope.id',
             'password' => bcrypt('password'),
         ]);
@@ -41,8 +44,10 @@ class TopicManagementTest extends TestCase
         $this->workspaceB = Workspace::create([
             'name' => 'Workspace Beta',
             'slug' => 'workspace-beta',
-            'owner_id' => $userB->id,
+            'owner_id' => $this->userB->id,
         ]);
+
+        Sanctum::actingAs($this->userA);
     }
 
     public function test_can_create_topic_with_keywords(): void
@@ -61,7 +66,7 @@ class TopicManagementTest extends TestCase
         $response->assertStatus(201)
             ->assertJsonPath('status', 'success')
             ->assertJsonPath('data.name', 'Fintech Regulasi OJK')
-            ->assertJsonPath('data.workspace_id', (string) $this->workspaceA->id);
+            ->assertJsonPath('data.workspace_id', $this->workspaceA->id);
 
         $this->assertDatabaseHas('topics', [
             'workspace_id' => $this->workspaceA->id,
@@ -89,12 +94,18 @@ class TopicManagementTest extends TestCase
             'match_mode' => 'any',
         ]);
 
+        Sanctum::actingAs($this->userA);
         $responseA = $this->getJson("/api/v1/workspaces/{$this->workspaceA->id}/topics");
         $responseA->assertStatus(200)
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $topicA->id)
             ->assertJsonPath('data.0.name', 'Topic in Alpha');
 
+        // User A cannot access Workspace B
+        $this->getJson("/api/v1/workspaces/{$this->workspaceB->id}/topics")
+            ->assertStatus(403);
+
+        Sanctum::actingAs($this->userB);
         $responseB = $this->getJson("/api/v1/workspaces/{$this->workspaceB->id}/topics");
         $responseB->assertStatus(200)
             ->assertJsonCount(1, 'data')

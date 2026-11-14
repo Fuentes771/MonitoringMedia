@@ -22,52 +22,56 @@ class DatabaseSeeder extends Seeder
     {
         $now = Carbon::now('Asia/Jakarta');
 
-        // 1. Create Users
-        $owner = User::firstOrCreate(
-            ['email' => 'owner@pulsescope.local'],
-            ['name' => 'Budi Pratama (Owner)', 'password' => Hash::make('password')]
-        );
+        // 1. Ensure Single Operator Account (credentials read from config/env, 1 unified role only)
+        $operatorName = trim((string) config('auth.operator.name', 'Operator TRINETRA')) ?: 'Operator TRINETRA';
+        $operatorEmail = strtolower(trim((string) config('auth.operator.email', 'operator@pulsescope.local')) ?: 'operator@pulsescope.local');
+        $operatorPassword = (string) config('auth.operator.password', 'password');
+        if ($operatorPassword === '') {
+            $operatorPassword = 'password';
+        }
 
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@pulsescope.local'],
-            ['name' => 'Siti Rahma (Admin)', 'password' => Hash::make('password')]
-        );
+        $operator = User::where('email', $operatorEmail)->first()
+            ?? User::where('email', 'operator@pulsescope.local')->first()
+            ?? User::where('email', 'owner@pulsescope.local')->first()
+            ?? User::query()->orderBy('id')->first();
 
-        $analyst = User::firstOrCreate(
-            ['email' => 'analyst@pulsescope.local'],
-            ['name' => 'Dimas Wicaksono (Analyst)', 'password' => Hash::make('password')]
-        );
+        if ($operator) {
+            $emailChanged = strtolower((string) $operator->email) !== $operatorEmail;
+            $operator->update([
+                'name' => $operatorName,
+                'email' => $operatorEmail,
+                'password' => Hash::make($operatorPassword),
+            ]);
+            if ($emailChanged) {
+                $operator->tokens()->delete();
+            }
+        } else {
+            $operator = User::create([
+                'name' => $operatorName,
+                'email' => $operatorEmail,
+                'password' => Hash::make($operatorPassword),
+            ]);
+        }
 
-        $viewer = User::firstOrCreate(
-            ['email' => 'viewer@pulsescope.local'],
-            ['name' => 'Dewi Lestari (Viewer)', 'password' => Hash::make('password')]
-        );
-
-        // 2. Create Workspace
+        // 2. Create or align Workspace BEFORE pruning other accounts (owner_id cascades)
         $workspace = Workspace::firstOrCreate(
             ['slug' => 'pulsescope-hub'],
             [
                 'name' => 'PulseScope Intelligence Hub',
-                'owner_id' => $owner->id,
+                'owner_id' => $operator->id,
             ]
         );
+        if ((int) $workspace->owner_id !== (int) $operator->id) {
+            $workspace->update(['owner_id' => $operator->id]);
+        }
 
-        // 3. Attach Members
-        WorkspaceMember::firstOrCreate(
-            ['workspace_id' => $workspace->id, 'user_id' => $owner->id],
-            ['role' => 'owner']
-        );
-        WorkspaceMember::firstOrCreate(
-            ['workspace_id' => $workspace->id, 'user_id' => $admin->id],
-            ['role' => 'admin']
-        );
-        WorkspaceMember::firstOrCreate(
-            ['workspace_id' => $workspace->id, 'user_id' => $analyst->id],
-            ['role' => 'analyst']
-        );
-        WorkspaceMember::firstOrCreate(
-            ['workspace_id' => $workspace->id, 'user_id' => $viewer->id],
-            ['role' => 'viewer']
+        // Keep only this single operator user across seed runs
+        User::where('id', '!=', $operator->id)->delete();
+
+        // 3. Attach Single Role Membership
+        WorkspaceMember::updateOrCreate(
+            ['workspace_id' => $workspace->id, 'user_id' => $operator->id],
+            ['role' => WorkspaceMember::ROLE]
         );
 
         // 4. Create Connectors

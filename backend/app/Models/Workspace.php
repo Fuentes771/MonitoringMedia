@@ -27,6 +27,7 @@ class Workspace extends Model
     {
         return $this->belongsToMany(User::class, 'workspace_members')
             ->withPivot('role')
+            ->wherePivot('role', WorkspaceMember::ROLE)
             ->withTimestamps();
     }
 

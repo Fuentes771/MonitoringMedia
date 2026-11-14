@@ -30,8 +30,8 @@ class AlertServiceTest extends TestCase
         parent::setUp();
 
         $user = User::create([
-            'name' => 'Analyst User',
-            'email' => 'analyst@pulsescope.id',
+            'name' => 'Operator User',
+            'email' => 'operator@pulsescope.local',
             'password' => bcrypt('password'),
         ]);
 

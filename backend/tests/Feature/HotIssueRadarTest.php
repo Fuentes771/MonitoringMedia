@@ -11,28 +11,32 @@ use App\Models\MentionTopicMatch;
 use App\Models\SentimentResult;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Carbon\Carbon;
+use Laravel\Sanctum\Sanctum;
 
 class HotIssueRadarTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected User $user;
     protected Workspace $workspace;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $user = User::create([
-            'name' => 'Intelligence Analyst',
-            'email' => 'analyst@pulsescope.local',
+        $this->user = User::create([
+            'name' => 'Operator Intelijen',
+            'email' => 'operator@pulsescope.local',
             'password' => bcrypt('password'),
         ]);
 
         $this->workspace = Workspace::create([
             'name' => 'Pulse Intelligence Hub',
             'slug' => 'pulsescope-hub',
-            'owner_id' => $user->id,
+            'owner_id' => $this->user->id,
         ]);
+
+        Sanctum::actingAs($this->user);
     }
 
     public function test_hot_issues_endpoint_returns_surging_data(): void

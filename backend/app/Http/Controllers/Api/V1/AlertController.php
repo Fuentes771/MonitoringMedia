@@ -2,18 +2,22 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Api\V1\Concerns\ResolvesAuthorizedWorkspace;
 use App\Http\Controllers\Controller;
 use App\Models\Alert;
 use App\Models\AlertEvent;
 use App\Models\Notification;
+use App\Models\Topic;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
 class AlertController extends Controller
 {
+    use ResolvesAuthorizedWorkspace;
+
     public function index(Request $request)
     {
-        $workspaceId = $request->input('workspace_id', 1);
+        $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
 
         $rules = Alert::where('workspace_id', $workspaceId)
             ->with('topic:id,name')
@@ -37,16 +41,23 @@ class AlertController extends Controller
 
     public function store(Request $request)
     {
+        $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
+
         $validated = $request->validate([
-            'workspace_id' => 'required|exists:workspaces,id',
             'topic_id' => 'required|exists:topics,id',
             'type' => 'required|in:volume_spike,negative_surge',
             'threshold_json' => 'required|array',
             'cooldown_minutes' => 'nullable|integer|min:15|max:1440',
         ]);
 
+        $topic = Topic::findOrFail($validated['topic_id']);
+        $this->authorizeResourceWorkspace($request, (int) $topic->workspace_id);
+        if ((int) $topic->workspace_id !== $workspaceId) {
+            abort(403, 'Topik bukan milik workspace yang dipilih.');
+        }
+
         $alert = Alert::create([
-            'workspace_id' => $validated['workspace_id'],
+            'workspace_id' => $workspaceId,
             'topic_id' => $validated['topic_id'],
             'type' => $validated['type'],
             'threshold_json' => $validated['threshold_json'],
@@ -63,7 +74,8 @@ class AlertController extends Controller
 
     public function updateEvent(Request $request, $id)
     {
-        $event = AlertEvent::findOrFail($id);
+        $event = AlertEvent::with('alert')->findOrFail($id);
+        $this->authorizeResourceWorkspace($request, (int) $event->alert->workspace_id);
 
         $validated = $request->validate([
             'status' => 'required|in:acknowledged,resolved,false_positive',
@@ -91,7 +103,7 @@ class AlertController extends Controller
 
     public function notifications(Request $request)
     {
-        $workspaceId = $request->input('workspace_id', 1);
+        $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
 
         $notifications = Notification::where('workspace_id', $workspaceId)
             ->orderBy('created_at', 'desc')

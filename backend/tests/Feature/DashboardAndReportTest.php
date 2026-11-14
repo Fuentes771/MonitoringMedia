@@ -11,11 +11,13 @@ use App\Models\MentionTopicMatch;
 use App\Models\SentimentResult;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Carbon\Carbon;
+use Laravel\Sanctum\Sanctum;
 
 class DashboardAndReportTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected User $user;
     protected Workspace $workspace;
     protected Topic $topic;
 
@@ -23,17 +25,19 @@ class DashboardAndReportTest extends TestCase
     {
         parent::setUp();
 
-        $user = User::create([
-            'name' => 'Data Analyst',
-            'email' => 'analyst@pulsescope.id',
+        $this->user = User::create([
+            'name' => 'Operator TRINETRA',
+            'email' => 'operator@pulsescope.local',
             'password' => bcrypt('password'),
         ]);
 
         $this->workspace = Workspace::create([
             'name' => 'Pulse Intelligence Lab',
             'slug' => 'pulse-lab',
-            'owner_id' => $user->id,
+            'owner_id' => $this->user->id,
         ]);
+
+        Sanctum::actingAs($this->user);
 
         $this->topic = Topic::create([
             'workspace_id' => $this->workspace->id,

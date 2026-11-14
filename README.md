@@ -35,7 +35,7 @@ PulseScope/
 
 ## 2. Fitur Utama
 
-- **Multi-Tenant & Workspace Isolation**: Batas data ketat antar workspace dengan role-based access control (Owner, Admin, Analyst, Viewer).
+- **Multi-Tenant & Workspace Isolation**: Batas data ketat antar workspace dengan satu peran terpadu (**Operator**).
 - **Live Data Ingestion**: Langsung aktif tanpa konfigurasi kunci API untuk feed media berita nasional Indonesia. Adapter YouTube Data API v3 siap pakai dengan input kredensial aman.
 - **Pembersihan & Ekstraksi Kata Kunci**: Ekstraksi unigram dan bigram dengan filtering stopword bahasa Indonesia untuk mengungkap kata kunci pendorong isu.
 - **Early Warning & Manajemen Insiden**: Pencatatan kejadian alert dengan bukti (evidence), cuplikan teks penyebab, serta pelacakan status (`open`, `acknowledged`, `resolved`).
@@ -43,16 +43,17 @@ PulseScope/
 
 ---
 
-## 3. Akun Pengguna Bawaan (Seeded Demo Accounts)
+## 3. Akun Pengguna Bawaan
 
-Database telah disiapkan dengan pengguna multi-peran (Password: `password`):
+Sistem hanya menggunakan satu peran terpadu (`operator`). Atur kredensial login pada file `backend/.env` sebelum menjalankan seeding database:
 
-| Peran | Email | Workspace |
-| :--- | :--- | :--- |
-| **Owner** | `owner@pulsescope.id` | PulseScope Intelligence Hub |
-| **Admin** | `admin@pulsescope.id` | PulseScope Intelligence Hub |
-| **Analyst** | `analyst@pulsescope.id` | PulseScope Intelligence Hub |
-| **Viewer** | `viewer@pulsescope.id` | PulseScope Intelligence Hub |
+```env
+OPERATOR_NAME="Operator TRINETRA"
+OPERATOR_EMAIL=your-operator@example.local
+OPERATOR_PASSWORD=your-strong-password
+```
+
+Lalu jalankan `php artisan db:seed` di direktori `backend/` untuk membuat atau memperbarui akun operator pada workspace `PulseScope Intelligence Hub`. (Jika `OPERATOR_EMAIL` / `OPERATOR_PASSWORD` tidak diisi pada lingkungan lokal, seeder memakai fallback dev bawaan; selalu isi lewat `.env` untuk deployment.)
 
 ---
 

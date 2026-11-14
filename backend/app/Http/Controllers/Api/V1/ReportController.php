@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Api\V1\Concerns\ResolvesAuthorizedWorkspace;
 use App\Http\Controllers\Controller;
 use App\Models\Mention;
 use Illuminate\Http\Request;
@@ -10,9 +11,11 @@ use Carbon\Carbon;
 
 class ReportController extends Controller
 {
+    use ResolvesAuthorizedWorkspace;
+
     public function export(Request $request)
     {
-        $workspaceId = $request->input('workspace_id', 1);
+        $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
         $topicId = $request->input('topic_id');
         $provider = $request->input('provider');
         $sentiment = $request->input('sentiment');

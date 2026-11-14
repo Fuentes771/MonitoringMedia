@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Api\V1\Concerns\ResolvesAuthorizedWorkspace;
 use App\Http\Controllers\Controller;
 use App\Services\HotIssueService;
 use App\Services\HotIssueDiscoveryService;
@@ -15,9 +16,11 @@ use Carbon\Carbon;
 
 class HotIssueController extends Controller
 {
+    use ResolvesAuthorizedWorkspace;
+
     public function index(Request $request, HotIssueService $hotIssueService)
     {
-        $workspaceId = (int)$request->input('workspace_id', 1);
+        $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
         $data = $hotIssueService->getActiveHotIssues($workspaceId);
 
         return response()->json([
@@ -32,7 +35,7 @@ class HotIssueController extends Controller
         TrendService $trendService, 
         AlertService $alertService
     ) {
-        $workspaceId = (int)$request->input('workspace_id', 1);
+        $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -84,7 +87,7 @@ class HotIssueController extends Controller
         HotIssueDiscoveryService $discoveryService, 
         HotIssueService $hotIssueService
     ) {
-        $workspaceId = (int)$request->input('workspace_id', 1);
+        $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
 
         $result = $discoveryService->discoverAndIngest($workspaceId);
         $radarData = $hotIssueService->getActiveHotIssues($workspaceId);
@@ -100,9 +103,10 @@ class HotIssueController extends Controller
     /**
      * Archive or dismiss a hot issue from active radar.
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $topic = Topic::where('category', 'trending_issue')->findOrFail($id);
+        $this->authorizeResourceWorkspace($request, (int) $topic->workspace_id);
         $topic->update(['status' => 'archived']);
 
         return response()->json([

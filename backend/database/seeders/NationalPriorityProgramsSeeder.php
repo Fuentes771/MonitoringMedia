@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\Topic;
 use App\Models\TopicKeyword;
+use App\Models\User;
 use App\Models\Workspace;
 
 class NationalPriorityProgramsSeeder extends Seeder
@@ -17,7 +18,7 @@ class NationalPriorityProgramsSeeder extends Seeder
         $workspace = Workspace::first() ?? Workspace::create([
             'name' => 'PulseScope Intelligence Hub',
             'slug' => 'pulsescope-hub',
-            'owner_id' => 1,
+            'owner_id' => User::query()->value('id') ?? 1,
         ]);
 
         $programs = [

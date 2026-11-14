@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Api\V1\Concerns\ResolvesAuthorizedWorkspace;
 use App\Http\Controllers\Controller;
 use App\Models\Topic;
 use App\Models\TrendSnapshot;
@@ -12,9 +13,11 @@ use Carbon\Carbon;
 
 class TrendController extends Controller
 {
+    use ResolvesAuthorizedWorkspace;
+
     public function index(Request $request)
     {
-        $workspaceId = $request->input('workspace_id', 1);
+        $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
 
         // Rising Topics based on latest Trend Snapshot
         $topics = Topic::where('workspace_id', $workspaceId)

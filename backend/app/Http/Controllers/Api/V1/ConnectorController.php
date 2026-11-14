@@ -2,22 +2,29 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Adapters\Concerns\ResolvesRapidApiKey;
+use App\Http\Controllers\Api\V1\Concerns\ResolvesAuthorizedWorkspace;
 use App\Http\Controllers\Controller;
 use App\Models\Connector;
 use App\Models\ConnectorCredential;
 use App\Services\LocalScraperService;
+use App\Services\SocialLinkValidator;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
 
 class ConnectorController extends Controller
 {
+    use ResolvesAuthorizedWorkspace;
+    use ResolvesRapidApiKey;
+
+    private const SOCIAL_LOCAL_PLATFORMS = ['youtube', 'x', 'tiktok', 'instagram', 'facebook'];
+
     public function index(Request $request)
     {
-        $workspaceId = $request->input('workspace_id', 1);
+        $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
 
         $defaultProviders = [
             'rss' => ['status' => 'connected', 'capabilities' => ['keyword_search' => true, 'public_content' => true, 'historical_backfill' => 'limited']],
-            'youtube' => ['status' => 'needs_config', 'capabilities' => ['keyword_search' => true, 'public_content' => true, 'comments' => false, 'public_metrics' => true]],
+            'youtube' => ['status' => 'needs_config', 'capabilities' => ['keyword_search' => true, 'public_content' => true, 'comments' => true, 'public_metrics' => true]],
             'x' => ['status' => 'needs_config', 'capabilities' => ['keyword_search' => true, 'public_content' => true, 'comments' => true, 'public_metrics' => true]],
             'tiktok' => ['status' => 'needs_config', 'capabilities' => ['keyword_search' => true, 'public_content' => true, 'comments' => true, 'public_metrics' => true]],
             'instagram' => ['status' => 'needs_config', 'capabilities' => ['keyword_search' => true, 'public_content' => true, 'comments' => true, 'public_metrics' => true]],
@@ -44,23 +51,29 @@ class ConnectorController extends Controller
         return response()->json([
             'status' => 'success',
             'data' => $connectors->map(function ($c) use ($workspaceId, $localScraperAvailable) {
-                $hasRapidApi = $this->hasRapidApiKey($workspaceId, $c->provider);
-                $isSocial = in_array($c->provider, ['x', 'tiktok', 'instagram', 'facebook']);
-                
+                $provider = $c->provider;
+                $isSocialLocal = in_array($provider, self::SOCIAL_LOCAL_PLATFORMS, true);
+                $isRapidApiTarget = in_array($provider, ['x', 'tiktok', 'instagram', 'facebook'], true);
+
+                $hasRapidApi = $isRapidApiTarget && $this->hasRapidApiKey($workspaceId, $provider);
+                $hasYouTubeApi = ($provider === 'youtube') && $this->hasYouTubeKey($c);
+                $hasApiCred = $hasRapidApi || $hasYouTubeApi || ($c->credential !== null && $this->isUsableApiKey($this->extractCredentialKey($c->credential)));
+
                 $status = $c->status;
-                if ($isSocial && $localScraperAvailable) {
+                if ($isSocialLocal && ($localScraperAvailable || $hasApiCred)) {
                     $status = 'connected';
                 }
 
-                $hasCred = $c->credential !== null;
-                if (!$hasCred && $isSocial) {
-                    $hasCred = $hasRapidApi;
-                } elseif (!$hasCred && $c->provider === 'youtube') {
-                    $hasCred = !empty(env('YOUTUBE_API_KEY'));
-                }
-
                 $engineMode = 'default';
-                if ($isSocial) {
+                if ($provider === 'youtube') {
+                    if ($localScraperAvailable && $hasYouTubeApi) {
+                        $engineMode = 'hybrid';
+                    } elseif ($localScraperAvailable) {
+                        $engineMode = 'local';
+                    } elseif ($hasYouTubeApi) {
+                        $engineMode = 'official_api';
+                    }
+                } elseif ($isRapidApiTarget) {
                     if ($localScraperAvailable && $hasRapidApi) {
                         $engineMode = 'hybrid';
                     } elseif ($localScraperAvailable) {
@@ -72,13 +85,13 @@ class ConnectorController extends Controller
 
                 return [
                     'id' => $c->id,
-                    'provider' => $c->provider,
+                    'provider' => $provider,
                     'status' => $status,
                     'capabilities' => $c->capabilities_json,
                     'last_successful_sync_at' => $c->last_successful_sync_at?->toIso8601String(),
-                    'has_credentials' => $hasCred,
-                    'has_local_engine' => $isSocial ? $localScraperAvailable : false,
-                    'has_rapidapi' => $isSocial ? $hasRapidApi : false,
+                    'has_credentials' => $hasApiCred,
+                    'has_local_engine' => $isSocialLocal ? $localScraperAvailable : false,
+                    'has_rapidapi' => $isRapidApiTarget ? $hasRapidApi : false,
                     'engine_mode' => $engineMode,
                 ];
             }),
@@ -87,14 +100,13 @@ class ConnectorController extends Controller
 
     public function connect(Request $request, $provider)
     {
-        $workspaceId = $request->input('workspace_id', 1);
+        $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
         $validated = $request->validate([
             'api_key' => 'required|string',
         ]);
 
         $apiKey = trim($validated['api_key']);
 
-        // Handle Unified RapidAPI Key
         if ($provider === 'rapidapi') {
             $unifiedConnector = Connector::firstOrCreate(
                 ['workspace_id' => $workspaceId, 'provider' => 'rapidapi'],
@@ -106,7 +118,6 @@ class ConnectorController extends Controller
                 ['encrypted_payload' => ['api_key' => $apiKey]]
             );
 
-            // Update status of all dependent social connectors
             foreach (['x', 'tiktok', 'instagram', 'facebook'] as $socialProv) {
                 $c = Connector::firstOrCreate(
                     ['workspace_id' => $workspaceId, 'provider' => $socialProv],
@@ -128,9 +139,7 @@ class ConnectorController extends Controller
 
         ConnectorCredential::updateOrCreate(
             ['connector_id' => $connector->id],
-            [
-                'encrypted_payload' => ['api_key' => $apiKey],
-            ]
+            ['encrypted_payload' => ['api_key' => $apiKey]]
         );
 
         $connector->update(['status' => 'connected']);
@@ -143,7 +152,7 @@ class ConnectorController extends Controller
 
     public function test(Request $request, $provider)
     {
-        $workspaceId = $request->input('workspace_id', 1);
+        $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
         $connector = Connector::where('workspace_id', $workspaceId)
             ->where('provider', $provider)
             ->first();
@@ -165,23 +174,30 @@ class ConnectorController extends Controller
         }
 
         if ($provider === 'youtube') {
-            $hasKey = ($connector && $connector->credential !== null) || !empty(env('YOUTUBE_API_KEY'));
-            if (!$hasKey) {
+            $hasKey = $this->hasYouTubeKey($connector);
+            $localAvailable = app(LocalScraperService::class)->isAvailable();
+
+            if (!$hasKey && !$localAvailable) {
                 return response()->json([
                     'status' => 'needs_config',
                     'provider' => 'youtube',
-                    'message' => 'API Key YouTube belum dimasukkan.',
+                    'message' => 'API Key YouTube belum dimasukkan dan scraper YouTube lokal tidak aktif.',
                 ]);
             }
+
+            $modeMsg = $hasKey && $localAvailable
+                ? 'YouTube Data API v3 dan Scraper YouTube Gratis siap (Mode Hybrid).'
+                : ($hasKey ? 'Koneksi ke YouTube Data API v3 siap.' : 'Scraper YouTube Gratis (ytInitialData) aktif sebagai pengganti API Key.');
 
             return response()->json([
                 'status' => 'success',
                 'provider' => 'youtube',
-                'message' => 'Koneksi ke YouTube Data API v3 siap.',
+                'engine' => $hasKey ? ($localAvailable ? 'hybrid' : 'official_api') : 'local',
+                'message' => $modeMsg,
             ]);
         }
 
-        if (in_array($provider, ['x', 'tiktok', 'instagram', 'facebook', 'rapidapi'])) {
+        if (in_array($provider, ['x', 'tiktok', 'instagram', 'facebook', 'rapidapi'], true)) {
             $hasKey = $this->hasRapidApiKey($workspaceId, $provider);
             $localAvailable = ($provider !== 'rapidapi') && app(LocalScraperService::class)->isAvailable();
 
@@ -194,11 +210,11 @@ class ConnectorController extends Controller
             }
 
             $details = [];
-            if ($localAvailable) {
-                $details[] = "Mesin Scraper Lokal Python Siap (100% Free)";
-            }
             if ($hasKey) {
-                $details[] = "Kunci RapidAPI Terkonfigurasi (Fallback Standby)";
+                $details[] = 'Kunci RapidAPI Terkonfigurasi (Prioritas Metrik & Komentar)';
+            }
+            if ($localAvailable) {
+                $details[] = 'Mesin Scraper Hybrid Terverifikasi Siap (Syndication/oEmbed)';
             }
 
             return response()->json([
@@ -217,52 +233,87 @@ class ConnectorController extends Controller
         ]);
     }
 
-    public function livePreview(Request $request, $provider, LocalScraperService $localScraper)
+    public function livePreview(Request $request, $provider, LocalScraperService $localScraper, SocialLinkValidator $validator)
     {
-        $workspaceId = $request->input('workspace_id', 1);
-        $query = $request->input('query', 'Makan Bergizi Gratis');
+        $this->resolveAuthorizedWorkspaceId($request);
+        $query = trim((string) $request->input('query', 'Makan Bergizi Gratis')) ?: 'Makan Bergizi Gratis';
 
-        if (!in_array($provider, ['x', 'tiktok', 'instagram', 'facebook'])) {
+        if (!in_array($provider, self::SOCIAL_LOCAL_PLATFORMS, true)) {
             return response()->json([
                 'status' => 'error',
-                'message' => "Live preview hanya didukung untuk X, TikTok, Instagram, dan Facebook.",
+                'message' => 'Live preview tersedia untuk YouTube, X, TikTok, Instagram, dan Facebook.',
             ], 400);
         }
 
         $start = microtime(true);
-        $items = $localScraper->scrape($provider, $query, 3);
+        $rawItems = $localScraper->scrape($provider, $query, 5);
+        $meta = $localScraper->getLastMeta();
         $latencyMs = round((microtime(true) - $start) * 1000);
+
+        $validatedItems = [];
+        $verifiedCount = 0;
+        $fallbackCount = 0;
+
+        foreach ($rawItems as $item) {
+            $checked = $validator->validateAndNormalize(
+                provider: $provider,
+                rawUrl: $item['source_url'] ?? null,
+                queryHint: $query,
+                isDemo: (bool) ($item['is_demo'] ?? false),
+                declaredStatus: $item['link_status'] ?? null
+            );
+
+            if ($checked['link_status'] === SocialLinkValidator::STATUS_BROKEN_LEGACY) {
+                continue;
+            }
+
+            if ($checked['link_status'] === SocialLinkValidator::STATUS_VERIFIED_POST) {
+                $verifiedCount++;
+            } elseif ($checked['link_status'] === SocialLinkValidator::STATUS_SEARCH_FALLBACK) {
+                $fallbackCount++;
+            }
+
+            $item['source_url'] = $checked['url'];
+            $item['link_status'] = $checked['link_status'];
+            $item['metrics_available'] = (bool) ($item['metrics_available'] ?? (!empty($item['metrics'])));
+            $validatedItems[] = $item;
+        }
 
         return response()->json([
             'status' => 'success',
             'provider' => $provider,
             'query' => $query,
             'latency_ms' => $latencyMs,
-            'engine' => 'local_python_curl_cffi',
-            'count' => count($items),
-            'items' => $items,
+            'engine' => 'hybrid_verified_scraper',
+            'engine_status' => $meta['engine_status'] ?? (count($validatedItems) > 0 ? 'ok' : 'empty'),
+            'status_message' => $meta['status_message'] ?? '',
+            'verified_count' => $verifiedCount,
+            'fallback_count' => $fallbackCount,
+            'count' => count($validatedItems),
+            'items' => $validatedItems,
         ]);
     }
 
     private function hasRapidApiKey(int $workspaceId, string $provider): bool
     {
-        $connector = Connector::where('workspace_id', $workspaceId)
-            ->where('provider', $provider)
-            ->first();
+        return $this->resolveRapidApiKey($workspaceId, $provider) !== null;
+    }
 
-        if ($connector && $connector->credential) {
+    private function hasYouTubeKey(?Connector $connector): bool
+    {
+        if ($connector && $connector->credential && $this->isUsableApiKey($this->extractCredentialKey($connector->credential))) {
             return true;
         }
 
-        $unified = Connector::where('workspace_id', $workspaceId)
-            ->where('provider', 'rapidapi')
-            ->first();
+        return $this->isUsableApiKey(config('services.youtube.api_key', env('YOUTUBE_API_KEY')));
+    }
 
-        if ($unified && $unified->credential) {
-            return true;
+    private function extractCredentialKey(ConnectorCredential $credential): ?string
+    {
+        $payload = $credential->encrypted_payload;
+        if (is_array($payload)) {
+            return $payload['api_key'] ?? null;
         }
-
-        $envKey = config('services.rapidapi.key') ?: env('RAPIDAPI_KEY');
-        return !empty($envKey);
+        return is_string($payload) ? $payload : null;
     }
 }

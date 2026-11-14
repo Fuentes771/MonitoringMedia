@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Api\V1\Concerns\ResolvesAuthorizedWorkspace;
 use App\Http\Controllers\Controller;
 use App\Services\BuzzerDetectionService;
 use Illuminate\Http\Request;
 
 class BuzzerRadarController extends Controller
 {
+    use ResolvesAuthorizedWorkspace;
+
     public function overview(Request $request, BuzzerDetectionService $buzzerService)
     {
-        $workspaceId = (int)$request->input('workspace_id', 1);
+        $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
         $days = (int)$request->input('days', 7);
         $topicId = $request->input('topic_id') ? (int)$request->input('topic_id') : null;
 
@@ -24,7 +27,7 @@ class BuzzerRadarController extends Controller
 
     public function scan(Request $request, BuzzerDetectionService $buzzerService)
     {
-        $workspaceId = (int)$request->input('workspace_id', 1);
+        $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
         $days = (int)$request->input('days', 7);
         $topicId = $request->input('topic_id') ? (int)$request->input('topic_id') : null;
 
@@ -41,3 +44,4 @@ class BuzzerRadarController extends Controller
         ]);
     }
 }
+

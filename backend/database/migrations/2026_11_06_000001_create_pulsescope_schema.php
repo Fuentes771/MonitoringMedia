@@ -20,12 +20,12 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // 2. Workspace Members (RBAC: owner, admin, analyst, viewer)
+        // 2. Workspace Members (Single role: operator)
         Schema::create('workspace_members', function (Blueprint $table) {
             $table->id();
             $table->foreignId('workspace_id')->constrained('workspaces')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->enum('role', ['owner', 'admin', 'analyst', 'viewer'])->default('analyst');
+            $table->enum('role', ['operator'])->default('operator');
             $table->timestamps();
 
             $table->unique(['workspace_id', 'user_id']);

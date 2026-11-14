@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Api\V1\Concerns\ResolvesAuthorizedWorkspace;
 use App\Http\Controllers\Controller;
+use App\Models\Topic;
 use App\Services\AiIntelligenceService;
 use Illuminate\Http\Request;
 
 class AiIntelligenceController extends Controller
 {
+    use ResolvesAuthorizedWorkspace;
+
     protected AiIntelligenceService $aiService;
 
     public function __construct(AiIntelligenceService $aiService)
@@ -40,8 +44,15 @@ class AiIntelligenceController extends Controller
             'workspace_id' => 'nullable|integer',
         ]);
 
-        $workspaceId = $validated['workspace_id'] ?? 1;
+        $workspaceId = $this->resolveAuthorizedWorkspaceId($request, $validated['workspace_id'] ?? null);
         $topicId = $validated['topic_id'] ?? null;
+        if ($topicId !== null) {
+            $topic = Topic::findOrFail($topicId);
+            $this->authorizeResourceWorkspace($request, (int) $topic->workspace_id);
+            if ((int) $topic->workspace_id !== $workspaceId) {
+                abort(403, 'Topik bukan milik workspace yang dipilih.');
+            }
+        }
         $history = $validated['conversation_history'] ?? [];
 
         $result = $this->aiService->chat(
@@ -62,9 +73,12 @@ class AiIntelligenceController extends Controller
      */
     public function topicSummary(Request $request, $id)
     {
+        $topic = Topic::findOrFail((int) $id);
+        $this->authorizeResourceWorkspace($request, (int) $topic->workspace_id);
+
         $forceRefresh = filter_var($request->query('refresh', false), FILTER_VALIDATE_BOOLEAN);
 
-        $summary = $this->aiService->getTopicSummary((int)$id, $forceRefresh);
+        $summary = $this->aiService->getTopicSummary((int) $topic->id, $forceRefresh);
 
         return response()->json([
             'status' => 'success',
