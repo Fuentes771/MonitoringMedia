@@ -47,7 +47,7 @@ class IngestionService
      */
     public function ingestTopic(Topic $topic): array
     {
-        $providers = $topic->providers ?: ['rss'];
+        $providers = $topic->providers ?: ['rss', 'youtube', 'x', 'tiktok', 'instagram', 'facebook'];
         $results = [];
 
         foreach ($providers as $providerKey) {
@@ -109,11 +109,39 @@ class IngestionService
             ];
         }
 
+        $validator = app(SocialLinkValidator::class);
         $records = $ingestionResult->records;
         $newCount = 0;
         $dupCount = 0;
+        $verifiedCount = 0;
+        $fallbackCount = 0;
 
         foreach ($records as $record) {
+            $isDemo = (bool) ($record['is_demo'] ?? false);
+            $meta = is_array($record['metadata_json'] ?? null) ? $record['metadata_json'] : [];
+            $checked = $validator->validateAndNormalize(
+                provider: $record['provider'],
+                rawUrl: $record['source_url'] ?? null,
+                queryHint: null,
+                isDemo: $isDemo,
+                declaredStatus: $meta['link_status'] ?? null
+            );
+
+            if ($checked['link_status'] === SocialLinkValidator::STATUS_BROKEN_LEGACY) {
+                continue;
+            }
+
+            $meta['link_status'] = $checked['link_status'];
+            if (!empty($checked['reason'])) {
+                $meta['link_reason'] = $checked['reason'];
+            }
+
+            if (in_array($checked['link_status'], [SocialLinkValidator::STATUS_VERIFIED_POST, SocialLinkValidator::STATUS_VERIFIED_ARTICLE], true)) {
+                $verifiedCount++;
+            } elseif ($checked['link_status'] === SocialLinkValidator::STATUS_SEARCH_FALLBACK) {
+                $fallbackCount++;
+            }
+
             // Deduplication check: unique by (provider, external_id)
             $existing = Mention::where('provider', $record['provider'])
                 ->where('external_id', $record['external_id'])
@@ -121,7 +149,21 @@ class IngestionService
 
             if ($existing) {
                 $dupCount++;
-                // Still ensure topic match relation exists
+                // Upgrade previously broken or unenriched URLs when re-synced with verified metadata
+                $existingStatus = $validator->resolveEffectiveStatus(
+                    $existing->provider,
+                    $existing->source_url,
+                    $existing->metadata_json,
+                    (bool) $existing->is_demo
+                );
+                if ($existingStatus !== SocialLinkValidator::STATUS_VERIFIED_POST && $checked['link_status'] === SocialLinkValidator::STATUS_VERIFIED_POST) {
+                    $existing->update([
+                        'source_url' => $checked['url'],
+                        'author_name' => $record['author_name'] ?? $existing->author_name,
+                        'metadata_json' => array_merge($existing->metadata_json ?? [], $meta),
+                    ]);
+                }
+
                 MentionTopicMatch::firstOrCreate([
                     'mention_id' => $existing->id,
                     'topic_id' => $topic->id,
@@ -131,12 +173,11 @@ class IngestionService
                 continue;
             }
 
-            // Create new mention
             $mention = Mention::create([
                 'workspace_id' => $topic->workspace_id,
                 'provider' => $record['provider'],
                 'external_id' => $record['external_id'],
-                'source_url' => $record['source_url'] ?? null,
+                'source_url' => $checked['url'],
                 'author_name' => $record['author_name'] ?? null,
                 'published_at' => $record['published_at'],
                 'collected_at' => $record['collected_at'] ?? Carbon::now('Asia/Jakarta'),
@@ -144,18 +185,16 @@ class IngestionService
                 'text_normalized' => $record['text_normalized'] ?? mb_strtolower(trim($record['text'])),
                 'language' => $record['language'] ?? 'id',
                 'deletion_status' => 'active',
-                'is_demo' => $record['is_demo'] ?? false,
-                'metadata_json' => $record['metadata_json'] ?? null,
+                'is_demo' => $isDemo,
+                'metadata_json' => $meta,
             ]);
 
-            // Link to topic
             MentionTopicMatch::create([
                 'mention_id' => $mention->id,
                 'topic_id' => $topic->id,
                 'matched_keywords_json' => $record['matched_keywords'] ?? [],
             ]);
 
-            // Analyze sentiment via FastAPI service (:8001)
             $this->analyzeAndStoreNlp($mention);
 
             $newCount++;
@@ -165,6 +204,8 @@ class IngestionService
             'collected' => count($records),
             'new' => $newCount,
             'duplicates' => $dupCount,
+            'verified_links' => $verifiedCount,
+            'fallback_links' => $fallbackCount,
         ];
 
         $run->update([

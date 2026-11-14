@@ -267,7 +267,7 @@ class SeedSocialMediaDemoCommand extends Command
                 ['provider' => $provider, 'external_id' => $extId],
                 [
                     'workspace_id' => $topic->workspace_id,
-                    'source_url' => $data['source_url'],
+                    'source_url' => null,
                     'author_name' => $data['author_name'],
                     'published_at' => $data['published_at'],
                     'collected_at' => $now,
@@ -275,9 +275,11 @@ class SeedSocialMediaDemoCommand extends Command
                     'text_normalized' => Str::lower($data['text']),
                     'language' => 'id',
                     'deletion_status' => 'active',
-                    'is_demo' => false,
+                    'is_demo' => true,
                     'metadata_json' => [
                         'is_comment' => false,
+                        'link_status' => 'demo_placeholder',
+                        'metrics_available' => true,
                         'metrics' => $data['metrics'] ?? [],
                     ],
                 ]
@@ -299,7 +301,7 @@ class SeedSocialMediaDemoCommand extends Command
                         ['provider' => $provider, 'external_id' => $c['id']],
                         [
                             'workspace_id' => $topic->workspace_id,
-                            'source_url' => $data['source_url'],
+                            'source_url' => null,
                             'author_name' => $c['author'],
                             'published_at' => $cTime,
                             'collected_at' => $now,
@@ -307,9 +309,10 @@ class SeedSocialMediaDemoCommand extends Command
                             'text_normalized' => Str::lower($c['text']),
                             'language' => 'id',
                             'deletion_status' => 'active',
-                            'is_demo' => false,
+                            'is_demo' => true,
                             'metadata_json' => [
                                 'is_comment' => true,
+                                'link_status' => 'demo_placeholder',
                                 'parent_external_id' => $extId,
                                 'likes' => $c['likes'],
                             ],

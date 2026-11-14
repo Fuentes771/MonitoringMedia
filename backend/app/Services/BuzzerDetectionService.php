@@ -74,18 +74,22 @@ class BuzzerDetectionService
         // Build Burst Attack Timeline (12 intervals across the selected window)
         $burstTimeline = $this->buildBurstTimeline($mentions, $start, $now, $days);
 
+        $linkValidator = app(SocialLinkValidator::class);
+
         // Build Top Sarcasm Highlights
         $sarcasmHighlights = $sarcasmMentions
             ->sortByDesc(fn(Mention $m) => $m->metadata_json['sarcasm_analysis']['sarcasm_score'] ?? 0.75)
             ->take(15)
-            ->map(function (Mention $m) {
-                $sarcMeta = $m->metadata_json['sarcasm_analysis'] ?? [];
+            ->map(function (Mention $m) use ($linkValidator) {
+                $meta = is_array($m->metadata_json) ? $m->metadata_json : [];
+                $sarcMeta = $meta['sarcasm_analysis'] ?? [];
                 return [
                     'id' => $m->id,
                     'provider' => $m->provider,
                     'author_name' => $m->author_name ?? ucfirst($m->provider),
                     'text' => $m->text,
                     'source_url' => $m->source_url,
+                    'link_status' => $linkValidator->resolveEffectiveStatus($m->provider, $m->source_url, $meta, (bool) $m->is_demo),
                     'published_at' => $m->published_at?->toIso8601String(),
                     'time_label' => $m->published_at ? $m->published_at->timezone('Asia/Jakarta')->format('d M H:i') . ' WIB' : '',
                     'sentiment' => $m->sentiment?->label ?? 'negative',

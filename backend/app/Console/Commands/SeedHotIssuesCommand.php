@@ -253,11 +253,12 @@ class SeedHotIssuesCommand extends Command
         foreach ($items as $item) {
             $pubTime = $now->copy()->subHours($item['pub_hours_ago']);
 
+            $isSocial = $item['provider'] !== 'rss';
             $mention = Mention::firstOrCreate(
                 ['provider' => $item['provider'], 'external_id' => $item['ext_id']],
                 [
                     'workspace_id' => $topic->workspace_id,
-                    'source_url' => $item['url'],
+                    'source_url' => $isSocial ? null : $item['url'],
                     'author_name' => $item['author'],
                     'published_at' => $pubTime,
                     'collected_at' => $now,
@@ -265,9 +266,11 @@ class SeedHotIssuesCommand extends Command
                     'text_normalized' => Str::lower($item['text']),
                     'language' => 'id',
                     'deletion_status' => 'active',
-                    'is_demo' => false,
+                    'is_demo' => $isSocial,
                     'metadata_json' => [
                         'is_comment' => false,
+                        'link_status' => $isSocial ? 'demo_placeholder' : 'verified_article',
+                        'metrics_available' => true,
                         'metrics' => $item['metrics'] ?? [],
                     ],
                 ]
@@ -300,7 +303,7 @@ class SeedHotIssuesCommand extends Command
                         ['provider' => $item['provider'], 'external_id' => $c['id']],
                         [
                             'workspace_id' => $topic->workspace_id,
-                            'source_url' => $item['url'],
+                            'source_url' => $isSocial ? null : $item['url'],
                             'author_name' => $c['author'],
                             'published_at' => $cTime,
                             'collected_at' => $now,
@@ -308,9 +311,10 @@ class SeedHotIssuesCommand extends Command
                             'text_normalized' => Str::lower($c['text']),
                             'language' => 'id',
                             'deletion_status' => 'active',
-                            'is_demo' => false,
+                            'is_demo' => $isSocial,
                             'metadata_json' => [
                                 'is_comment' => true,
+                                'link_status' => $isSocial ? 'demo_placeholder' : 'verified_article',
                                 'parent_external_id' => $item['ext_id'],
                                 'likes' => $c['likes'],
                             ],

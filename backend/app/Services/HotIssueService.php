@@ -102,22 +102,31 @@ class HotIssueService
                 $cursor->addHours(3);
             }
 
+            $linkValidator = app(SocialLinkValidator::class);
+
             // Top netizen quotes across X, TikTok, IG, FB, RSS
             $quotes = (clone $currentMentionsQuery)
                 ->with(['sentiment'])
                 ->orderBy('published_at', 'desc')
                 ->limit(10)
                 ->get()
-                ->map(function ($m) {
+                ->map(function ($m) use ($linkValidator) {
                     $meta = $m->metadata_json ?? [];
                     $likes = $meta['likes'] ?? $meta['metrics']['favorite_count'] ?? $meta['metrics']['digg_count'] ?? $meta['metrics']['reactions_count'] ?? 0;
                     $isComment = !empty($meta['is_comment']);
+                    $linkStatus = $linkValidator->resolveEffectiveStatus(
+                        $m->provider,
+                        $m->source_url,
+                        is_array($meta) ? $meta : [],
+                        (bool) $m->is_demo
+                    );
 
                     return [
                         'id' => $m->id,
                         'platform' => $m->provider,
                         'author' => $m->author_name ?? ucfirst($m->provider),
                         'source_url' => $m->source_url,
+                        'link_status' => $linkStatus,
                         'text' => $m->text,
                         'sentiment' => $m->sentiment?->label ?? 'neutral',
                         'likes' => (int)$likes,
