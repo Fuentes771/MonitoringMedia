@@ -69,8 +69,6 @@ class XScraper(BaseScraper):
             limit=limit,
             extra_site_terms="status",
         )
-        if not raw_items:
-            raw_items = self.search_web_syndication(query, site_domain="x.com", limit=limit)
 
         verified_items: List[Dict[str, Any]] = []
         fallback_items: List[Dict[str, Any]] = []

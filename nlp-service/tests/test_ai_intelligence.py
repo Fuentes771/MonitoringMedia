@@ -14,6 +14,16 @@ def test_api_health():
     assert res.status_code == 200
     assert res.json()["status"] == "healthy"
 
+
+def test_docs_disabled_by_default_and_no_hardcoded_ninerouter_key(monkeypatch):
+    assert client.get("/docs").status_code == 404
+    assert client.get("/openapi.json").status_code == 404
+
+    monkeypatch.delenv("NINEROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("NINE_ROUTER_API_KEY", raising=False)
+    isolated_client = NineRouterClient()
+    assert isolated_client.api_key == ""
+
 def test_ai_health_endpoint():
     res = client.get("/ai/health")
     assert res.status_code == 200

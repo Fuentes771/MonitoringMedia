@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -14,18 +15,28 @@ from .ai_search import generate_search_queries, filter_relevance
 from .bot_detection import evaluate_account_and_text_anomalies, analyze_buzzer_network
 from .scrapers.router import router as scraper_router
 
+_enable_docs = os.getenv("NLP_ENABLE_DOCS", "false").lower() in ("1", "true", "yes")
+_cors_origins = [
+    origin.strip()
+    for origin in os.getenv("NLP_CORS_ORIGINS", "http://backend:8000,http://localhost:8000").split(",")
+    if origin.strip()
+]
+
 app = FastAPI(
     title="TRINETRA NLP & AI Intelligence Service",
     version="2.0.0",
-    description="Sentiment inference, 9Router AI gateway, topic executive digest, and context-bounded RAG chat."
+    description="Sentiment inference, 9Router AI gateway, topic executive digest, and context-bounded RAG chat.",
+    docs_url="/docs" if _enable_docs else None,
+    redoc_url="/redoc" if _enable_docs else None,
+    openapi_url="/openapi.json" if _enable_docs else None,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization", "Accept"],
 )
 
 # ----------------- Request Models ----------------- #
@@ -42,6 +53,9 @@ class BatchAnalyzeItem(BaseModel):
     id: str | int
     text: str
     language: Optional[str] = "id"
+    author_name: Optional[str] = None
+    provider: Optional[str] = None
+    top_keywords: Optional[int] = 5
 
 class BatchAnalyzeRequest(BaseModel):
     items: List[BatchAnalyzeItem]
@@ -99,15 +113,17 @@ def ai_health_check():
         "9router": status
     }
 
-@app.post("/analyze")
-def analyze(req: AnalyzeRequest):
-    if not req.text:
-        raise HTTPException(status_code=400, detail="Text cannot be empty")
-    
-    if req.use_ai:
-        sentiment = analyze_ai_sentiment(req.text)
+def _analyze_single_item(
+    text: str,
+    use_ai: bool = True,
+    top_keywords: int = 5,
+    author_name: Optional[str] = None,
+    provider: Optional[str] = None,
+) -> Dict[str, Any]:
+    if use_ai:
+        sentiment = analyze_ai_sentiment(text)
     else:
-        sentiment = analyze_sentiment(req.text)
+        sentiment = analyze_sentiment(text)
         sentiment["aspect"] = "general"
         sentiment["key_reason"] = (
             f"[Sarkasme Terdeteksi] {sentiment['sarcasm_reason']}"
@@ -116,11 +132,11 @@ def analyze(req: AnalyzeRequest):
         )
         sentiment["urgency"] = "medium" if sentiment.get("is_sarcasm") else "low"
 
-    keywords = extract_keywords(req.text, top_n=req.top_keywords)
+    keywords = extract_keywords(text, top_n=top_keywords)
     bot_analysis = evaluate_account_and_text_anomalies(
-        text=req.text,
-        author_name=req.author_name,
-        provider=req.provider
+        text=text,
+        author_name=author_name,
+        provider=provider
     )
 
     return {
@@ -129,19 +145,57 @@ def analyze(req: AnalyzeRequest):
         "bot_analysis": bot_analysis
     }
 
+@app.post("/analyze")
+def analyze(req: AnalyzeRequest):
+    if not req.text:
+        raise HTTPException(status_code=400, detail="Text cannot be empty")
+
+    return _analyze_single_item(
+        text=req.text,
+        use_ai=bool(req.use_ai),
+        top_keywords=req.top_keywords or 5,
+        author_name=req.author_name,
+        provider=req.provider,
+    )
+
 @app.post("/batch-analyze")
 def batch_analyze(req: BatchAnalyzeRequest):
     results = []
     for item in req.items:
-        if req.use_ai:
-            sent = analyze_ai_sentiment(item.text)
-        else:
-            sent = analyze_sentiment(item.text)
-        kw = extract_keywords(item.text, top_n=5)
+        if not item.text or not item.text.strip():
+            results.append({
+                "id": item.id,
+                "sentiment": {
+                    "label": "neutral",
+                    "confidence": 0.5,
+                    "probabilities": {"positive": 0.15, "neutral": 0.70, "negative": 0.15},
+                    "aspect": "general",
+                    "key_reason": "Teks kosong",
+                    "urgency": "low",
+                    "is_sarcasm": False,
+                    "sarcasm_score": 0.0,
+                    "sarcasm_reason": "",
+                    "sarcasm_markers": [],
+                },
+                "keywords": [],
+                "bot_analysis": {
+                    "is_inauthentic": False,
+                    "inauthentic_score": 0.0,
+                    "bot_signals": [],
+                },
+            })
+            continue
+
+        analysis = _analyze_single_item(
+            text=item.text,
+            use_ai=bool(req.use_ai),
+            top_keywords=item.top_keywords or 5,
+            author_name=item.author_name,
+            provider=item.provider,
+        )
         results.append({
             "id": item.id,
-            "sentiment": sent,
-            "keywords": kw
+            **analysis,
         })
     return {"results": results}
 

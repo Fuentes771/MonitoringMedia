@@ -120,7 +120,7 @@ def process_rag_chat(
 PERTANYAAN PENGGUNA:
 "{query}"
 
-Instruksi: Jawab pertanyaan di atas HANYA berdasarkan DATA KONTEKS di atas. Cantumkan sitasi sumber [Penulis/Media, Tanggal, Sentimen] pada setiap temuan."""
+Instruksi: Jawab pertanyaan di atas HANYA berdasarkan DATA KONTEKS di atas dengan mengikuti STRUKTUR JAWABAN EKSEKUTIF secara ketat tanpa menyertakan sitasi nama media/tanggal dalam tanda kurung di dalam kalimat (daftar sitasi sumber sudah ditampilkan terpisah oleh sistem)."""
 
     messages.append({"role": "user", "content": user_prompt})
 
@@ -141,22 +141,61 @@ Instruksi: Jawab pertanyaan di atas HANYA berdasarkan DATA KONTEKS di atas. Cant
             "model": res.get("model")
         }
 
-    # 5. Fallback response if 9Router is offline
-    summary_preview = []
-    for m in context_mentions[:3]:
-        txt = m.get("text", "")[:120].replace("\n", " ")
-        summary_preview.append(f"- {txt}...")
+    # 5. Structured local executive fallback if 9Router is offline
+    total_ctx = len(context_mentions)
+    pos_mentions = [m for m in context_mentions if (m.get("sentiment") or "").lower() == "positive"]
+    neg_mentions = [m for m in context_mentions if (m.get("sentiment") or "").lower() == "negative"]
+    neu_mentions = [
+        m for m in context_mentions
+        if (m.get("sentiment") or "neutral").lower() not in ("positive", "negative")
+    ]
 
-    offline_msg = (
-        f"Layanan pemrosesan AI sedang tidak terhubung. "
-        f"Rangkuman awal dari {len(context_mentions)} sebutan data terkini:\n\n"
-        + "\n".join(summary_preview)
-    )
+    pos_count = len(pos_mentions)
+    neg_count = len(neg_mentions)
+    neu_count = len(neu_mentions)
+
+    pos_pct = round((pos_count / total_ctx) * 100) if total_ctx else 0
+    neg_pct = round((neg_count / total_ctx) * 100) if total_ctx else 0
+    neu_pct = max(0, 100 - pos_pct - neg_pct) if total_ctx else 0
+
+    focus_label = topic_name or "isu yang ditanyakan"
+    dominant_label = "positif" if pos_count >= neg_count and pos_count >= neu_count else ("negatif" if neg_count > pos_count else "netral")
+
+    def _snippet(m: Dict[str, Any]) -> str:
+        raw = (m.get("text") or "").replace("\n", " ").strip()
+        return (raw[:150] + "...") if len(raw) > 150 else raw
+
+    pos_bullets = [f"  - {_snippet(m)}" for m in pos_mentions[:2] if _snippet(m)]
+    crit_source = neg_mentions[:2] if neg_mentions else neu_mentions[:2]
+    crit_bullets = [f"  - {_snippet(m)}" for m in crit_source if _snippet(m)]
+
+    lines = [
+        "### 📌 Ringkasan Eksekutif",
+        f"Berdasarkan {total_ctx} sebutan terkini terkait {focus_label}, kecenderungan sentimen publik saat ini bersifat {dominant_label} (mode sintesis lokal aktif).",
+        "",
+        "### 📊 Distribusi Sentimen Publik",
+        f"🟢 Positif: {pos_pct}% ({pos_count} sebutan) | ⚪ Netral: {neu_pct}% ({neu_count} sebutan) | 🔴 Negatif: {neg_pct}% ({neg_count} sebutan)",
+        "",
+        "### 🔍 Sorotan Isu Strategis",
+    ]
+    if pos_bullets:
+        lines.append("- Katalis Positif:")
+        lines.extend(pos_bullets)
+    else:
+        lines.append("- Katalis Positif: Belum terdapat sebutan bernada positif pada sampel konteks terkini.")
+
+    if crit_bullets:
+        lines.append("- Tantangan & Sorotan Lapangan:")
+        lines.extend(crit_bullets)
+    else:
+        lines.append("- Tantangan & Sorotan Lapangan: Tidak ada catatan kritis menonjol pada sampel konteks terkini.")
+
+    offline_msg = "\n".join(lines)
 
     return {
         "answer": offline_msg,
         "citations": citations,
-        "mentions_count": len(context_mentions),
+        "mentions_count": total_ctx,
         "grounded": True,
         "engine": "local-context-fallback",
         "error": res.get("error")

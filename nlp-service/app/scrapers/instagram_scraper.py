@@ -120,8 +120,6 @@ class InstagramScraper(BaseScraper):
             limit=limit,
             extra_site_terms="(inurl:/p/ OR inurl:/reel/)",
         )
-        if not raw_items:
-            raw_items = self.search_web_syndication(query, site_domain="instagram.com", limit=limit)
 
         verified_items: List[Dict[str, Any]] = []
         fallback_items: List[Dict[str, Any]] = []

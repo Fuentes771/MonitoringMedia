@@ -1,11 +1,15 @@
+import html as html_lib
 import re
 import time
 import random
 import urllib.parse
+import warnings
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional, Tuple, Set
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 from curl_cffi import requests
+
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 
 TWITTER_EPOCH_MS = 1288834974657
@@ -13,6 +17,13 @@ TWITTER_EPOCH_MS = 1288834974657
 
 class BaseScraper:
     """Base HTTP scraper with domain guards, canonical URL encoding, and search telemetry."""
+
+    CACHE_TTL_SECONDS = 600.0
+    _SEARCH_CACHE: Dict[Tuple[str, str, str], Tuple[float, List[Dict[str, Any]]]] = {}
+
+    @classmethod
+    def clear_search_cache(cls) -> None:
+        cls._SEARCH_CACHE.clear()
 
     def __init__(self, platform: str):
         self.platform = platform
@@ -163,6 +174,62 @@ class BaseScraper:
         )
         return resp.status_code, resp.text or ""
 
+    def _run_secondary_syndication_query(self, search_query: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """Secondary web syndication via Bing Web RSS when primary DuckDuckGo throttles or returns empty."""
+        url = f"https://www.bing.com/search?q={urllib.parse.quote(search_query)}&format=rss"
+        try:
+            resp = requests.get(
+                url,
+                headers=self.headers,
+                impersonate="chrome120",
+                timeout=10,
+            )
+            body = resp.text or ""
+            if resp.status_code != 200 or "<item>" not in body.lower():
+                return []
+
+            soup = BeautifulSoup(body, "html.parser")
+            results: List[Dict[str, Any]] = []
+            for item_el in soup.select("item")[: limit * 3]:
+                link_el = item_el.find("link")
+                dest_url = ""
+                if link_el:
+                    dest_url = (link_el.get_text(strip=True) or link_el.get("href") or "").strip()
+                    if not dest_url and link_el.next_sibling:
+                        dest_url = str(link_el.next_sibling).strip()
+                if not dest_url:
+                    guid_el = item_el.find("guid")
+                    if guid_el:
+                        cand = guid_el.get_text(strip=True)
+                        if cand.startswith("http"):
+                            dest_url = cand
+
+                dest_url = html_lib.unescape(dest_url)
+                if not dest_url.startswith("http") or "fallback." in dest_url:
+                    continue
+
+                title_el = item_el.find("title")
+                desc_el = item_el.find("description")
+                pub_el = item_el.find("pubdate")
+
+                title_text = html_lib.unescape(title_el.get_text(" ", strip=True)) if title_el else ""
+                raw_desc = html_lib.unescape(desc_el.get_text(" ", strip=True)) if desc_el else ""
+                snippet_text = BeautifulSoup(raw_desc, "html.parser").get_text(" ", strip=True) if "<" in raw_desc else raw_desc
+                full_text = f"{title_text}. {snippet_text}".strip() if snippet_text else title_text
+                if not full_text or len(full_text) < 12:
+                    continue
+
+                results.append({
+                    "url": dest_url,
+                    "text": full_text,
+                    "title": title_text,
+                    "snippet": snippet_text,
+                    "age_hint": pub_el.get_text(" ", strip=True) if pub_el else "",
+                })
+            return results
+        except Exception:
+            return []
+
     def search_web_syndication(
         self,
         query: str,
@@ -171,7 +238,7 @@ class BaseScraper:
         extra_site_terms: str = "",
     ) -> List[Dict[str, Any]]:
         """
-        Query DuckDuckGo HTML strictly scoped to site_domain so foreign sites never pollute results.
+        Query DuckDuckGo HTML strictly scoped to site_domain with TTL cache and secondary RSS fallback.
         Never synthesizes fake posts or /post/<hash> URLs if search returns empty.
         """
         clean_query = re.sub(r"\s+", " ", (query or "").strip())
@@ -182,6 +249,17 @@ class BaseScraper:
                 "raw_count": 0,
             }
             return []
+
+        cache_key = (site_domain, clean_query.lower(), extra_site_terms.strip().lower())
+        cached = self._SEARCH_CACHE.get(cache_key)
+        if cached and (time.time() - cached[0]) < self.CACHE_TTL_SECONDS:
+            cached_results = [dict(row) for row in cached[1]]
+            self._last_search_meta = {
+                "engine_status": "ok",
+                "status_message": f"{len(cached_results)} kandidat ditemukan pada cache indeks {site_domain}.",
+                "raw_count": len(cached_results),
+            }
+            return cached_results
 
         primary_q = f"site:{site_domain} {extra_site_terms} {clean_query}".strip()
         fallback_q = f"site:{site_domain} {clean_query}".strip()
@@ -213,6 +291,9 @@ class BaseScraper:
                     or len(html) < 500
                 )
                 if status_code != 200 or is_challenge:
+                    if status_code in (202, 403, 429) or "anomaly-modal" in html or "challenge-form" in html:
+                        last_status = status_code if status_code in (202, 403, 429) else 202
+                        break
                     continue
 
                 soup = BeautifulSoup(html, "html.parser")
@@ -247,6 +328,7 @@ class BaseScraper:
                     })
 
                 if results:
+                    self._SEARCH_CACHE[cache_key] = (time.time(), [dict(row) for row in results])
                     self._last_search_meta = {
                         "engine_status": "ok",
                         "status_message": f"{len(results)} kandidat ditemukan pada indeks {site_domain}.",
@@ -260,6 +342,20 @@ class BaseScraper:
                     "raw_count": 0,
                 }
                 continue
+
+        # Secondary web syndication fallback (Bing RSS) when DDG throttles or returns empty
+        secondary_results = self._run_secondary_syndication_query(primary_q, limit=limit)
+        if not secondary_results and fallback_q != primary_q:
+            secondary_results = self._run_secondary_syndication_query(fallback_q, limit=limit)
+
+        if secondary_results:
+            self._SEARCH_CACHE[cache_key] = (time.time(), [dict(row) for row in secondary_results])
+            self._last_search_meta = {
+                "engine_status": "ok",
+                "status_message": f"{len(secondary_results)} kandidat ditemukan melalui sindikasi cadangan {site_domain}.",
+                "raw_count": len(secondary_results),
+            }
+            return secondary_results
 
         if last_status in (202, 403, 429):
             self._last_search_meta = {

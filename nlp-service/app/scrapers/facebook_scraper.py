@@ -87,8 +87,6 @@ class FacebookScraper(BaseScraper):
             limit=limit,
             extra_site_terms="(inurl:/posts/ OR inurl:/reel/ OR inurl:/videos/)",
         )
-        if not raw_items:
-            raw_items = self.search_web_syndication(query, site_domain="facebook.com", limit=limit)
 
         verified_items: List[Dict[str, Any]] = []
         fallback_items: List[Dict[str, Any]] = []

@@ -46,8 +46,6 @@ class TikTokScraper(BaseScraper):
             limit=limit,
             extra_site_terms="video",
         )
-        if not raw_items:
-            raw_items = self.search_web_syndication(query, site_domain="tiktok.com", limit=limit)
 
         verified_items: List[Dict[str, Any]] = []
         fallback_items: List[Dict[str, Any]] = []
