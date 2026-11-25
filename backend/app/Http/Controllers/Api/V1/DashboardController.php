@@ -11,6 +11,7 @@ use App\Models\TrendSnapshot;
 use App\Models\Workspace;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -23,8 +24,32 @@ class DashboardController extends Controller
         $topicId = $request->input('topic_id');
         $provider = $request->input('provider');
         $excludeInauthentic = $request->boolean('exclude_inauthentic');
-        $fromStr = $request->input('from', Carbon::now('Asia/Jakarta')->subDays(7)->toIso8601String());
-        $toStr = $request->input('to', Carbon::now('Asia/Jakarta')->toIso8601String());
+        $days = max(1, min(90, (int) $request->input('days', 7)));
+        $fromParam = $request->input('from');
+        $toParam = $request->input('to');
+        $forceRefresh = $request->boolean('refresh');
+
+        $wsVer = (int) Cache::get("ws_data_ver:{$workspaceId}", 1);
+        $cacheKey = "dashboard_overview_v2:{$wsVer}:" . md5(json_encode([
+            $workspaceId,
+            $topicId,
+            $provider,
+            $excludeInauthentic,
+            $days,
+            $fromParam,
+            $toParam,
+        ]));
+
+        if (!app()->runningUnitTests() && !$forceRefresh) {
+            $cached = Cache::get($cacheKey);
+            if ($cached !== null) {
+                return response()->json($cached);
+            }
+        }
+
+        $nowWib = Carbon::now('Asia/Jakarta');
+        $fromStr = $fromParam ?: $nowWib->copy()->subDays($days)->toIso8601String();
+        $toStr = $toParam ?: $nowWib->toIso8601String();
 
         $from = Carbon::parse($fromStr)->setTimezone('Asia/Jakarta');
         $to = Carbon::parse($toStr)->setTimezone('Asia/Jakarta');
@@ -166,41 +191,49 @@ class DashboardController extends Controller
                 ];
             });
 
-        // 33-Hour Activity Curve (Hourly Velocity Sparkline in memory)
-        $windowMentions = Mention::where('mentions.workspace_id', $workspaceId)
+        // 33-Hour Activity Curve (single-pass O(N) bucketing on lightweight stdClass rows)
+        $windowRows = DB::table('mentions')
+            ->where('mentions.workspace_id', $workspaceId)
             ->whereBetween('mentions.published_at', [$dailyStart, $dailyEnd])
             ->leftJoin('sentiment_results', 'mentions.id', '=', 'sentiment_results.mention_id')
             ->select('mentions.published_at', 'sentiment_results.label as sentiment')
             ->get();
 
+        $bucketSeconds = 3 * 3600;
+        $dailyStartTs = $dailyStart->getTimestamp();
+        $dailyEndTs = $dailyEnd->getTimestamp();
         $hourlyVelocity = [];
         $cursor = $dailyStart->copy();
         while ($cursor < $dailyEnd) {
-            $bucketEnd = $cursor->copy()->addHours(3);
-            if ($bucketEnd > $dailyEnd) {
-                $bucketEnd = $dailyEnd->copy();
-            }
-
-            $inBucket = $windowMentions->filter(function ($item) use ($cursor, $bucketEnd) {
-                if (!$item->published_at) return false;
-                $t = Carbon::parse($item->published_at);
-                return $t >= $cursor && $t < $bucketEnd;
-            });
-
-            $bPos = $inBucket->where('sentiment', 'positive')->count();
-            $bNeg = $inBucket->where('sentiment', 'negative')->count();
-
             $isToday = $cursor->isToday();
             $labelPrefix = $isToday ? 'Hari Ini ' : 'Kemarin ';
-
             $hourlyVelocity[] = [
                 'time_label' => $labelPrefix . $cursor->format('H:i'),
-                'count' => $inBucket->count(),
-                'positive' => $bPos,
-                'negative' => $bNeg,
+                'count' => 0,
+                'positive' => 0,
+                'negative' => 0,
             ];
-
             $cursor->addHours(3);
+        }
+
+        $bucketCount = count($hourlyVelocity);
+        foreach ($windowRows as $row) {
+            if (!$row->published_at) {
+                continue;
+            }
+            $ts = strtotime((string) $row->published_at);
+            if ($ts === false || $ts < $dailyStartTs || $ts >= $dailyEndTs) {
+                continue;
+            }
+            $idx = intdiv($ts - $dailyStartTs, $bucketSeconds);
+            if ($idx >= 0 && $idx < $bucketCount) {
+                $hourlyVelocity[$idx]['count']++;
+                if ($row->sentiment === 'positive') {
+                    $hourlyVelocity[$idx]['positive']++;
+                } elseif ($row->sentiment === 'negative') {
+                    $hourlyVelocity[$idx]['negative']++;
+                }
+            }
         }
 
         $aiSummary = app(\App\Services\AiIntelligenceService::class)->getDailyExecutiveSummary($workspaceId, $dailyStart, $dailyEnd);
@@ -226,7 +259,7 @@ class DashboardController extends Controller
             'ai_summary' => $aiSummary,
         ];
 
-        return response()->json([
+        $payload = [
             'status' => 'success',
             'meta' => [
                 'timezone' => 'Asia/Jakarta',
@@ -244,7 +277,7 @@ class DashboardController extends Controller
                     'provider' => $c->provider,
                     'status' => $c->status,
                     'last_sync' => $c->last_successful_sync_at?->toIso8601String(),
-                ]),
+                ])->values()->all(),
             ],
             'kpis' => [
                 'total_mentions' => $totalMentions,
@@ -260,7 +293,13 @@ class DashboardController extends Controller
             ],
             'daily_briefing' => $dailyBriefing,
             'platform_breakdown' => $platformBreakdown,
-        ]);
+        ];
+
+        if (!app()->runningUnitTests()) {
+            Cache::put($cacheKey, $payload, 60);
+        }
+
+        return response()->json($payload);
     }
 
     public function timeseries(Request $request)
@@ -269,7 +308,24 @@ class DashboardController extends Controller
         $topicId = $request->input('topic_id');
         $provider = $request->input('provider');
         $excludeInauthentic = $request->boolean('exclude_inauthentic');
-        $days = (int)$request->input('days', 7);
+        $days = max(1, min(90, (int) $request->input('days', 7)));
+        $forceRefresh = $request->boolean('refresh');
+
+        $wsVer = (int) Cache::get("ws_data_ver:{$workspaceId}", 1);
+        $cacheKey = "dashboard_timeseries_v2:{$wsVer}:" . md5(json_encode([
+            $workspaceId,
+            $topicId,
+            $provider,
+            $excludeInauthentic,
+            $days,
+        ]));
+
+        if (!app()->runningUnitTests() && !$forceRefresh) {
+            $cached = Cache::get($cacheKey);
+            if ($cached !== null) {
+                return response()->json($cached);
+            }
+        }
 
         $now = Carbon::now('Asia/Jakarta');
         $start = $now->copy()->subDays($days)->startOfDay();
@@ -307,27 +363,40 @@ class DashboardController extends Controller
         ->orderBy('day', 'asc')
         ->get();
 
+        $rowsByDate = [];
+        foreach ($rows as $r) {
+            $dateKey = substr((string) $r->day, 0, 10);
+            $rowsByDate[$dateKey] = $r;
+        }
+
         $timeline = [];
         for ($i = $days; $i >= 0; $i--) {
-            $date = $now->copy()->subDays($i)->format('Y-m-d');
-            $row = $rows->first(fn($r) => Carbon::parse($r->day)->format('Y-m-d') === $date);
+            $dayCarbon = $now->copy()->subDays($i);
+            $date = $dayCarbon->format('Y-m-d');
+            $row = $rowsByDate[$date] ?? null;
 
             $timeline[] = [
                 'date' => $date,
-                'label' => Carbon::parse($date)->locale('id')->isoFormat('D MMM'),
-                'total' => $row ? (int)$row->total : 0,
-                'positive' => $row ? (int)$row->positive : 0,
-                'neutral' => $row ? (int)$row->neutral : 0,
-                'negative' => $row ? (int)$row->negative : 0,
-                'unknown' => $row ? (int)$row->unknown : 0,
+                'label' => $dayCarbon->copy()->locale('id')->isoFormat('D MMM'),
+                'total' => $row ? (int) $row->total : 0,
+                'positive' => $row ? (int) $row->positive : 0,
+                'neutral' => $row ? (int) $row->neutral : 0,
+                'negative' => $row ? (int) $row->negative : 0,
+                'unknown' => $row ? (int) $row->unknown : 0,
             ];
         }
 
-        return response()->json([
+        $payload = [
             'status' => 'success',
             'days' => $days,
             'timeline' => $timeline,
-        ]);
+        ];
+
+        if (!app()->runningUnitTests()) {
+            Cache::put($cacheKey, $payload, 60);
+        }
+
+        return response()->json($payload);
     }
 }
 

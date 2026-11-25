@@ -8,6 +8,7 @@ use App\Models\Alert;
 use App\Models\AlertEvent;
 use App\Models\Notification;
 use App\Models\Topic;
+use App\Services\AlertService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -15,9 +16,10 @@ class AlertController extends Controller
 {
     use ResolvesAuthorizedWorkspace;
 
-    public function index(Request $request)
+    public function index(Request $request, AlertService $alertService)
     {
         $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
+        $alertService->ensureDefaultAlertsForWorkspace($workspaceId);
 
         $rules = Alert::where('workspace_id', $workspaceId)
             ->with('topic:id,name')

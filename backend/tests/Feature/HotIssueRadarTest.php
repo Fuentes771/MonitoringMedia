@@ -10,6 +10,8 @@ use App\Models\Mention;
 use App\Models\MentionTopicMatch;
 use App\Models\SentimentResult;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use App\Services\HotIssueDiscoveryService;
 use Carbon\Carbon;
 use Laravel\Sanctum\Sanctum;
 
@@ -142,6 +144,32 @@ class HotIssueRadarTest extends TestCase
 
         $this->assertEquals(1, Topic::nationalPrograms()->count());
         $this->assertEquals(1, Topic::trendingIssues()->count());
+    }
+
+    public function test_hot_issues_index_auto_discovers_once_when_empty(): void
+    {
+        Cache::forget("hot_issues_autodiscover_{$this->workspace->id}");
+
+        $this->mock(HotIssueDiscoveryService::class, function ($mock) {
+            $mock->shouldReceive('discoverAndIngest')
+                ->once()
+                ->with($this->workspace->id)
+                ->andReturn([
+                    'status' => 'success',
+                    'discovered_count' => 1,
+                    'new_topics_created' => 1,
+                    'message' => '1 isu baru ditemukan otomatis.',
+                ]);
+        });
+
+        $first = $this->getJson('/api/v1/hot-issues?workspace_id=' . $this->workspace->id);
+        $first->assertStatus(200)
+            ->assertJsonPath('data.auto_discovered', true)
+            ->assertJsonPath('data.auto_discovery_message', '1 isu baru ditemukan otomatis.');
+
+        // Second call within 15-minute cooldown should not invoke discoverAndIngest again
+        $second = $this->getJson('/api/v1/hot-issues?workspace_id=' . $this->workspace->id);
+        $second->assertStatus(200);
     }
 }
 

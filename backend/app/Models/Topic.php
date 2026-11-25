@@ -14,6 +14,7 @@ class Topic extends Model
 
     protected $fillable = [
         'workspace_id',
+        'external_key',
         'name',
         'description',
         'category',
@@ -23,6 +24,8 @@ class Topic extends Model
         'match_mode',
         'language_filters',
         'providers',
+        'collect_interval_minutes',
+        'last_collected_at',
         'is_demo',
     ];
 
@@ -31,7 +34,14 @@ class Topic extends Model
         'providers' => 'array',
         'is_demo' => 'boolean',
         'surge_detected_at' => 'datetime',
+        'collect_interval_minutes' => 'integer',
+        'last_collected_at' => 'datetime',
     ];
+
+    public function resolveTopicIdentifier(): string
+    {
+        return !empty($this->external_key) ? (string) $this->external_key : (string) $this->id;
+    }
 
     public function scopeNationalPrograms($query)
     {

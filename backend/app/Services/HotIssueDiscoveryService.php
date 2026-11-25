@@ -89,7 +89,8 @@ class HotIssueDiscoveryService
                     }
                 }
 
-                // Ingest latest mentions
+                // Ingest latest mentions & evaluate auto-provisioned alerts
+                $this->alertService->ensureDefaultAlertsForTopic($existingTopic);
                 $this->ingestionService->ingestTopic($existingTopic);
                 $this->trendService->computeTopicTrend($existingTopic);
                 $this->alertService->evaluateTopicAlerts($existingTopic);
@@ -122,7 +123,8 @@ class HotIssueDiscoveryService
                     }
                 }
 
-                // Ingest mentions right away
+                // Auto-provision default alerts & ingest mentions right away
+                $this->alertService->ensureDefaultAlertsForTopic($topic);
                 $this->ingestionService->ingestTopic($topic);
                 $this->trendService->computeTopicTrend($topic);
                 $this->alertService->evaluateTopicAlerts($topic);

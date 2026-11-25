@@ -7,7 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Topic;
 use App\Models\TrendSnapshot;
 use App\Models\MentionKeyword;
+use App\Services\TrendService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -15,9 +17,17 @@ class TrendController extends Controller
 {
     use ResolvesAuthorizedWorkspace;
 
-    public function index(Request $request)
+    public function index(Request $request, TrendService $trendService)
     {
         $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
+        $cacheKey = "trends_index_v2:{$workspaceId}";
+
+        if (!app()->runningUnitTests() && !$request->boolean('refresh')) {
+            $cached = Cache::get($cacheKey);
+            if ($cached !== null) {
+                return response()->json($cached);
+            }
+        }
 
         // Rising Topics based on latest Trend Snapshot
         $topics = Topic::where('workspace_id', $workspaceId)
@@ -26,17 +36,35 @@ class TrendController extends Controller
             ->withCount('mentions')
             ->get();
 
-        $risingTopics = $topics->map(function ($t) {
+        $risingTopics = $topics->map(function ($t) use ($trendService) {
             $snap = $t->trendSnapshots->first();
+            if ($snap) {
+                $score = $snap->score;
+                $sampleCount = $snap->sample_count;
+                $rawExplanation = $snap->explanation;
+                $components = is_array($snap->components_json) ? $snap->components_json : [];
+            } else {
+                $computed = $trendService->computeTopicTrend($t);
+                $score = $computed['score'];
+                $sampleCount = $computed['sample_count'];
+                $rawExplanation = $computed['explanation'];
+                $components = $computed['components'] ?? [];
+            }
+
+            $explanation = str_replace('—', ':', (string) ($rawExplanation ?: 'Volume stabil pada periode observasi.'));
+
             return [
                 'id' => $t->id,
                 'name' => $t->name,
                 'description' => $t->description,
                 'mentions_count' => $t->mentions_count,
-                'trend_score' => $snap ? $snap->score : 45.0,
-                'sample_count' => $snap ? $snap->sample_count : $t->mentions_count,
-                'explanation' => $snap ? $snap->explanation : "Volume stabil pada periode observasi.",
-                'components' => $snap ? $snap->components_json : null,
+                'trend_score' => $score,
+                'sample_count' => $sampleCount,
+                'explanation' => $explanation,
+                'components' => $components ?: null,
+                'driving_keywords' => $components['driving_keywords'] ?? [],
+                'active_providers' => $components['active_providers'] ?? [],
+                'sample_mention' => $components['sample_mention'] ?? null,
             ];
         })->sortByDesc('trend_score')->values();
 
@@ -50,13 +78,19 @@ class TrendController extends Controller
             ->limit(15)
             ->get();
 
-        return response()->json([
+        $payload = [
             'status' => 'success',
             'data' => [
-                'rising_topics' => $risingTopics,
-                'top_keywords' => $topKeywords,
+                'rising_topics' => $risingTopics->all(),
+                'top_keywords' => $topKeywords->toArray(),
             ],
-        ]);
+        ];
+
+        if (!app()->runningUnitTests()) {
+            Cache::put($cacheKey, $payload, 60);
+        }
+
+        return response()->json($payload);
     }
 }
 

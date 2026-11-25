@@ -12,9 +12,22 @@ use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\AiIntelligenceController;
 use App\Http\Controllers\Api\V1\HotIssueController;
 use App\Http\Controllers\Api\V1\BuzzerRadarController;
+use App\Http\Controllers\Api\V1\MuseConnectorController;
 
 Route::prefix('v1')->group(function () {
-    // 1. Public Authentication (IP burst limit; failed-attempt throttling handled per email+IP in AuthController)
+    // 0. Public Health Check
+    Route::get('/health', [MuseConnectorController::class, 'health']);
+
+    // 1. Muse Official Collector Bridge (API Key Auth, terpisah dari login web Operator)
+    Route::middleware('muse.auth')->group(function () {
+        Route::get('/topics/active', [MuseConnectorController::class, 'activeTopics']);
+        Route::get('/collector/status', [MuseConnectorController::class, 'collectorStatus']);
+        Route::post('/ingest/mentions', [MuseConnectorController::class, 'ingestMentions'])
+            ->middleware('throttle:muse-ingest');
+        Route::delete('/ingest/mentions/{platform}/{platform_post_id}', [MuseConnectorController::class, 'deleteMention']);
+    });
+
+    // 2. Public Authentication (IP burst limit; failed-attempt throttling handled per email+IP in AuthController)
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:30,1');
 
     // Authenticated Endpoints (Sanctum Bearer Token + Workspace Access Verification)

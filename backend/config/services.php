@@ -59,4 +59,13 @@ return [
         ],
     ],
 
+    'muse' => [
+        'api_keys' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('TRINETRA_API_KEY', ''))
+        ))),
+        'workspace_id' => env('TRINETRA_MUSE_WORKSPACE_ID') ? (int) env('TRINETRA_MUSE_WORKSPACE_ID') : null,
+        'ingest_rate_limit' => max(1, (int) env('TRINETRA_INGEST_RATE_LIMIT', 10)),
+    ],
+
 ];

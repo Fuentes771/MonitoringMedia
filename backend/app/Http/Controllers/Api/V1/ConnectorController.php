@@ -16,7 +16,9 @@ class ConnectorController extends Controller
     use ResolvesAuthorizedWorkspace;
     use ResolvesRapidApiKey;
 
-    private const SOCIAL_LOCAL_PLATFORMS = ['youtube', 'x', 'tiktok', 'instagram', 'facebook'];
+    private const SOCIAL_LOCAL_PLATFORMS = ['youtube', 'x', 'tiktok'];
+    private const RAPIDAPI_PLATFORMS = ['x', 'tiktok'];
+    private const MUSE_PUSH_PLATFORMS = ['threads', 'facebook', 'instagram'];
 
     public function index(Request $request)
     {
@@ -25,10 +27,11 @@ class ConnectorController extends Controller
         $defaultProviders = [
             'rss' => ['status' => 'connected', 'capabilities' => ['keyword_search' => true, 'public_content' => true, 'historical_backfill' => 'limited']],
             'youtube' => ['status' => 'needs_config', 'capabilities' => ['keyword_search' => true, 'public_content' => true, 'comments' => true, 'public_metrics' => true]],
+            'threads' => ['status' => 'needs_config', 'capabilities' => ['keyword_search' => true, 'public_content' => true, 'comments' => true, 'public_metrics' => true, 'ingestion_mode' => 'muse_push']],
+            'instagram' => ['status' => 'needs_config', 'capabilities' => ['keyword_search' => false, 'public_content' => true, 'comments' => true, 'public_metrics' => true, 'ingestion_mode' => 'muse_push']],
+            'facebook' => ['status' => 'needs_config', 'capabilities' => ['keyword_search' => false, 'public_content' => true, 'comments' => true, 'public_metrics' => true, 'ingestion_mode' => 'muse_push']],
             'x' => ['status' => 'needs_config', 'capabilities' => ['keyword_search' => true, 'public_content' => true, 'comments' => true, 'public_metrics' => true]],
             'tiktok' => ['status' => 'needs_config', 'capabilities' => ['keyword_search' => true, 'public_content' => true, 'comments' => true, 'public_metrics' => true]],
-            'instagram' => ['status' => 'needs_config', 'capabilities' => ['keyword_search' => true, 'public_content' => true, 'comments' => true, 'public_metrics' => true]],
-            'facebook' => ['status' => 'needs_config', 'capabilities' => ['keyword_search' => true, 'public_content' => true, 'comments' => true, 'public_metrics' => true]],
             'reddit' => ['status' => 'disconnected', 'capabilities' => ['keyword_search' => true, 'public_content' => true, 'comments' => true]],
         ];
 
@@ -47,13 +50,32 @@ class ConnectorController extends Controller
             ->get();
 
         $localScraperAvailable = app(LocalScraperService::class)->isAvailable();
+        $museConfigured = $this->isMuseConfigured();
 
         return response()->json([
             'status' => 'success',
-            'data' => $connectors->map(function ($c) use ($workspaceId, $localScraperAvailable) {
+            'data' => $connectors->map(function ($c) use ($workspaceId, $localScraperAvailable, $museConfigured) {
                 $provider = $c->provider;
+                $isMusePush = in_array($provider, self::MUSE_PUSH_PLATFORMS, true);
                 $isSocialLocal = in_array($provider, self::SOCIAL_LOCAL_PLATFORMS, true);
-                $isRapidApiTarget = in_array($provider, ['x', 'tiktok', 'instagram', 'facebook'], true);
+                $isRapidApiTarget = in_array($provider, self::RAPIDAPI_PLATFORMS, true);
+
+                if ($isMusePush) {
+                    return [
+                        'id' => $c->id,
+                        'provider' => $provider,
+                        'status' => $museConfigured ? 'connected' : 'needs_config',
+                        'capabilities' => array_merge(
+                            is_array($c->capabilities_json) ? $c->capabilities_json : [],
+                            ['ingestion_mode' => 'muse_push']
+                        ),
+                        'last_successful_sync_at' => $c->last_successful_sync_at?->toIso8601String(),
+                        'has_credentials' => $museConfigured,
+                        'has_local_engine' => false,
+                        'has_rapidapi' => false,
+                        'engine_mode' => 'muse_push',
+                    ];
+                }
 
                 $hasRapidApi = $isRapidApiTarget && $this->hasRapidApiKey($workspaceId, $provider);
                 $hasYouTubeApi = ($provider === 'youtube') && $this->hasYouTubeKey($c);
@@ -118,7 +140,7 @@ class ConnectorController extends Controller
                 ['encrypted_payload' => ['api_key' => $apiKey]]
             );
 
-            foreach (['x', 'tiktok', 'instagram', 'facebook'] as $socialProv) {
+            foreach (self::RAPIDAPI_PLATFORMS as $socialProv) {
                 $c = Connector::firstOrCreate(
                     ['workspace_id' => $workspaceId, 'provider' => $socialProv],
                     ['status' => 'connected']
@@ -128,7 +150,7 @@ class ConnectorController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Unified RapidAPI Key berhasil disimpan dan mengaktifkan konektor X, TikTok, Instagram, dan Facebook.',
+                'message' => 'Unified RapidAPI Key berhasil disimpan dan mengaktifkan konektor X dan TikTok.',
             ]);
         }
 
@@ -197,7 +219,29 @@ class ConnectorController extends Controller
             ]);
         }
 
-        if (in_array($provider, ['x', 'tiktok', 'instagram', 'facebook', 'rapidapi'], true)) {
+        if (in_array($provider, self::MUSE_PUSH_PLATFORMS, true)) {
+            if (!$this->isMuseConfigured()) {
+                return response()->json([
+                    'status' => 'needs_config',
+                    'provider' => $provider,
+                    'engine' => 'muse_push',
+                    'message' => "TRINETRA_API_KEY belum dikonfigurasi di environment server. Atur TRINETRA_API_KEY agar Muse dapat mendorong data {$provider} ke /api/v1/ingest/mentions.",
+                ]);
+            }
+
+            $lastSyncText = $connector?->last_successful_sync_at
+                ? ' Push terakhir: ' . $connector->last_successful_sync_at->timezone('Asia/Jakarta')->format('d M Y H:i') . ' WIB.'
+                : ' Belum ada batch push masuk dari Muse.';
+
+            return response()->json([
+                'status' => 'success',
+                'provider' => $provider,
+                'engine' => 'muse_push',
+                'message' => "Konektor {$provider} siap menerima data resmi via Muse Push (/api/v1/ingest/mentions).{$lastSyncText}",
+            ]);
+        }
+
+        if (in_array($provider, ['x', 'tiktok', 'rapidapi'], true)) {
             $hasKey = $this->hasRapidApiKey($workspaceId, $provider);
             $localAvailable = ($provider !== 'rapidapi') && app(LocalScraperService::class)->isAvailable();
 
@@ -238,10 +282,17 @@ class ConnectorController extends Controller
         $this->resolveAuthorizedWorkspaceId($request);
         $query = trim((string) $request->input('query', 'Makan Bergizi Gratis')) ?: 'Makan Bergizi Gratis';
 
+        if (in_array($provider, self::MUSE_PUSH_PLATFORMS, true)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Platform {$provider} menggunakan konektor push resmi via Muse (POST /api/v1/ingest/mentions), bukan scraping lokal langsung.",
+            ], 400);
+        }
+
         if (!in_array($provider, self::SOCIAL_LOCAL_PLATFORMS, true)) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Live preview tersedia untuk YouTube, X, TikTok, Instagram, dan Facebook.',
+                'message' => 'Live preview tersedia untuk YouTube, X, dan TikTok.',
             ], 400);
         }
 
@@ -306,6 +357,20 @@ class ConnectorController extends Controller
         }
 
         return $this->isUsableApiKey(config('services.youtube.api_key', env('YOUTUBE_API_KEY')));
+    }
+
+    private function isMuseConfigured(): bool
+    {
+        $keys = config('services.muse.api_keys', []);
+        if (is_string($keys)) {
+            $keys = explode(',', $keys);
+        }
+
+        if (!is_array($keys)) {
+            return false;
+        }
+
+        return count(array_filter($keys, fn ($k) => is_string($k) && trim($k) !== '')) > 0;
     }
 
     private function extractCredentialKey(ConnectorCredential $credential): ?string

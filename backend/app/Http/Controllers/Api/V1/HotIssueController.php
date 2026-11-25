@@ -12,16 +12,39 @@ use App\Services\AlertService;
 use App\Models\Topic;
 use App\Models\TopicKeyword;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Throwable;
 
 class HotIssueController extends Controller
 {
     use ResolvesAuthorizedWorkspace;
 
-    public function index(Request $request, HotIssueService $hotIssueService)
-    {
+    public function index(
+        Request $request,
+        HotIssueService $hotIssueService,
+        HotIssueDiscoveryService $discoveryService
+    ) {
         $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
+        $skipAutoDiscover = $request->boolean('skip_autodiscover');
         $data = $hotIssueService->getActiveHotIssues($workspaceId);
+
+        $shouldAutoDiscover = !$skipAutoDiscover
+            && empty($data['hot_issues'])
+            && (!app()->runningUnitTests() || app()->bound(HotIssueDiscoveryService::class) || $request->boolean('auto_discover'));
+
+        if ($shouldAutoDiscover && Cache::add("hot_issues_autodiscover_{$workspaceId}", true, now()->addMinutes(15))) {
+            try {
+                $result = $discoveryService->discoverAndIngest($workspaceId);
+                HotIssueService::forgetCache($workspaceId);
+                $data = $hotIssueService->getActiveHotIssues($workspaceId, true);
+                $data['auto_discovered'] = true;
+                $data['auto_discovery_message'] = $result['message'] ?? 'Pemindaian otomatis Google News selesai.';
+            } catch (Throwable $e) {
+                Log::warning("HotIssues auto-discovery failed for workspace {$workspaceId}: {$e->getMessage()}");
+            }
+        }
 
         return response()->json([
             'status' => 'success',
@@ -54,7 +77,8 @@ class HotIssueController extends Controller
             'surge_detected_at' => Carbon::now('Asia/Jakarta'),
             'status' => 'active',
             'match_mode' => 'any',
-            'providers' => ['rss', 'youtube', 'x', 'tiktok', 'instagram', 'facebook'],
+            'providers' => ['rss', 'youtube', 'threads', 'facebook', 'instagram', 'x', 'tiktok'],
+            'collect_interval_minutes' => 30,
             'is_demo' => false,
         ]);
 
@@ -67,10 +91,17 @@ class HotIssueController extends Controller
             ]);
         }
 
-        // Immediately trigger initial ingestion and trend calculation
-        $ingestionService->ingestTopic($topic);
-        $trendService->computeTopicTrend($topic);
-        $alertService->evaluateTopicAlerts($topic);
+        // Zero-touch: auto-provision default alerts and run initial ingestion + evaluation
+        $alertService->ensureDefaultAlertsForTopic($topic);
+        try {
+            $ingestionService->ingestTopic($topic);
+            $trendService->computeTopicTrend($topic);
+            $alertService->evaluateTopicAlerts($topic);
+        } catch (Throwable $e) {
+            Log::warning("Initial hot issue sync failed for topic {$topic->id}: {$e->getMessage()}");
+        }
+
+        HotIssueService::forgetCache($workspaceId);
 
         return response()->json([
             'status' => 'success',
@@ -90,7 +121,8 @@ class HotIssueController extends Controller
         $workspaceId = $this->resolveAuthorizedWorkspaceId($request);
 
         $result = $discoveryService->discoverAndIngest($workspaceId);
-        $radarData = $hotIssueService->getActiveHotIssues($workspaceId);
+        HotIssueService::forgetCache($workspaceId);
+        $radarData = $hotIssueService->getActiveHotIssues($workspaceId, true);
 
         return response()->json([
             'status' => 'success',
@@ -108,6 +140,7 @@ class HotIssueController extends Controller
         $topic = Topic::where('category', 'trending_issue')->findOrFail($id);
         $this->authorizeResourceWorkspace($request, (int) $topic->workspace_id);
         $topic->update(['status' => 'archived']);
+        HotIssueService::forgetCache((int) $topic->workspace_id);
 
         return response()->json([
             'status' => 'success',

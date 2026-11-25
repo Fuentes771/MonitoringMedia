@@ -155,4 +155,46 @@ class TopicManagementTest extends TestCase
             'status' => 'archived',
         ]);
     }
+
+    public function test_creating_topic_provisions_default_alerts_and_manage_status_includes_paused(): void
+    {
+        $response = $this->postJson("/api/v1/workspaces/{$this->workspaceA->id}/topics", [
+            'name' => 'Infrastruktur IKN',
+            'include_keywords' => ['IKN', 'Nusantara'],
+            'providers' => ['rss'],
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('auto_alerts_provisioned', true);
+
+        $topicId = $response->json('data.id');
+        $this->assertDatabaseHas('alerts', [
+            'topic_id' => $topicId,
+            'type' => 'negative_surge',
+            'is_active' => true,
+        ]);
+        $this->assertDatabaseHas('alerts', [
+            'topic_id' => $topicId,
+            'type' => 'volume_spike',
+            'is_active' => true,
+        ]);
+
+        $archived = Topic::create([
+            'workspace_id' => $this->workspaceA->id,
+            'name' => 'Topik Lama Arsip',
+            'status' => 'archived',
+            'match_mode' => 'any',
+        ]);
+
+        $this->patchJson("/api/v1/topics/{$topicId}", ['status' => 'paused'])
+            ->assertStatus(200);
+
+        $manageList = $this->getJson("/api/v1/workspaces/{$this->workspaceA->id}/topics?status=manage");
+        $manageList->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $topicId)
+            ->assertJsonPath('data.0.status', 'paused');
+
+        $this->assertNotEquals($archived->id, $manageList->json('data.0.id'));
+    }
 }

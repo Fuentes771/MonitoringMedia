@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Workspace;
 use App\Models\Topic;
 use App\Models\Mention;
+use App\Models\MentionKeyword;
 use App\Models\MentionTopicMatch;
 use App\Models\Connector;
 use App\Services\TrendService;
@@ -92,6 +93,14 @@ class TrendServiceTest extends TestCase
                 'topic_id' => $this->topic->id,
                 'matched_keywords_json' => ['AI'],
             ]);
+
+            if ($i < 3) {
+                MentionKeyword::create([
+                    'mention_id' => $mention->id,
+                    'keyword' => 'kecerdasan buatan',
+                    'score' => 1.5,
+                ]);
+            }
         }
 
         $result = $this->trendService->computeTopicTrend($this->topic, 24);
@@ -99,6 +108,10 @@ class TrendServiceTest extends TestCase
         $this->assertEquals(20, $result['sample_count']);
         $this->assertGreaterThan(25.0, $result['score']);
         $this->assertNotEmpty($result['explanation']);
+        $this->assertStringNotContainsString('—', $result['explanation']);
+        $this->assertContains('rss', $result['components']['active_providers']);
+        $this->assertContains('kecerdasan buatan', $result['components']['driving_keywords']);
+        $this->assertNotNull($result['components']['sample_mention']);
         $this->assertDatabaseHas('trend_snapshots', [
             'topic_id' => $this->topic->id,
             'sample_count' => 20,

@@ -66,6 +66,7 @@ class NationalPriorityProgramsSeeder extends Seeder
             ],
             [
                 'name' => 'Koperasi Desa/Kelurahan Merah Putih',
+                'external_key' => 'top_kopdes_001',
                 'description' => 'Penguatan dan revitalisasi koperasi di tingkat desa dan kelurahan sebagai pusat rantai pasok dan ekonomi kerakyatan.',
                 'includes' => ['Koperasi Desa Merah Putih', 'Koperasi Kelurahan Merah Putih', 'Koperasi Merah Putih', 'koperasi desa merah putih'],
                 'excludes' => ['beras merah putih', 'bendera merah putih pesta'],
@@ -133,11 +134,13 @@ class NationalPriorityProgramsSeeder extends Seeder
                     'name' => $prog['name'],
                 ],
                 [
+                    'external_key' => $prog['external_key'] ?? null,
                     'description' => $prog['description'],
                     'status' => 'active',
                     'match_mode' => 'any',
                     'language_filters' => ['id'],
-                    'providers' => ['rss', 'youtube'],
+                    'providers' => ['rss', 'youtube', 'threads', 'facebook', 'instagram'],
+                    'collect_interval_minutes' => 60,
                     'is_demo' => false,
                 ]
             );

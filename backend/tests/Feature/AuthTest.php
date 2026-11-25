@@ -347,4 +347,25 @@ class AuthTest extends TestCase
         $this->assertSame(0, PersonalAccessToken::where('tokenable_id', $this->user->id)->count());
         $this->assertGreaterThanOrEqual(2, AuditLog::where('actor_id', $this->user->id)->count());
     }
+
+    public function test_trusted_proxy_headers_resolve_real_client_ip_and_cors_is_not_wildcard(): void
+    {
+        $this->assertNotContains('*', config('cors.allowed_origins', []));
+
+        $this->withServerVariables([
+            'REMOTE_ADDR' => '172.19.0.8',
+            'HTTP_X_FORWARDED_FOR' => '203.0.113.42',
+            'HTTP_X_FORWARDED_PROTO' => 'https',
+        ])->postJson('/api/v1/auth/login', [
+            'email' => 'operator@pulsescope.local',
+            'password' => 'password123',
+        ])->assertStatus(200);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'workspace_id' => $this->workspace->id,
+            'actor_id' => $this->user->id,
+            'action' => 'auth.login',
+            'ip_address' => '203.0.113.42',
+        ]);
+    }
 }

@@ -6,6 +6,7 @@ use App\Models\Mention;
 use App\Models\SentimentResult;
 use App\Models\Topic;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -20,6 +21,11 @@ class BuzzerDetectionService
         $this->nlpUrl = rtrim(env('NLP_SERVICE_URL', 'http://127.0.0.1:8001'), '/');
     }
 
+    private static function radarCacheKey(int $workspaceId, int $days, ?int $topicId): string
+    {
+        return "buzzer_radar_v2:{$workspaceId}:{$days}:" . ($topicId ?? 'all');
+    }
+
     /**
      * Get comprehensive Buzzer, Bot & Political Sarcasm Radar overview.
      *
@@ -28,8 +34,15 @@ class BuzzerDetectionService
      * @param int|null $topicId
      * @return array<string, mixed>
      */
-    public function getRadarOverview(int $workspaceId = 1, int $days = 7, ?int $topicId = null): array
+    public function getRadarOverview(int $workspaceId = 1, int $days = 7, ?int $topicId = null, bool $forceFresh = false): array
     {
+        $cacheKey = self::radarCacheKey($workspaceId, $days, $topicId);
+        if (!app()->runningUnitTests() && !$forceFresh) {
+            $cached = Cache::get($cacheKey);
+            if (is_array($cached)) {
+                return $cached;
+            }
+        }
         $now = Carbon::now('Asia/Jakarta');
         $start = $now->copy()->subDays(max(1, $days));
 
@@ -44,8 +57,14 @@ class BuzzerDetectionService
 
         $mentions = $query->orderBy('published_at', 'desc')->limit(350)->get();
 
-        // Ensure mentions have been evaluated by our 3-layer detector + sarcasm scanner
-        $this->evaluateMentionsBatch($mentions);
+        // Evaluate only when unanalyzed legacy items are present (full re-evaluation runs via forceScanWorkspace)
+        $needsEvaluation = $mentions->contains(function (Mention $m) {
+            $meta = is_array($m->metadata_json) ? $m->metadata_json : [];
+            return !isset($meta['sarcasm_analysis']) || !isset($meta['bot_analysis']);
+        });
+        if ($needsEvaluation) {
+            $this->evaluateMentionsBatch($mentions);
+        }
 
         $total = $mentions->count();
         $inauthenticMentions = $mentions->filter(fn(Mention $m) => (bool)$m->is_inauthentic);
@@ -105,7 +124,7 @@ class BuzzerDetectionService
         // Build Suspected Bot Accounts Leaderboard
         $suspectedAccounts = $this->buildSuspectedAccounts($inauthenticMentions);
 
-        return [
+        $result = [
             'authenticity_index' => [
                 'total_mentions' => $total,
                 'organic_count' => $organicCount,
@@ -122,6 +141,12 @@ class BuzzerDetectionService
             'sarcasm_highlights' => $sarcasmHighlights,
             'suspected_accounts' => $suspectedAccounts,
         ];
+
+        if (!app()->runningUnitTests()) {
+            Cache::put($cacheKey, $result, 60);
+        }
+
+        return $result;
     }
 
     /**
@@ -143,8 +168,10 @@ class BuzzerDetectionService
 
         $mentions = $query->orderBy('published_at', 'desc')->limit(350)->get();
         $this->evaluateMentionsBatch($mentions, true);
+        Cache::forget(self::radarCacheKey($workspaceId, $days, $topicId));
+        Cache::increment("ws_data_ver:{$workspaceId}");
 
-        return $this->getRadarOverview($workspaceId, $days, $topicId);
+        return $this->getRadarOverview($workspaceId, $days, $topicId, true);
     }
 
     /**
@@ -236,17 +263,23 @@ class BuzzerDetectionService
             }
 
             if ($force || !isset($meta['bot_analysis']) || ($assignedCluster && $mention->bot_cluster_id !== $assignedCluster)) {
+                $effectiveCluster = $force ? $assignedCluster : ($assignedCluster ?? $mention->bot_cluster_id);
+                $effectiveClusterSize = $clusterCounts[$mention->id] ?? ($effectiveCluster ? 2 : 1);
                 $botEval = $this->detectBotSignalsPhp(
                     $mention->text,
                     $mention->author_name,
                     $mention->provider,
-                    $assignedCluster,
-                    $clusterCounts[$mention->id] ?? 1
+                    $effectiveCluster,
+                    $effectiveClusterSize
                 );
                 $meta['bot_analysis'] = $botEval;
-                $mention->is_inauthentic = $botEval['is_inauthentic'];
-                $mention->inauthentic_score = $botEval['inauthentic_score'];
-                $mention->bot_cluster_id = $assignedCluster;
+                $mention->is_inauthentic = $force
+                    ? $botEval['is_inauthentic']
+                    : ($botEval['is_inauthentic'] || (bool) $mention->is_inauthentic);
+                $mention->inauthentic_score = $force
+                    ? $botEval['inauthentic_score']
+                    : max((float) $botEval['inauthentic_score'], (float) ($mention->inauthentic_score ?? 0.0));
+                $mention->bot_cluster_id = $effectiveCluster;
                 $needsSave = true;
             }
 
@@ -309,40 +342,50 @@ class BuzzerDetectionService
     }
 
     /**
-     * Build time-bucketed burst chronology showing Organic vs Bot vs Sarcasm spikes.
+     * Build time-bucketed burst chronology showing Organic vs Bot vs Sarcasm spikes (single-pass O(N)).
      */
     protected function buildBurstTimeline($mentions, Carbon $start, Carbon $end, int $days): array
     {
         $bucketHours = $days <= 2 ? 4 : ($days <= 7 ? 12 : 24);
+        $bucketSeconds = $bucketHours * 3600;
         $points = [];
         $cursor = $start->copy();
 
         while ($cursor < $end) {
-            $bEnd = $cursor->copy()->addHours($bucketHours);
-            if ($bEnd > $end) {
-                $bEnd = $end->copy();
-            }
-
-            $inBucket = $mentions->filter(function (Mention $m) use ($cursor, $bEnd) {
-                if (!$m->published_at) {
-                    return false;
-                }
-                return $m->published_at >= $cursor && $m->published_at < $bEnd;
-            });
-
-            $botCount = $inBucket->where('is_inauthentic', true)->count();
-            $organicCount = max(0, $inBucket->count() - $botCount);
-            $sarcasmCount = $inBucket->where('is_sarcasm', true)->count();
-
             $points[] = [
                 'time_label' => $cursor->timezone('Asia/Jakarta')->format('d M H:i'),
-                'organic' => $organicCount,
-                'inauthentic' => $botCount,
-                'sarcasm' => $sarcasmCount,
-                'total' => $inBucket->count(),
+                'organic' => 0,
+                'inauthentic' => 0,
+                'sarcasm' => 0,
+                'total' => 0,
             ];
-
             $cursor->addHours($bucketHours);
+        }
+
+        $startTs = $start->getTimestamp();
+        $endTs = $end->getTimestamp();
+        $pointCount = count($points);
+
+        foreach ($mentions as $m) {
+            if (!$m->published_at) {
+                continue;
+            }
+            $ts = $m->published_at->getTimestamp();
+            if ($ts < $startTs || $ts >= $endTs) {
+                continue;
+            }
+            $idx = intdiv($ts - $startTs, $bucketSeconds);
+            if ($idx >= 0 && $idx < $pointCount) {
+                $points[$idx]['total']++;
+                if ($m->is_inauthentic) {
+                    $points[$idx]['inauthentic']++;
+                } else {
+                    $points[$idx]['organic']++;
+                }
+                if ($m->is_sarcasm) {
+                    $points[$idx]['sarcasm']++;
+                }
+            }
         }
 
         return $points;

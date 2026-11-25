@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Models\Topic;
 use App\Models\TrendSnapshot;
 use App\Models\Mention;
+use App\Models\MentionKeyword;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 class TrendService
 {
@@ -48,10 +50,14 @@ class TrendService
         $normAccel = min(1.0, max(0.0, $normGrowth * 0.9));
 
         // 4. Source Diversity
-        $distinctProviders = (clone $currentMentionsQuery)
-            ->distinct('mentions.provider')
-            ->count('mentions.provider');
-        $normDiversity = min(1.0, $distinctProviders / 2.0); // Out of RSS + YouTube (MVP)
+        $activeProviders = (clone $currentMentionsQuery)
+            ->select('mentions.provider')
+            ->distinct()
+            ->pluck('mentions.provider')
+            ->values()
+            ->toArray();
+        $distinctProviders = count($activeProviders);
+        $normDiversity = min(1.0, $distinctProviders / 3.0);
 
         // 5. Persistence
         $normPersistence = $currentVolume > 5 ? 0.75 : 0.40;
@@ -67,11 +73,41 @@ class TrendService
 
         $score = round(min(100.0, max(5.0, $rawScore * 100)), 1);
 
-        // Human-readable explanation per PRD §9.3
-        $growthStr = $growthMultiplier >= 1.0 
+        // Extract driving keywords & sample evidence mention (PRD TREND-07)
+        $keywordCutoff = $currentVolume > 0 ? $windowStart : $now->copy()->subDays(7);
+        $drivingKeywords = MentionKeyword::join('mentions', 'mention_keywords.mention_id', '=', 'mentions.id')
+            ->join('mention_topic_matches', 'mentions.id', '=', 'mention_topic_matches.mention_id')
+            ->where('mention_topic_matches.topic_id', $topic->id)
+            ->where('mentions.published_at', '>=', $keywordCutoff)
+            ->selectRaw('mention_keywords.keyword, COUNT(*) as freq')
+            ->groupBy('mention_keywords.keyword')
+            ->orderByDesc('freq')
+            ->limit(4)
+            ->pluck('mention_keywords.keyword')
+            ->values()
+            ->toArray();
+
+        $latestMention = (clone $currentMentionsQuery)
+            ->with('sentiment')
+            ->orderByDesc('mentions.published_at')
+            ->first();
+
+        $sampleMention = $latestMention ? [
+            'id' => $latestMention->id,
+            'provider' => $latestMention->provider,
+            'author_name' => $latestMention->author_name ?: ucfirst($latestMention->provider),
+            'text' => Str::limit($latestMention->text, 120),
+            'sentiment' => $latestMention->sentiment?->label ?? 'neutral',
+        ] : null;
+
+        // Human-readable explanation per PRD §9.3 & TREND-07 (without em-dash per Antislop R-02)
+        $growthStr = $growthMultiplier >= 1.0
             ? sprintf("%.1fx dibanding baseline", $growthMultiplier)
             : "stabil";
-        $explanation = "Trend score {$score}/100 — volume {$currentVolume} mention ({$growthStr}) pada periode {$windowHours} jam terakhir.";
+        $kwSuffix = !empty($drivingKeywords)
+            ? ' Kata kunci pendorong: ' . implode(', ', array_slice($drivingKeywords, 0, 3)) . '.'
+            : '';
+        $explanation = "Skor tren {$score}/100: volume {$currentVolume} sebutan ({$growthStr}) pada periode {$windowHours} jam terakhir.{$kwSuffix}";
 
         $components = [
             'volume' => round($normVolume, 2),
@@ -82,6 +118,9 @@ class TrendService
             'raw_volume' => $currentVolume,
             'baseline_volume' => $baselineVolume,
             'growth_multiplier' => round($growthMultiplier, 2),
+            'active_providers' => $activeProviders,
+            'driving_keywords' => $drivingKeywords,
+            'sample_mention' => $sampleMention,
         ];
 
         // Save Snapshot

@@ -294,6 +294,7 @@ class SocialMediaAdaptersTest extends TestCase
         $providers = $resp->json('data.providers');
         $this->assertContains('rss', $providers);
         $this->assertContains('youtube', $providers);
+        $this->assertContains('threads', $providers);
         $this->assertContains('x', $providers);
         $this->assertContains('tiktok', $providers);
         $this->assertContains('instagram', $providers);
@@ -413,6 +414,90 @@ class SocialMediaAdaptersTest extends TestCase
         $this->assertCount(1, $this->getJson("/api/v1/mentions?workspace_id={$this->workspace->id}&interaction_type=comment")->assertStatus(200)->json('data'));
         $this->assertCount(1, $this->getJson("/api/v1/mentions?workspace_id={$this->workspace->id}&interaction_type=comments")->assertStatus(200)->json('data'));
         $this->assertCount(2, $this->getJson("/api/v1/mentions?workspace_id={$this->workspace->id}&link_status=verified")->assertStatus(200)->json('data'));
+    }
+
+    public function test_ingestion_uses_batch_analyze_and_flags_near_duplicates(): void
+    {
+        $fakeAdapter = new class implements \App\Adapters\ProviderAdapterInterface {
+            public function getProviderKey(): string { return 'x'; }
+            public function getCapabilities(): array { return ['keyword_search' => true]; }
+            public function fetch(Topic $topic, ?string $cursor = null): \App\Adapters\IngestionResult
+            {
+                $nowIso = now()->toIso8601String();
+                return new \App\Adapters\IngestionResult(records: [
+                    [
+                        'provider' => 'x',
+                        'external_id' => 'x_batch_1001',
+                        'source_url' => 'https://x.com/warga_satu/status/2114676540395135082',
+                        'author_name' => '@warga_satu',
+                        'published_at' => $nowIso,
+                        'text' => 'Program makan bergizi gratis sangat membantu siswa daerah terpencil.',
+                        'metadata_json' => ['link_status' => 'verified_post'],
+                    ],
+                    [
+                        'provider' => 'x',
+                        'external_id' => 'x_batch_1002',
+                        'source_url' => 'https://x.com/warga_dua/status/2114676540395135083',
+                        'author_name' => '@warga_dua',
+                        'published_at' => $nowIso,
+                        'text' => 'Program makan bergizi gratis sangat membantu siswa daerah terpencil! https://t.co/abc',
+                        'metadata_json' => ['link_status' => 'verified_post'],
+                    ],
+                ]);
+            }
+        };
+
+        $batchRequests = 0;
+        $singleRequests = 0;
+        Http::fake([
+            '*/batch-analyze' => function ($request) use (&$batchRequests) {
+                $batchRequests++;
+                $results = [];
+                foreach ($request->data()['items'] as $item) {
+                    $results[] = [
+                        'id' => $item['id'],
+                        'sentiment' => [
+                            'label' => 'positive',
+                            'confidence' => 0.91,
+                            'probabilities' => ['positive' => 0.91, 'neutral' => 0.06, 'negative' => 0.03],
+                            'is_sarcasm' => false,
+                            'sarcasm_score' => 0.0,
+                            'aspect' => 'manfaat',
+                            'key_reason' => 'Dukungan program',
+                            'urgency' => 'low',
+                        ],
+                        'keywords' => [['keyword' => 'makan bergizi', 'score' => 1.2]],
+                        'bot_analysis' => [
+                            'is_inauthentic' => false,
+                            'inauthentic_score' => 0.05,
+                            'bot_signals' => [],
+                        ],
+                    ];
+                }
+                return Http::response(['results' => $results], 200);
+            },
+            '*/analyze' => function () use (&$singleRequests) {
+                $singleRequests++;
+                return Http::response([], 500);
+            },
+        ]);
+
+        $ingestion = new \App\Services\IngestionService();
+        $res = $ingestion->runAdapterIngestion($this->topic, $fakeAdapter);
+
+        $this->assertEquals('success', $res['status']);
+        $this->assertEquals(2, $res['counts']['new']);
+        $this->assertEquals(1, $batchRequests);
+        $this->assertEquals(0, $singleRequests);
+
+        $first = \App\Models\Mention::where('external_id', 'x_batch_1001')->firstOrFail();
+        $second = \App\Models\Mention::where('external_id', 'x_batch_1002')->firstOrFail();
+
+        $this->assertFalse($first->metadata_json['is_near_duplicate']);
+        $this->assertTrue($second->metadata_json['is_near_duplicate']);
+        $this->assertEquals($first->id, $second->metadata_json['near_duplicate_of_id']);
+        $this->assertEquals('positive', $first->sentiment->label);
+        $this->assertEquals('positive', $second->sentiment->label);
     }
 }
 

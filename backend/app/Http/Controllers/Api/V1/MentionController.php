@@ -14,7 +14,7 @@ class MentionController extends Controller
 {
     use ResolvesAuthorizedWorkspace;
 
-    private const SOCIAL_PROVIDERS = ['x', 'tiktok', 'instagram', 'facebook', 'youtube', 'reddit'];
+    private const SOCIAL_PROVIDERS = ['x', 'tiktok', 'instagram', 'facebook', 'threads', 'youtube', 'reddit'];
 
     public function index(Request $request, BuzzerDetectionService $buzzerService, SocialLinkValidator $validator)
     {
@@ -26,8 +26,11 @@ class MentionController extends Controller
         $linkStatus = trim((string) $request->input('link_status', ''));
         $interactionType = trim((string) $request->input('interaction_type', ''));
         $excludeInauthentic = $request->boolean('exclude_inauthentic');
+        $excludeNearDuplicates = $request->boolean('exclude_near_duplicates');
         $onlySarcasm = $request->boolean('only_sarcasm');
         $onlyInauthentic = $request->boolean('only_inauthentic');
+        $botClusterId = trim((string) $request->input('bot_cluster_id', ''));
+        $authorName = trim((string) $request->input('author_name', ''));
         $perPage = min((int) $request->input('per_page', 20), 100);
 
         $query = Mention::where('workspace_id', $workspaceId)
@@ -44,6 +47,21 @@ class MentionController extends Controller
 
         if ($onlyInauthentic) {
             $query->where('is_inauthentic', true);
+        }
+
+        if ($botClusterId !== '') {
+            $query->where('bot_cluster_id', $botClusterId);
+        }
+
+        if ($authorName !== '') {
+            if ($authorName === '@unknown') {
+                $query->where(function ($q) {
+                    $q->whereNull('author_name')
+                        ->orWhere('author_name', '@unknown');
+                });
+            } else {
+                $query->where('author_name', $authorName);
+            }
         }
 
         if ($topicId) {
@@ -87,14 +105,42 @@ class MentionController extends Controller
 
         if ($search) {
             $likeOp = DB::getDriverName() === 'pgsql' ? 'ilike' : 'like';
-            $query->where('text', $likeOp, '%' . $search . '%');
+            $query->where(function ($q) use ($likeOp, $search) {
+                $q->where('text', $likeOp, '%' . $search . '%')
+                    ->orWhere('author_name', $likeOp, '%' . $search . '%');
+            });
+        }
+
+        $skipMetaCounts = $request->boolean('skip_meta_counts');
+        $totalNearDuplicates = 0;
+        $hiddenNearDuplicates = 0;
+
+        if (!$skipMetaCounts) {
+            $totalNearDuplicates = (clone $query)
+                ->where('metadata_json->is_near_duplicate', true)
+                ->count();
+        }
+
+        if ($excludeNearDuplicates) {
+            $hiddenNearDuplicates = $totalNearDuplicates;
+            $query->where(function ($q) {
+                $q->whereNull('metadata_json')
+                    ->orWhereNull('metadata_json->is_near_duplicate')
+                    ->orWhere('metadata_json->is_near_duplicate', false);
+            });
         }
 
         $mentions = $query->paginate($perPage);
         $collection = collect($mentions->items());
 
-        // Ensure current page mentions have up-to-date sarcasm & bot signals
-        $buzzerService->evaluateMentionsBatch($collection);
+        // Evaluate sarcasm & bot signals only if this page contains unanalyzed legacy items
+        $needsEvaluation = $collection->contains(function (Mention $m) {
+            $meta = is_array($m->metadata_json) ? $m->metadata_json : [];
+            return !isset($meta['sarcasm_analysis']) || !isset($meta['bot_analysis']);
+        });
+        if ($needsEvaluation) {
+            $buzzerService->evaluateMentionsBatch($collection);
+        }
 
         // Compute normalized link_status cleanly for legacy records lacking metadata_json.link_status
         $serialized = $collection->map(function (Mention $m) use ($validator) {
@@ -108,6 +154,9 @@ class MentionController extends Controller
             );
             $arr['link_status'] = $effectiveStatus;
             $arr['metrics_available'] = (bool) ($meta['metrics_available'] ?? (!empty($meta['metrics'])));
+            $arr['ingestion_source'] = $meta['ingestion_source'] ?? null;
+            $arr['is_near_duplicate'] = (bool) ($meta['is_near_duplicate'] ?? false);
+            $arr['near_duplicate_of_id'] = $meta['near_duplicate_of_id'] ?? null;
             return $arr;
         })->values();
 
@@ -119,6 +168,10 @@ class MentionController extends Controller
                 'last_page' => $mentions->lastPage(),
                 'per_page' => $mentions->perPage(),
                 'total' => $mentions->total(),
+            ],
+            'meta_counts' => [
+                'hidden_near_duplicates' => $hiddenNearDuplicates,
+                'total_near_duplicates' => $totalNearDuplicates,
             ],
         ]);
     }
@@ -137,6 +190,7 @@ class MentionController extends Controller
             (bool) $mention->is_demo
         );
         $arr['metrics_available'] = (bool) ($meta['metrics_available'] ?? (!empty($meta['metrics'])));
+        $arr['ingestion_source'] = $meta['ingestion_source'] ?? null;
 
         return response()->json([
             'status' => 'success',

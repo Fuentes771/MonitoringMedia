@@ -25,25 +25,33 @@ class AiIntelligenceService
      */
     public function getGatewayStatus(): array
     {
-        try {
-            $response = Http::timeout(4)->get("{$this->nlpUrl}/ai/health");
-            if ($response->successful()) {
-                return $response->json();
+        $fetcher = function (): array {
+            try {
+                $response = Http::connectTimeout(1)->timeout(2)->get("{$this->nlpUrl}/ai/health");
+                if ($response->successful()) {
+                    return $response->json();
+                }
+                return [
+                    'status' => 'degraded',
+                    'http_status' => $response->status(),
+                    'service' => 'pulsescope-ai-gateway',
+                    '9router' => ['status' => 'unreachable'],
+                ];
+            } catch (Throwable $e) {
+                return [
+                    'status' => 'offline',
+                    'error' => $e->getMessage(),
+                    'service' => 'pulsescope-ai-gateway',
+                    '9router' => ['status' => 'offline'],
+                ];
             }
-            return [
-                'status' => 'degraded',
-                'http_status' => $response->status(),
-                'service' => 'pulsescope-ai-gateway',
-                '9router' => ['status' => 'unreachable'],
-            ];
-        } catch (Throwable $e) {
-            return [
-                'status' => 'offline',
-                'error' => $e->getMessage(),
-                'service' => 'pulsescope-ai-gateway',
-                '9router' => ['status' => 'offline'],
-            ];
+        };
+
+        if (app()->runningUnitTests()) {
+            return $fetcher();
         }
+
+        return Cache::remember('ai_gateway_status_v1', 30, $fetcher);
     }
 
     /**
@@ -62,7 +70,8 @@ class AiIntelligenceService
         int $workspaceId = 1
     ): array {
         $topicName = null;
-        $sevenDaysAgo = \Carbon\Carbon::now('Asia/Jakarta')->subDays(7);
+        $now = \Carbon\Carbon::now('Asia/Jakarta');
+        $sevenDaysAgo = $now->copy()->subDays(7);
 
         // Strict 7-day cutoff to guarantee freshness and prevent stale news contamination
         $mentionsQuery = Mention::where('workspace_id', $workspaceId)
@@ -70,6 +79,7 @@ class AiIntelligenceService
             ->with(['sentiment', 'topics:id,name'])
             ->orderBy('published_at', 'desc');
 
+        $resolvedTopicId = $topicId;
         if ($topicId) {
             $topic = Topic::find($topicId);
             if ($topic) {
@@ -77,16 +87,16 @@ class AiIntelligenceService
                 $mentionsQuery->whereHas('topics', fn($q) => $q->where('topics.id', $topicId));
             }
         } else {
-            // Check if any of the 17 programs is mentioned in the query
-            $matchedTopic = Topic::where('status', 'active')
-                ->where(function ($q) use ($query) {
-                    $lowerQuery = Str::lower($query);
-                    $q->whereRaw('LOWER(name) LIKE ?', ["%{$lowerQuery}%"]);
-                })
-                ->first();
+            // Auto-detect monitored topic via name, parenthetical acronym (e.g., MBG), or include keywords
+            $activeTopics = Topic::where('workspace_id', $workspaceId)
+                ->where('status', 'active')
+                ->with('keywords')
+                ->get();
 
+            $matchedTopic = $this->matchTopicFromQuery($activeTopics, Str::lower($query));
             if ($matchedTopic) {
                 $topicName = $matchedTopic->name;
+                $resolvedTopicId = $matchedTopic->id;
                 $mentionsQuery->whereHas('topics', fn($q) => $q->where('topics.id', $matchedTopic->id));
             }
         }
@@ -102,19 +112,21 @@ class AiIntelligenceService
             });
         }
 
-        // Fetch top 20 relevant mentions
-        $mentions = $mentionsQuery->limit(20)->get();
+        // Fetch up to 60 candidates, then rank by keyword density, organic authenticity, link provenance, and recency
+        $candidates = $mentionsQuery->limit(60)->get();
 
-        // If no keyword-specific mentions were found, fallback to recent mentions for the topic (within 7 days)
-        if ($mentions->isEmpty() && $topicId) {
-            $mentions = Mention::where('workspace_id', $workspaceId)
+        // If no keyword-specific mentions were found, fallback to recent mentions for the resolved topic (within 7 days)
+        if ($candidates->isEmpty() && $resolvedTopicId) {
+            $candidates = Mention::where('workspace_id', $workspaceId)
                 ->where('published_at', '>=', $sevenDaysAgo)
-                ->whereHas('topics', fn($q) => $q->where('topics.id', $topicId))
+                ->whereHas('topics', fn($q) => $q->where('topics.id', $resolvedTopicId))
                 ->with(['sentiment', 'topics:id,name'])
                 ->orderBy('published_at', 'desc')
-                ->limit(15)
+                ->limit(60)
                 ->get();
         }
+
+        $mentions = $this->rankMentionsForRag($candidates, $searchTerms, $now)->take(20);
 
         // Format context mentions for the NLP service
         $contextMentions = [];
@@ -250,54 +262,80 @@ class AiIntelligenceService
      */
     public function getDailyExecutiveSummary(int $workspaceId, \Carbon\Carbon $start, \Carbon\Carbon $end): string
     {
-        $dateKey = $end->format('Ymd_H');
+        $hourBucket = (int) floor(((int) $end->format('H')) / 2);
+        $dateKey = $end->format('Ymd') . '_b' . $hourBucket;
         $cacheKey = "daily_briefing_ai_{$workspaceId}_{$dateKey}";
+        $lastGoodKey = "daily_briefing_ai_last_{$workspaceId}";
 
-        return Cache::remember($cacheKey, 1800, function () use ($workspaceId, $start, $end) {
-            $mentions = Mention::where('workspace_id', $workspaceId)
-                ->whereBetween('published_at', [$start, $end])
-                ->with(['sentiment', 'topics:id,name'])
-                ->orderBy('published_at', 'desc')
-                ->limit(20)
-                ->get();
+        $cached = Cache::get($cacheKey);
+        if (is_string($cached) && $cached !== '') {
+            return $cached;
+        }
 
-            if ($mentions->isEmpty()) {
-                return "Dalam kurun waktu monitoring 33 jam terakhir, belum ada pergerakan isu signifikan atau anomali baru yang terdeteksi pada 17 Program Prioritas Nasional.";
-            }
+        $mentions = Mention::where('workspace_id', $workspaceId)
+            ->whereBetween('published_at', [$start, $end])
+            ->with(['sentiment', 'topics:id,name'])
+            ->orderBy('published_at', 'desc')
+            ->limit(20)
+            ->get();
 
-            $contextMentions = [];
-            foreach ($mentions as $m) {
-                $contextMentions[] = [
-                    'author_name' => $m->author_name ?? ucfirst($m->provider),
-                    'text' => $m->text,
-                    'published_at' => $m->published_at ? $m->published_at->format('Y-m-d H:i') : null,
-                    'sentiment' => $m->sentiment?->label ?? 'neutral',
-                    'topic' => $m->topics->pluck('name')->join(', '),
-                ];
-            }
+        if ($mentions->isEmpty()) {
+            $emptyMsg = "Dalam kurun waktu monitoring 33 jam terakhir, belum ada pergerakan isu signifikan atau anomali baru yang terdeteksi pada 17 Program Prioritas Nasional.";
+            Cache::put($cacheKey, $emptyMsg, 300);
+            return $emptyMsg;
+        }
 
-            try {
-                $response = Http::timeout(20)->post("{$this->nlpUrl}/ai/daily-summary", [
-                    'mentions' => $contextMentions,
-                    'window_label' => "Periode " . $start->format('d M H:i') . " s/d " . $end->format('d M H:i') . " WIB",
-                ]);
+        $total = $mentions->count();
+        $pos = $mentions->filter(fn($m) => $m->sentiment?->label === 'positive')->count();
+        $neg = $mentions->filter(fn($m) => $m->sentiment?->label === 'negative')->count();
+        $factualFallback = "Dalam kurun waktu 33 jam terakhir tercatat {$total} perkembangan peristiwa di lapangan, dengan kecenderungan persepsi {$pos} positif dan {$neg} catatan kritis publik.";
 
-                if ($response->successful()) {
-                    $resData = $response->json();
-                    if (!empty($resData['summary'])) {
-                        return trim($resData['summary']);
-                    }
+        // Prevent concurrent request stampedes from blocking multiple PHP workers on LLM generation
+        $lockKey = "daily_briefing_ai_lock_{$workspaceId}";
+        if (!Cache::add($lockKey, 1, 15)) {
+            $stale = Cache::get($lastGoodKey);
+            return (is_string($stale) && $stale !== '') ? $stale : $factualFallback;
+        }
+
+        $contextMentions = [];
+        foreach ($mentions as $m) {
+            $contextMentions[] = [
+                'author_name' => $m->author_name ?? ucfirst($m->provider),
+                'text' => $m->text,
+                'published_at' => $m->published_at ? $m->published_at->format('Y-m-d H:i') : null,
+                'sentiment' => $m->sentiment?->label ?? 'neutral',
+                'topic' => $m->topics->pluck('name')->join(', '),
+            ];
+        }
+
+        try {
+            // Keep HTTP dashboard latency bounded (fail fast if NLP/LLM is slow)
+            $response = Http::connectTimeout(2)->timeout(5)->post("{$this->nlpUrl}/ai/daily-summary", [
+                'mentions' => $contextMentions,
+                'window_label' => "Periode " . $start->format('d M H:i') . " s/d " . $end->format('d M H:i') . " WIB",
+            ]);
+
+            if ($response->successful()) {
+                $resData = $response->json();
+                if (!empty($resData['summary'])) {
+                    $summaryText = trim($resData['summary']);
+                    Cache::put($cacheKey, $summaryText, 7200);
+                    Cache::put($lastGoodKey, $summaryText, 43200);
+                    return $summaryText;
                 }
-            } catch (Throwable $e) {
-                Log::warning("Failed to generate AI daily executive summary: {$e->getMessage()}");
             }
+        } catch (Throwable $e) {
+            Log::warning("Failed to generate AI daily executive summary: {$e->getMessage()}");
+        } finally {
+            Cache::forget($lockKey);
+        }
 
-            // Factual fallback
-            $total = $mentions->count();
-            $pos = $mentions->filter(fn($m) => $m->sentiment?->label === 'positive')->count();
-            $neg = $mentions->filter(fn($m) => $m->sentiment?->label === 'negative')->count();
-            return "Dalam kurun waktu 33 jam terakhir tercatat {$total} perkembangan peristiwa di lapangan, dengan kecenderungan persepsi {$pos} positif dan {$neg} catatan kritis publik.";
-        });
+        // Cache fallback briefly (120s) so subsequent dashboard loads do not keep timing out on NLP
+        $stale = Cache::get($lastGoodKey);
+        $fallback = (is_string($stale) && $stale !== '') ? $stale : $factualFallback;
+        Cache::put($cacheKey, $fallback, 120);
+
+        return $fallback;
     }
 
     /**
@@ -327,6 +365,78 @@ class AiIntelligenceService
             'exclude_keywords' => ['lowongan', 'loker'],
             'engine' => 'local-fallback',
         ];
+    }
+
+    /**
+     * Match a user query against active workspace topics by full name, base name, parenthetical acronym, or keywords.
+     *
+     * @param \Illuminate\Support\Collection<int, Topic> $activeTopics
+     */
+    protected function matchTopicFromQuery($activeTopics, string $lowerQuery): ?Topic
+    {
+        foreach ($activeTopics as $topic) {
+            $fullName = Str::lower(trim($topic->name));
+            $baseName = trim((string) preg_replace('/\s*\([^)]*\)/', '', $fullName));
+            if ($fullName !== '' && str_contains($lowerQuery, $fullName)) {
+                return $topic;
+            }
+            if ($baseName !== '' && strlen($baseName) >= 4 && str_contains($lowerQuery, $baseName)) {
+                return $topic;
+            }
+        }
+
+        foreach ($activeTopics as $topic) {
+            if (preg_match_all('/\(([^)]+)\)/', Str::lower($topic->name), $matches)) {
+                foreach ($matches[1] as $acronym) {
+                    $acronym = trim($acronym);
+                    if (strlen($acronym) >= 3 && preg_match('/\b' . preg_quote($acronym, '/') . '\b/u', $lowerQuery)) {
+                        return $topic;
+                    }
+                }
+            }
+        }
+
+        foreach ($activeTopics as $topic) {
+            foreach ($topic->keywords->where('type', 'include') as $kw) {
+                $kwLower = Str::lower(trim($kw->keyword));
+                if (strlen($kwLower) >= 4 && str_contains($lowerQuery, $kwLower)) {
+                    return $topic;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Score and rank candidate mentions for RAG context grounding.
+     *
+     * @param \Illuminate\Support\Collection<int, Mention> $candidates
+     * @param array<int, string> $searchTerms
+     */
+    protected function rankMentionsForRag($candidates, array $searchTerms, \Carbon\Carbon $now)
+    {
+        return $candidates->sortByDesc(function (Mention $m) use ($searchTerms, $now) {
+            $lowerText = Str::lower($m->text ?? '');
+            $kwScore = 0.0;
+            foreach ($searchTerms as $term) {
+                if (str_contains($lowerText, Str::lower($term))) {
+                    $kwScore += 3.0;
+                }
+            }
+
+            $organicScore = $m->is_inauthentic ? -2.5 : 2.0;
+
+            $linkStatus = $m->metadata_json['link_status'] ?? '';
+            $linkScore = in_array($linkStatus, ['verified_post', 'verified_article'], true) ? 1.5 : 0.0;
+
+            $hoursAge = $m->published_at
+                ? max(0.0, ($now->timestamp - $m->published_at->timestamp) / 3600.0)
+                : 168.0;
+            $recencyScore = max(0.0, 1.5 - ($hoursAge / 112.0));
+
+            return $kwScore + $organicScore + $linkScore + $recencyScore;
+        })->values();
     }
 
     /**

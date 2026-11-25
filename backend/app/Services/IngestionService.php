@@ -16,6 +16,7 @@ use App\Models\Mention;
 use App\Models\MentionTopicMatch;
 use App\Models\SentimentResult;
 use App\Models\MentionKeyword;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -32,8 +33,7 @@ class IngestionService
         $this->registerAdapter(new YouTubeProviderAdapter());
         $this->registerAdapter(new XProviderAdapter());
         $this->registerAdapter(new TikTokProviderAdapter());
-        $this->registerAdapter(new InstagramProviderAdapter());
-        $this->registerAdapter(new FacebookProviderAdapter());
+        // Meta platforms (threads, facebook, instagram) ingest via Muse Push Connector (POST /api/v1/ingest/mentions)
     }
 
     public function registerAdapter(ProviderAdapterInterface $adapter): void
@@ -59,7 +59,32 @@ class IngestionService
             $results[$providerKey] = $this->runAdapterIngestion($topic, $adapter);
         }
 
+        // Pre-compute copypasta clusters & bot/sarcasm signals once at ingestion time
+        $recentTopicMentions = $topic->mentions()
+            ->with('sentiment')
+            ->where('mentions.published_at', '>=', Carbon::now('Asia/Jakarta')->subDays(7))
+            ->orderBy('mentions.published_at', 'desc')
+            ->limit(200)
+            ->get();
+
+        if ($recentTopicMentions->isNotEmpty()) {
+            app(BuzzerDetectionService::class)->evaluateMentionsBatch($recentTopicMentions);
+        }
+
         return $results;
+    }
+
+    /**
+     * Compute canonical SHA-256 hash of normalized text for near-duplicate detection (PRD §8.4).
+     */
+    public function computeNormalizedTextHash(string $text): string
+    {
+        $cleaned = preg_replace('/https?:\/\/\S+/i', '', mb_strtolower($text));
+        $cleaned = preg_replace('/@\w+/u', '', $cleaned);
+        $cleaned = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $cleaned);
+        $cleaned = trim(preg_replace('/\s+/', ' ', $cleaned));
+
+        return hash('sha256', $cleaned);
     }
 
     /**
@@ -115,6 +140,8 @@ class IngestionService
         $dupCount = 0;
         $verifiedCount = 0;
         $fallbackCount = 0;
+        $newMentions = [];
+        $nearDupCutoff = Carbon::now('Asia/Jakarta')->subHours(24);
 
         foreach ($records as $record) {
             $isDemo = (bool) ($record['is_demo'] ?? false);
@@ -173,6 +200,26 @@ class IngestionService
                 continue;
             }
 
+            // Secondary near-duplicate detection within workspace (PRD §8.4: flag, never auto-drop)
+            $textNormalized = $record['text_normalized'] ?? mb_strtolower(trim($record['text']));
+            $textHash = $this->computeNormalizedTextHash($record['text']);
+            $meta['text_hash'] = $textHash;
+
+            $nearDup = Mention::where('workspace_id', $topic->workspace_id)
+                ->where('published_at', '>=', $nearDupCutoff)
+                ->where(function ($q) use ($textHash, $textNormalized) {
+                    $q->where('metadata_json->text_hash', $textHash)
+                        ->orWhere('text_normalized', $textNormalized);
+                })
+                ->first();
+
+            if ($nearDup) {
+                $meta['is_near_duplicate'] = true;
+                $meta['near_duplicate_of_id'] = $nearDup->id;
+            } else {
+                $meta['is_near_duplicate'] = false;
+            }
+
             $mention = Mention::create([
                 'workspace_id' => $topic->workspace_id,
                 'provider' => $record['provider'],
@@ -182,7 +229,7 @@ class IngestionService
                 'published_at' => $record['published_at'],
                 'collected_at' => $record['collected_at'] ?? Carbon::now('Asia/Jakarta'),
                 'text' => $record['text'],
-                'text_normalized' => $record['text_normalized'] ?? mb_strtolower(trim($record['text'])),
+                'text_normalized' => $textNormalized,
                 'language' => $record['language'] ?? 'id',
                 'deletion_status' => 'active',
                 'is_demo' => $isDemo,
@@ -195,9 +242,12 @@ class IngestionService
                 'matched_keywords_json' => $record['matched_keywords'] ?? [],
             ]);
 
-            $this->analyzeAndStoreNlp($mention);
-
+            $newMentions[] = $mention;
             $newCount++;
+        }
+
+        if (!empty($newMentions)) {
+            $this->analyzeBatchAndStoreNlp($newMentions);
         }
 
         $counts = [
@@ -226,14 +276,73 @@ class IngestionService
     }
 
     /**
+     * Send a batch of new mentions to Python NLP /batch-analyze in a single HTTP request.
+     *
+     * @param array<int, Mention> $mentions
+     */
+    public function analyzeBatchAndStoreNlp(array $mentions): void
+    {
+        if (empty($mentions)) {
+            return;
+        }
+
+        $nlpUrl = rtrim((string) env('NLP_SERVICE_URL', 'http://127.0.0.1:8001'), '/');
+        $useAi = (bool) env('NLP_INGEST_USE_AI', false);
+
+        $items = array_map(fn (Mention $m) => [
+            'id' => $m->id,
+            'text' => $m->text,
+            'language' => $m->language ?? 'id',
+            'top_keywords' => 5,
+            'author_name' => $m->author_name,
+            'provider' => $m->provider,
+        ], $mentions);
+
+        $indexed = [];
+        try {
+            $response = Http::timeout(20)->post("{$nlpUrl}/batch-analyze", [
+                'items' => $items,
+                'use_ai' => $useAi,
+            ]);
+
+            if ($response->successful() && is_array($response->json('results'))) {
+                foreach ($response->json('results') as $row) {
+                    if (is_array($row) && isset($row['id'])) {
+                        $indexed[(string) $row['id']] = $row;
+                    }
+                }
+            } else {
+                Log::warning("NLP /batch-analyze returned status {$response->status()}, falling back per mention.");
+            }
+        } catch (ConnectionException $e) {
+            Log::warning("NLP service unreachable for batch analyze: {$e->getMessage()}. Using fallback neutral.");
+            foreach ($mentions as $mention) {
+                $this->storeFallbackSentiment($mention);
+            }
+            return;
+        } catch (Throwable $e) {
+            Log::warning("NLP /batch-analyze failed: {$e->getMessage()}. Falling back per mention.");
+        }
+
+        foreach ($mentions as $mention) {
+            $key = (string) $mention->id;
+            if (isset($indexed[$key])) {
+                $this->applyNlpResultToMention($mention, $indexed[$key]);
+            } else {
+                $this->analyzeAndStoreNlp($mention);
+            }
+        }
+    }
+
+    /**
      * Send mention text to Python NLP service for sentiment & keyword extraction.
      */
     protected function analyzeAndStoreNlp(Mention $mention): void
     {
-        $nlpUrl = env('NLP_SERVICE_URL', 'http://127.0.0.1:8001');
+        $nlpUrl = rtrim((string) env('NLP_SERVICE_URL', 'http://127.0.0.1:8001'), '/');
 
         try {
-            $useAi = (bool)env('NLP_INGEST_USE_AI', false);
+            $useAi = (bool) env('NLP_INGEST_USE_AI', false);
             $response = Http::timeout(10)->post("{$nlpUrl}/analyze", [
                 'text' => $mention->text,
                 'language' => $mention->language,
@@ -243,66 +352,81 @@ class IngestionService
                 'provider' => $mention->provider,
             ]);
 
-            if ($response->successful()) {
-                $data = $response->json();
-                $sent = $data['sentiment'] ?? [];
-                $kws = $data['keywords'] ?? [];
-                $bot = $data['bot_analysis'] ?? [];
-
-                SentimentResult::updateOrCreate(
-                    ['mention_id' => $mention->id],
-                    [
-                        'label' => $sent['label'] ?? 'unknown',
-                        'confidence' => $sent['confidence'] ?? 0.50,
-                        'probabilities_json' => $sent['probabilities'] ?? null,
-                        'model_version' => $sent['model_version'] ?? 'v2.0-9router',
-                        'analyzed_at' => Carbon::now('Asia/Jakarta'),
-                    ]
-                );
-
-                $isSarcasm = (bool)($sent['is_sarcasm'] ?? false);
-                $isInauthentic = (bool)($bot['is_inauthentic'] ?? false);
-                $inauthenticScore = (float)($bot['inauthentic_score'] ?? 0.0);
-
-                $meta = $mention->metadata_json ?? [];
-                $meta['ai_analysis'] = [
-                    'aspect' => $sent['aspect'] ?? 'umum',
-                    'key_reason' => $sent['key_reason'] ?? '',
-                    'urgency' => $sent['urgency'] ?? 'low',
-                    'engine' => $sent['engine'] ?? 'nlp-service',
-                ];
-                $meta['sarcasm_analysis'] = [
-                    'is_sarcasm' => $isSarcasm,
-                    'sarcasm_score' => (float)($sent['sarcasm_score'] ?? 0.0),
-                    'sarcasm_reason' => $sent['sarcasm_reason'] ?? '',
-                    'sarcasm_markers' => $sent['sarcasm_markers'] ?? [],
-                ];
-                $meta['bot_analysis'] = [
-                    'is_inauthentic' => $isInauthentic,
-                    'inauthentic_score' => $inauthenticScore,
-                    'bot_signals' => $bot['bot_signals'] ?? [],
-                ];
-
-                $mention->update([
-                    'is_sarcasm' => $isSarcasm,
-                    'is_inauthentic' => $isInauthentic,
-                    'inauthentic_score' => $inauthenticScore,
-                    'metadata_json' => $meta,
-                ]);
-
-                foreach ($kws as $kw) {
-                    MentionKeyword::firstOrCreate(
-                        ['mention_id' => $mention->id, 'keyword' => $kw['keyword']],
-                        ['score' => $kw['score'] ?? 1.0]
-                    );
-                }
+            if ($response->successful() && is_array($response->json('sentiment'))) {
+                $this->applyNlpResultToMention($mention, $response->json());
                 return;
             }
         } catch (Throwable $e) {
             Log::warning("NLP service call failed: {$e->getMessage()}. Using fallback neutral.");
         }
 
-        // Fallback if NLP service unavailable
+        $this->storeFallbackSentiment($mention);
+    }
+
+    /**
+     * Persist sentiment, sarcasm, bot anomaly, and extracted keywords onto a Mention.
+     *
+     * @param array<string, mixed> $data
+     */
+    protected function applyNlpResultToMention(Mention $mention, array $data): void
+    {
+        $sent = $data['sentiment'] ?? [];
+        $kws = $data['keywords'] ?? [];
+        $bot = $data['bot_analysis'] ?? [];
+
+        SentimentResult::updateOrCreate(
+            ['mention_id' => $mention->id],
+            [
+                'label' => $sent['label'] ?? 'unknown',
+                'confidence' => $sent['confidence'] ?? 0.50,
+                'probabilities_json' => $sent['probabilities'] ?? null,
+                'model_version' => $sent['model_version'] ?? 'v2.0-9router',
+                'analyzed_at' => Carbon::now('Asia/Jakarta'),
+            ]
+        );
+
+        $isSarcasm = (bool) ($sent['is_sarcasm'] ?? false);
+        $isInauthentic = (bool) ($bot['is_inauthentic'] ?? false);
+        $inauthenticScore = (float) ($bot['inauthentic_score'] ?? 0.0);
+
+        $meta = $mention->metadata_json ?? [];
+        $meta['ai_analysis'] = [
+            'aspect' => $sent['aspect'] ?? 'umum',
+            'key_reason' => $sent['key_reason'] ?? '',
+            'urgency' => $sent['urgency'] ?? 'low',
+            'engine' => $sent['engine'] ?? 'nlp-service',
+        ];
+        $meta['sarcasm_analysis'] = [
+            'is_sarcasm' => $isSarcasm,
+            'sarcasm_score' => (float) ($sent['sarcasm_score'] ?? 0.0),
+            'sarcasm_reason' => $sent['sarcasm_reason'] ?? '',
+            'sarcasm_markers' => $sent['sarcasm_markers'] ?? [],
+        ];
+        $meta['bot_analysis'] = [
+            'is_inauthentic' => $isInauthentic,
+            'inauthentic_score' => $inauthenticScore,
+            'bot_signals' => $bot['bot_signals'] ?? [],
+        ];
+
+        $mention->update([
+            'is_sarcasm' => $isSarcasm,
+            'is_inauthentic' => $isInauthentic,
+            'inauthentic_score' => $inauthenticScore,
+            'metadata_json' => $meta,
+        ]);
+
+        foreach ($kws as $kw) {
+            if (!empty($kw['keyword'])) {
+                MentionKeyword::firstOrCreate(
+                    ['mention_id' => $mention->id, 'keyword' => $kw['keyword']],
+                    ['score' => $kw['score'] ?? 1.0]
+                );
+            }
+        }
+    }
+
+    protected function storeFallbackSentiment(Mention $mention): void
+    {
         SentimentResult::updateOrCreate(
             ['mention_id' => $mention->id],
             [

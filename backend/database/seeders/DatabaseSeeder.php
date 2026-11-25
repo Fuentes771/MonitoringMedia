@@ -117,7 +117,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        foreach (['x', 'tiktok', 'instagram', 'facebook'] as $socialKey) {
+        foreach (['x', 'tiktok'] as $socialKey) {
             Connector::firstOrCreate(
                 ['workspace_id' => $workspace->id, 'provider' => $socialKey],
                 [
@@ -127,6 +127,23 @@ class DatabaseSeeder extends Seeder
                         'public_content' => true,
                         'comments' => true,
                         'public_metrics' => true,
+                    ],
+                    'last_successful_sync_at' => null,
+                ]
+            );
+        }
+
+        foreach (['threads', 'facebook', 'instagram'] as $metaKey) {
+            Connector::firstOrCreate(
+                ['workspace_id' => $workspace->id, 'provider' => $metaKey],
+                [
+                    'status' => 'needs_config',
+                    'capabilities_json' => [
+                        'keyword_search' => $metaKey === 'threads',
+                        'public_content' => true,
+                        'comments' => true,
+                        'public_metrics' => true,
+                        'ingestion_mode' => 'muse_push',
                     ],
                     'last_successful_sync_at' => null,
                 ]

@@ -137,9 +137,13 @@ class SocialLinkValidator
     public function isSyntheticOrBrokenPattern(string $url): bool
     {
         $lower = strtolower($url);
+        $isThreadsPost = (bool) preg_match(
+            '#^https?://(?:www\.)?threads\.(?:com|net)/@[a-zA-Z0-9_.\-]+/post/[a-zA-Z0-9_\-]+/?(?:\?.*)?$#i',
+            $url
+        );
 
         // Previous BaseScraper bug emitted https://www.<domain>/post/<12 hex chars>
-        if (preg_match('#/(?:post)/[a-f0-9]{6,}/?(?:\?|$)#i', $url)) {
+        if (!$isThreadsPost && preg_match('#/(?:post)/[a-f0-9]{6,}/?(?:\?|$)#i', $url)) {
             return true;
         }
 
@@ -182,6 +186,10 @@ class SocialLinkValidator
             ) || preg_match('#^https?://fb\.watch/[a-zA-Z0-9_\-]+#i', $url)
                 ? self::STATUS_VERIFIED_POST
                 : self::STATUS_SEARCH_FALLBACK,
+            'threads' => preg_match(
+                '#^https?://(?:www\.)?threads\.(?:com|net)/@[a-zA-Z0-9_.\-]+/post/[a-zA-Z0-9_\-]{5,30}/?(?:\?.*)?$#i',
+                $url
+            ) ? self::STATUS_VERIFIED_POST : self::STATUS_SEARCH_FALLBACK,
             'youtube' => preg_match(
                 '#^https?://(?:(?:www\.|m\.)?youtube\.com/(?:watch\?(?:[^\#]*&)?v=[a-zA-Z0-9_\-]{6,}|shorts/[a-zA-Z0-9_\-]{6,})|youtu\.be/[a-zA-Z0-9_\-]{6,})#i',
                 $url
@@ -200,6 +208,7 @@ class SocialLinkValidator
             'tiktok' => "https://www.tiktok.com/search?q={$encoded}",
             'instagram' => "https://www.instagram.com/explore/search/keyword/?q={$encoded}",
             'facebook' => "https://www.facebook.com/search/posts/?q={$encoded}",
+            'threads' => "https://www.threads.com/search?q={$encoded}&serp_type=default",
             'youtube' => "https://www.youtube.com/results?search_query={$encoded}",
             default => "https://www.google.com/search?q={$encoded}",
         };
@@ -227,7 +236,7 @@ class SocialLinkValidator
 
     private function canonicalizePlatformUrl(string $provider, string $url): string
     {
-        $clean = preg_replace('/([?&])(utm_[^=]+|fbclid|igsh|igshid|__tn__|mibextid|ref)=[^&]*(&?)/i', '$1', $url);
+        $clean = preg_replace('/([?&])(utm_[^=]+|fbclid|igsh|igshid|__tn__|mibextid|ref|xmt|slof)=[^&]*(&?)/i', '$1', $url);
         $clean = rtrim((string) $clean, '?&');
 
         if ($provider === 'facebook') {

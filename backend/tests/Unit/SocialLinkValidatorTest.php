@@ -44,6 +44,14 @@ class SocialLinkValidatorTest extends TestCase
 
         $ytRes = $validator->validateAndNormalize('youtube', 'https://www.youtube.com/watch?v=aIUWJ9t-Etk');
         $this->assertEquals(SocialLinkValidator::STATUS_VERIFIED_POST, $ytRes['link_status']);
+
+        $threadsRes = $validator->validateAndNormalize('threads', 'https://www.threads.com/@bkmedan_/post/DgHYtzLkaaT?xmt=abc123');
+        $this->assertEquals(SocialLinkValidator::STATUS_VERIFIED_POST, $threadsRes['link_status']);
+        $this->assertStringNotContainsString('xmt=', (string) $threadsRes['url']);
+
+        // Hexadecimal shortcodes on Threads must not trigger the legacy BaseScraper /post/<hex> blocklist
+        $threadsHexRes = $validator->validateAndNormalize('threads', 'https://www.threads.net/@realemo87/post/abcdef123456');
+        $this->assertEquals(SocialLinkValidator::STATUS_VERIFIED_POST, $threadsHexRes['link_status']);
     }
 
     public function test_normalizes_unencoded_search_urls_and_demo_placeholders(): void
