@@ -168,19 +168,22 @@ export function ExecutiveAiMessageView({ content }: ExecutiveAiMessageViewProps)
       {/* 2. Visual Sentiment Distribution Barometer */}
       {parsed.sentiment && (
         <div className="p-3 rounded-xl bg-black/40 border border-white/[0.08] space-y-2">
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs">
             <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider font-mono-code">
               Distribusi Sentimen Publik
             </span>
-            <div className="flex items-center gap-2 text-[11px] font-mono-code">
-              <span className="text-emerald-400 font-semibold">
-                🟢 {parsed.sentiment.posPct}% {parsed.sentiment.posCount ? `(${parsed.sentiment.posCount})` : ''}
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] font-mono-code font-tabular">
+              <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                {parsed.sentiment.posPct}% {parsed.sentiment.posCount ? `(${parsed.sentiment.posCount})` : ''}
               </span>
-              <span className="text-zinc-400 font-semibold">
-                ⚪ {parsed.sentiment.neuPct}% {parsed.sentiment.neuCount ? `(${parsed.sentiment.neuCount})` : ''}
+              <span className="inline-flex items-center gap-1 text-zinc-300 font-semibold">
+                <span className="w-2 h-2 rounded-full bg-zinc-400 shrink-0" />
+                {parsed.sentiment.neuPct}% {parsed.sentiment.neuCount ? `(${parsed.sentiment.neuCount})` : ''}
               </span>
-              <span className="text-rose-400 font-semibold">
-                🔴 {parsed.sentiment.negPct}% {parsed.sentiment.negCount ? `(${parsed.sentiment.negCount})` : ''}
+              <span className="inline-flex items-center gap-1 text-rose-400 font-semibold">
+                <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0" />
+                {parsed.sentiment.negPct}% {parsed.sentiment.negCount ? `(${parsed.sentiment.negCount})` : ''}
               </span>
             </div>
           </div>
@@ -253,7 +256,7 @@ export function ExecutiveAiMessageView({ content }: ExecutiveAiMessageViewProps)
                     </span>
                   </div>
 
-                  <p className="text-[12.5px] text-zinc-200 leading-relaxed font-sans-ui pl-5">
+                  <p className="text-[12.5px] text-zinc-200 leading-relaxed font-sans-ui pl-0 sm:pl-5 break-words">
                     {hl.body}
                   </p>
                 </div>

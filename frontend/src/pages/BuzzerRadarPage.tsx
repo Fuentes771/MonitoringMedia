@@ -29,6 +29,7 @@ import {
   MessageSquareWarning,
   CheckCircle2,
   Activity,
+  ArrowRight,
 } from 'lucide-react';
 import { PlatformBadge } from '@/components/common/PlatformBadge';
 import { LinkVerificationBadge } from '@/components/common/LinkVerificationBadge';
@@ -36,9 +37,19 @@ import { LinkVerificationBadge } from '@/components/common/LinkVerificationBadge
 interface BuzzerRadarPageProps {
   days: number;
   onOpenAiWithQuery?: (query: string, topicId?: number) => void;
+  onNavigateToMentionsWithFilters?: (
+    topicId?: number,
+    sentiment?: string,
+    keyword?: string,
+    extra?: { authorName?: string; botClusterId?: string; onlyInauthentic?: boolean }
+  ) => void;
 }
 
-export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProps) {
+export function BuzzerRadarPage({
+  days,
+  onOpenAiWithQuery,
+  onNavigateToMentionsWithFilters,
+}: BuzzerRadarPageProps) {
   const queryClient = useQueryClient();
   const { activeWorkspace } = useAuth();
   const workspaceId = activeWorkspace?.id;
@@ -139,32 +150,33 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
   }
 
   return (
-    <div className="space-y-6 font-sans-ui">
+    <div className="space-y-4 sm:space-y-6 font-sans-ui">
       {/* Top Header & Action Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/[0.08] pb-5">
-        <div className="flex items-start gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-400 flex items-center justify-center shrink-0 mt-0.5">
-            <ShieldAlert className="w-5 h-5" />
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/[0.08] pb-4 sm:pb-5">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-400 flex items-center justify-center shrink-0 mt-0.5">
+            <ShieldAlert className="w-5 h-5" aria-hidden="true" />
           </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="font-editorial text-2xl sm:text-3xl font-medium text-white tracking-tight">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-editorial text-xl sm:text-2xl lg:text-3xl font-medium text-white tracking-tight text-balance">
                 Radar Buzzer, Jaringan Bot &amp; Sarkasme Politik
               </h1>
               {getThreatBadge(authIndex?.threat_level)}
             </div>
-            <p className="text-xs text-zinc-400 mt-1 max-w-3xl">
-              Deteksi 3-Lapis Perilaku Inautentik Terkoordinasi (CIB), Kluster Narasi Copypasta, serta Pembedahan Satir &amp; Ironi Netizen Indonesia yang membalikkan sentimen pujian palsu menjadi kritik negatif.
+            <p className="text-xs text-zinc-400 mt-1 max-w-3xl text-pretty">
+              Deteksi 3-Lapis Perilaku Inautentik Terkoordinasi (CIB), Kluster Narasi Copypasta, serta Pembedahan Satir &amp; Ironi Netizen Indonesia.
             </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto shrink-0">
           {/* Topic Selector */}
           <select
+            aria-label="Filter topik radar buzzer"
             value={selectedTopicId || ''}
             onChange={(e) => setSelectedTopicId(e.target.value ? Number(e.target.value) : undefined)}
-            className="bg-[#0e1117] border border-white/[0.1] rounded-xl px-3.5 py-2 text-xs text-zinc-200 focus:outline-none focus:border-amber-400/50 transition-colors"
+            className="w-full sm:w-auto min-h-11 bg-[#0e1117] border border-white/[0.12] rounded-xl px-3.5 py-2 text-base sm:text-xs text-zinc-200 focus:outline-none focus:border-amber-400/60 transition-colors"
           >
             <option value="">Semua Topik &amp; Isu Nasional</option>
             {topics?.map((t) => (
@@ -179,9 +191,9 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
             type="button"
             onClick={() => scanMutation.mutate()}
             disabled={scanMutation.isPending || isFetching}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-200 font-semibold text-xs transition-all cursor-pointer disabled:opacity-50"
+            className="min-h-11 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-200 font-semibold text-xs transition-all cursor-pointer disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${scanMutation.isPending ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${scanMutation.isPending ? 'animate-spin' : ''}`} aria-hidden="true" />
             <span>
               {scanMutation.isPending ? 'Memindai Jaringan...' : 'Pindai Jaringan & Sarkasme'}
             </span>
@@ -193,32 +205,33 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
       {scanBanner && (
         <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between gap-3 text-xs text-emerald-300">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" aria-hidden="true" />
             <span>{scanBanner}</span>
           </div>
           <button
+            type="button"
             onClick={() => setScanBanner(null)}
-            className="text-xs text-emerald-400/80 hover:text-emerald-200 font-mono-code cursor-pointer"
+            className="min-h-9 px-2 text-xs text-emerald-300 hover:text-emerald-100 font-mono-code cursor-pointer shrink-0"
           >
             Tutup
           </button>
         </div>
       )}
 
-      {/* 4-Card KPI Strip: Authenticity Index */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 4-Card KPI Strip: Authenticity Index (2x2 on Phone, 4-Col on Desktop) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Card 1: Suara Organik */}
-        <div className="bento-card p-5 bg-[#0e1117] border border-white/[0.08] space-y-3">
-          <div className="flex items-center justify-between text-xs text-zinc-400">
-            <span className="font-mono-code uppercase tracking-wider text-[10px]">Suara Asli (Organik)</span>
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+        <div className="bento-card p-3.5 sm:p-5 bg-[#0e1117] border border-white/[0.08] space-y-2.5 sm:space-y-3 min-w-0">
+          <div className="flex items-center justify-between gap-1 text-xs text-zinc-400">
+            <span className="font-mono-code uppercase tracking-wider text-[10px] truncate">Suara Organik</span>
+            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" aria-hidden="true" />
           </div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-3xl font-bold text-white font-mono-code">
+          <div className="flex flex-wrap items-baseline justify-between gap-1">
+            <span className="text-2xl sm:text-3xl font-bold text-white font-mono-code font-tabular">
               {authIndex?.organic_percent ?? 100}%
             </span>
-            <span className="text-xs text-emerald-400 font-mono-code">
-              {authIndex?.organic_count ?? 0} / {authIndex?.total_mentions ?? 0} dok
+            <span className="text-[11px] sm:text-xs text-emerald-400 font-mono-code font-tabular">
+              {authIndex?.organic_count ?? 0}/{authIndex?.total_mentions ?? 0}
             </span>
           </div>
           <div className="w-full h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
@@ -227,23 +240,23 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
               style={{ width: `${Math.min(100, authIndex?.organic_percent ?? 100)}%` }}
             />
           </div>
-          <p className="text-[11px] text-zinc-400">
-            Percakapan publik natural &amp; pemberitaan media terverifikasi
+          <p className="text-[11px] text-zinc-400 line-clamp-2">
+            Percakapan publik natural &amp; media terverifikasi
           </p>
         </div>
 
         {/* Card 2: Indikasi Buzzer / Bot */}
-        <div className="bento-card p-5 bg-[#0e1117] border border-white/[0.08] space-y-3">
-          <div className="flex items-center justify-between text-xs text-zinc-400">
-            <span className="font-mono-code uppercase tracking-wider text-[10px]">Indikasi Buzzer / Bot</span>
-            <Bot className="w-4 h-4 text-rose-400" />
+        <div className="bento-card p-3.5 sm:p-5 bg-[#0e1117] border border-white/[0.08] space-y-2.5 sm:space-y-3 min-w-0">
+          <div className="flex items-center justify-between gap-1 text-xs text-zinc-400">
+            <span className="font-mono-code uppercase tracking-wider text-[10px] truncate">Buzzer / Bot</span>
+            <Bot className="w-4 h-4 text-rose-400 shrink-0" aria-hidden="true" />
           </div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-3xl font-bold text-rose-400 font-mono-code">
+          <div className="flex flex-wrap items-baseline justify-between gap-1">
+            <span className="text-2xl sm:text-3xl font-bold text-rose-400 font-mono-code font-tabular">
               {authIndex?.inauthentic_percent ?? 0}%
             </span>
-            <span className="text-xs text-zinc-300 font-mono-code">
-              {authIndex?.inauthentic_count ?? 0} terindikasi
+            <span className="text-[11px] sm:text-xs text-zinc-300 font-mono-code font-tabular">
+              {authIndex?.inauthentic_count ?? 0} dok
             </span>
           </div>
           <div className="w-full h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
@@ -252,22 +265,22 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
               style={{ width: `${Math.min(100, authIndex?.inauthentic_percent ?? 0)}%` }}
             />
           </div>
-          <p className="text-[11px] text-zinc-400">
-            Akun anomali angka acak, rentetan tagar, atau duplikasi seragam
+          <p className="text-[11px] text-zinc-400 line-clamp-2">
+            Akun anomali, rentetan tagar, atau duplikasi seragam
           </p>
         </div>
 
         {/* Card 3: Sarkasme & Satir Politik */}
-        <div className="bento-card p-5 bg-[#0e1117] border border-white/[0.08] space-y-3">
-          <div className="flex items-center justify-between text-xs text-zinc-400">
-            <span className="font-mono-code uppercase tracking-wider text-[10px]">Sarkasme &amp; Satir</span>
-            <MessageSquareWarning className="w-4 h-4 text-amber-400" />
+        <div className="bento-card p-3.5 sm:p-5 bg-[#0e1117] border border-white/[0.08] space-y-2.5 sm:space-y-3 min-w-0">
+          <div className="flex items-center justify-between gap-1 text-xs text-zinc-400">
+            <span className="font-mono-code uppercase tracking-wider text-[10px] truncate">Sarkasme &amp; Satir</span>
+            <MessageSquareWarning className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
           </div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-3xl font-bold text-amber-300 font-mono-code">
+          <div className="flex flex-wrap items-baseline justify-between gap-1">
+            <span className="text-2xl sm:text-3xl font-bold text-amber-300 font-mono-code font-tabular">
               {authIndex?.sarcasm_percent ?? 0}%
             </span>
-            <span className="text-xs text-amber-300/90 font-mono-code">
+            <span className="text-[11px] sm:text-xs text-amber-300/90 font-mono-code font-tabular">
               {authIndex?.sarcasm_count ?? 0} dikoreksi
             </span>
           </div>
@@ -277,59 +290,59 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
               style={{ width: `${Math.min(100, authIndex?.sarcasm_percent ?? 0)}%` }}
             />
           </div>
-          <p className="text-[11px] text-zinc-400">
-            Pujian ironis/sindiran yang otomatis dibalik menjadi sentimen Negatif
+          <p className="text-[11px] text-zinc-400 line-clamp-2">
+            Sindiran ironis otomatis dikoreksi ke Negatif
           </p>
         </div>
 
         {/* Card 4: Kluster Copypasta */}
-        <div className="bento-card p-5 bg-[#0e1117] border border-white/[0.08] space-y-3">
-          <div className="flex items-center justify-between text-xs text-zinc-400">
-            <span className="font-mono-code uppercase tracking-wider text-[10px]">Kluster Copypasta</span>
-            <Copy className="w-4 h-4 text-amber-300" />
+        <div className="bento-card p-3.5 sm:p-5 bg-[#0e1117] border border-white/[0.08] space-y-2.5 sm:space-y-3 min-w-0">
+          <div className="flex items-center justify-between gap-1 text-xs text-zinc-400">
+            <span className="font-mono-code uppercase tracking-wider text-[10px] truncate">Copypasta</span>
+            <Copy className="w-4 h-4 text-amber-300 shrink-0" aria-hidden="true" />
           </div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-3xl font-bold text-white font-mono-code">
+          <div className="flex flex-wrap items-baseline justify-between gap-1">
+            <span className="text-2xl sm:text-3xl font-bold text-white font-mono-code font-tabular">
               {authIndex?.clusters_count ?? 0}
             </span>
-            <span className="text-xs text-zinc-400 font-mono-code">
-              Kemiripan &ge;75%
+            <span className="text-[11px] sm:text-xs text-zinc-400 font-mono-code font-tabular">
+              &ge;75% mirip
             </span>
           </div>
-          <div className="text-[11px] text-zinc-400 pt-1">
-            Kelompok teks kampanye seragam yang disebarkan lintas akun dalam jendela waktu berdekatan
+          <div className="text-[11px] text-zinc-400 line-clamp-2">
+            Teks kampanye seragam lintas akun berdekatan
           </div>
         </div>
       </div>
 
       {/* Burst Attack & Sarcasm Timeline Chart */}
-      <div className="bento-card p-6 bg-[#0e1117] border border-white/[0.08] space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div className="bento-card p-4 sm:p-6 bg-[#0e1117] border border-white/[0.08] space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
           <div>
             <span className="text-[10px] font-mono-code uppercase tracking-wider text-amber-300 block">
               Kronologi Velositas &amp; Anomali
             </span>
-            <h2 className="text-base font-semibold text-white">
+            <h2 className="text-sm sm:text-base font-semibold text-white leading-snug">
               Perbandingan Arus Opini Organik vs. Serangan Bot &amp; Gelombang Sarkasme
             </h2>
           </div>
-          <div className="flex items-center gap-4 text-xs font-mono-code">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-mono-code shrink-0">
             <span className="flex items-center gap-1.5 text-emerald-400">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0" />
               Organik
             </span>
             <span className="flex items-center gap-1.5 text-rose-400">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-              Indikasi Bot/Buzzer
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
+              Bot/Buzzer
             </span>
             <span className="flex items-center gap-1.5 text-amber-300">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-              Sarkasme/Satir
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+              Sarkasme
             </span>
           </div>
         </div>
 
-        <div className="h-64 w-full">
+        <div className="h-56 sm:h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={timeline} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
@@ -349,11 +362,13 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
               <XAxis
                 dataKey="time_label"
-                stroke="#71717a"
-                fontSize={11}
+                stroke="#a1a1aa"
+                fontSize={10}
                 tickLine={false}
+                interval="preserveStartEnd"
+                minTickGap={22}
               />
-              <YAxis stroke="#71717a" fontSize={11} tickLine={false} allowDecimals={false} />
+              <YAxis stroke="#a1a1aa" fontSize={10} tickLine={false} allowDecimals={false} />
               <Tooltip
                 contentStyle={{
                   backgroundColor: '#0a0c12',
@@ -370,6 +385,7 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
                 stroke="#10b981"
                 fill="url(#gradOrganic)"
                 strokeWidth={2}
+                isAnimationActive={false}
               />
               <Area
                 type="monotone"
@@ -378,6 +394,7 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
                 stroke="#f43f5e"
                 fill="url(#gradBot)"
                 strokeWidth={2}
+                isAnimationActive={false}
               />
               <Area
                 type="monotone"
@@ -386,6 +403,7 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
                 stroke="#fbbf24"
                 fill="url(#gradSarcasm)"
                 strokeWidth={2}
+                isAnimationActive={false}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -393,27 +411,27 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
       </div>
 
       {/* 2-Column Deep Analysis: Copypasta Clusters (Left) & Sarcasm Dissection (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
         {/* LEFT COLUMN (6 cols): Kluster Narasi Copypasta */}
-        <div className="lg:col-span-6 bento-card p-6 bg-[#0e1117] border border-white/[0.08] space-y-4">
-          <div className="flex items-center justify-between border-b border-white/[0.08] pb-3.5">
-            <div>
+        <div className="lg:col-span-6 bento-card p-4 sm:p-6 bg-[#0e1117] border border-white/[0.08] space-y-4 min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.08] pb-3.5">
+            <div className="min-w-0">
               <span className="text-[10px] font-mono-code uppercase tracking-wider text-rose-400 block">
                 Layer 1 &amp; 3: Deteksi Amplifikasi Seragam
               </span>
-              <h3 className="text-base font-semibold text-white flex items-center gap-2">
-                <Copy className="w-4 h-4 text-rose-400" />
+              <h3 className="text-sm sm:text-base font-semibold text-white flex items-center gap-2">
+                <Copy className="w-4 h-4 text-rose-400 shrink-0" aria-hidden="true" />
                 <span>Kluster Narasi Copypasta Terkoordinasi</span>
               </h3>
             </div>
-            <span className="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs font-mono-code text-zinc-300">
+            <span className="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs font-mono-code text-zinc-300 shrink-0">
               {clusters.length} Kluster
             </span>
           </div>
 
           {clusters.length === 0 ? (
-            <div className="p-8 text-center rounded-xl border border-white/[0.05] bg-white/[0.01] space-y-2">
-              <ShieldCheck className="w-8 h-8 text-emerald-400/70 mx-auto" />
+            <div className="p-6 sm:p-8 text-center rounded-xl border border-white/[0.05] bg-white/[0.01] space-y-2">
+              <ShieldCheck className="w-8 h-8 text-emerald-400/70 mx-auto" aria-hidden="true" />
               <div className="text-sm font-medium text-zinc-200">
                 Tidak Ditemukan Serangan Copypasta Masif
               </div>
@@ -422,14 +440,14 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
               </p>
             </div>
           ) : (
-            <div className="space-y-3.5 max-h-[560px] overflow-y-auto pr-1">
+            <div className="space-y-3.5 max-h-[460px] lg:max-h-[560px] overflow-y-auto overscroll-y-contain pr-1">
               {clusters.map((cluster: CopypastaCluster) => (
                 <div
                   key={cluster.cluster_id}
-                  className="p-4 rounded-xl border border-rose-500/25 bg-rose-500/[0.04] space-y-3 transition-colors hover:border-rose-500/40"
+                  className="p-3.5 sm:p-4 rounded-xl border border-rose-500/25 bg-rose-500/[0.04] space-y-3 transition-colors hover:border-rose-500/40"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-mono-code text-[10px] font-bold">
                         {cluster.copy_count}x Duplikasi
                       </span>
@@ -446,14 +464,14 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
                   </div>
 
                   {/* Canonical Text */}
-                  <div className="p-3 rounded-lg bg-[#08090d]/90 border border-white/[0.07] text-xs text-zinc-200 leading-relaxed font-sans-ui">
+                  <div className="p-3 rounded-lg bg-[#08090d]/90 border border-white/[0.07] text-xs text-zinc-200 leading-relaxed font-sans-ui break-words">
                     &ldquo;{cluster.canonical_text}&rdquo;
                   </div>
 
                   {/* Accounts & Metadata */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-zinc-400">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1 text-[11px] text-zinc-400">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-zinc-500" />
+                      <Users className="w-3.5 h-3.5 text-zinc-400 shrink-0" aria-hidden="true" />
                       {cluster.accounts.slice(0, 5).map((acc, idx) => (
                         <span
                           key={idx}
@@ -463,26 +481,44 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
                         </span>
                       ))}
                       {cluster.accounts.length > 5 && (
-                        <span className="text-[10px] text-zinc-500 font-mono-code">
+                        <span className="text-[10px] text-zinc-400 font-mono-code">
                           +{cluster.accounts.length - 5} lainnya
                         </span>
                       )}
                     </div>
 
-                    {onOpenAiWithQuery && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onOpenAiWithQuery(
-                            `Analisis motif dan agenda di balik kluster narasi copypasta ini (${cluster.copy_count} duplikasi dari ${cluster.unique_accounts_count} akun): "${cluster.canonical_text}". Apa tujuan penggiringan opininya?`
-                          )
-                        }
-                        className="inline-flex items-center gap-1 text-amber-300 hover:text-amber-200 font-semibold cursor-pointer"
-                      >
-                        <Sparkles className="w-3 h-3" />
-                        <span>Bedah Agenda AI</span>
-                      </button>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      {onNavigateToMentionsWithFilters && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onNavigateToMentionsWithFilters(selectedTopicId, undefined, undefined, {
+                              botClusterId: cluster.cluster_id,
+                            })
+                          }
+                          className="min-h-10 sm:min-h-8 inline-flex items-center gap-1 text-sky-300 hover:text-sky-200 font-semibold cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 rounded-lg px-2.5 py-1 bg-sky-500/10 border border-sky-500/25"
+                          title="Buka seluruh bukti sebutan pada kluster copypasta ini"
+                        >
+                          <span>Lihat {cluster.copy_count} Bukti</span>
+                          <ArrowRight className="w-3 h-3" aria-hidden="true" />
+                        </button>
+                      )}
+
+                      {onOpenAiWithQuery && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onOpenAiWithQuery(
+                              `Analisis motif dan agenda di balik kluster narasi copypasta ini (${cluster.copy_count} duplikasi dari ${cluster.unique_accounts_count} akun): "${cluster.canonical_text}". Apa tujuan penggiringan opininya?`
+                            )
+                          }
+                          className="min-h-10 sm:min-h-8 inline-flex items-center gap-1 text-amber-300 hover:text-amber-200 font-semibold cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 rounded-lg px-2.5 py-1 bg-amber-500/10 border border-amber-500/25"
+                        >
+                          <Sparkles className="w-3 h-3" aria-hidden="true" />
+                          <span>Bedah Agenda AI</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -491,49 +527,49 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
         </div>
 
         {/* RIGHT COLUMN (6 cols): Pembedahan Sarkasme & Satir Politik */}
-        <div className="lg:col-span-6 bento-card p-6 bg-[#0e1117] border border-white/[0.08] space-y-4">
-          <div className="flex items-center justify-between border-b border-white/[0.08] pb-3.5">
-            <div>
+        <div className="lg:col-span-6 bento-card p-4 sm:p-6 bg-[#0e1117] border border-white/[0.08] space-y-4 min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.08] pb-3.5">
+            <div className="min-w-0">
               <span className="text-[10px] font-mono-code uppercase tracking-wider text-amber-300 block">
                 Hybrid Lexicon + 9Router LLM
               </span>
-              <h3 className="text-base font-semibold text-white flex items-center gap-2">
-                <MessageSquareWarning className="w-4 h-4 text-amber-400" />
+              <h3 className="text-sm sm:text-base font-semibold text-white flex items-center gap-2">
+                <MessageSquareWarning className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
                 <span>Pembedahan Sarkasme &amp; Satir Politik Netizen</span>
               </h3>
             </div>
-            <span className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/25 text-xs font-mono-code text-amber-300">
+            <span className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/25 text-xs font-mono-code text-amber-300 shrink-0">
               {sarcasmList.length} Terdeteksi
             </span>
           </div>
 
           {sarcasmList.length === 0 ? (
-            <div className="p-8 text-center rounded-xl border border-white/[0.05] bg-white/[0.01] space-y-2">
-              <MessageSquareWarning className="w-8 h-8 text-zinc-500 mx-auto" />
+            <div className="p-6 sm:p-8 text-center rounded-xl border border-white/[0.05] bg-white/[0.01] space-y-2">
+              <MessageSquareWarning className="w-8 h-8 text-zinc-400 mx-auto" aria-hidden="true" />
               <div className="text-sm font-medium text-zinc-200">
                 Belum Ada Komentar Sarkasme pada Filter Ini
               </div>
               <p className="text-xs text-zinc-400 max-w-md mx-auto">
-                Komentar netizen yang menggunakan pujian ironis (seperti &ldquo;saking bagusnya&rdquo;, &ldquo;menyala abangkuh&rdquo;, atau emoji 🗿/🤡) akan otomatis muncul di sini dan dikoreksi menjadi sentimen Negatif.
+                Komentar netizen yang menggunakan pujian ironis akan otomatis muncul di sini dan dikoreksi menjadi sentimen Negatif.
               </p>
             </div>
           ) : (
-            <div className="space-y-3.5 max-h-[560px] overflow-y-auto pr-1">
+            <div className="space-y-3.5 max-h-[460px] lg:max-h-[560px] overflow-y-auto overscroll-y-contain pr-1">
               {sarcasmList.map((item: SarcasmHighlight) => (
                 <div
                   key={item.id}
-                  className="p-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.04] space-y-2.5 transition-colors hover:border-amber-500/40"
+                  className="p-3.5 sm:p-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.04] space-y-2.5 transition-colors hover:border-amber-500/40"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 min-w-0">
                       <PlatformBadge provider={item.provider} size="xs" compactLabel />
-                      <span className="font-semibold text-white">{item.author_name}</span>
+                      <span className="font-semibold text-white truncate max-w-[140px]">{item.author_name}</span>
                       <span className="text-[11px] text-zinc-400 font-mono-code">{item.time_label}</span>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/35 font-mono-code text-[10px] font-bold">
-                        🎭 SARKASME ({Math.round(item.sarcasm_score * 100)}%)
+                        SARKASME ({Math.round(item.sarcasm_score * 100)}%)
                       </span>
                       <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-mono-code text-[10px] font-bold">
                         &rarr; NEGATIF
@@ -542,14 +578,14 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
                   </div>
 
                   {/* Comment Text */}
-                  <p className="text-xs text-zinc-100 leading-relaxed bg-[#08090d]/80 p-3 rounded-lg border border-white/[0.06]">
+                  <p className="text-xs text-zinc-100 leading-relaxed bg-[#08090d]/80 p-3 rounded-lg border border-white/[0.06] break-words">
                     &ldquo;{item.text}&rdquo;
                   </p>
 
                   {/* Sarcasm Explanation Box */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-1 text-[11px]">
-                    <div className="text-amber-200/90 flex items-start gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1 text-[11px]">
+                    <div className="text-amber-200/90 flex items-start gap-1.5 min-w-0">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
                       <span>
                         <strong className="text-amber-300">Analisis Ironi:</strong> {item.sarcasm_reason}
                       </span>
@@ -571,20 +607,20 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
         </div>
       </div>
 
-      {/* Bottom Table: Peringkat Akun Terindikasi Bot / Buzzer */}
-      <div className="bento-card p-6 bg-[#0e1117] border border-white/[0.08] space-y-4">
+      {/* Bottom List: Suspected Bot/Buzzer Accounts (Card Reflow on Mobile, Dense Table on md+) */}
+      <div className="bento-card p-4 sm:p-6 bg-[#0e1117] border border-white/[0.08] space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/[0.08] pb-3.5">
           <div>
             <span className="text-[10px] font-mono-code uppercase tracking-wider text-zinc-400 block">
               Layer 2: Anomali Akun &amp; Frekuensi
             </span>
-            <h3 className="text-base font-semibold text-white flex items-center gap-2">
-              <Bot className="w-4 h-4 text-rose-400" />
+            <h3 className="text-sm sm:text-base font-semibold text-white flex items-center gap-2">
+              <Bot className="w-4 h-4 text-rose-400 shrink-0" aria-hidden="true" />
               <span>Daftar Akun Terindikasi Bot / Buzzer Kampanye</span>
             </h3>
           </div>
-          <span className="text-xs text-zinc-400 font-mono-code">
-            Menampilkan {suspectedAccounts.length} akun dengan skor anomali tertinggi
+          <span className="text-xs text-zinc-400 font-mono-code font-tabular">
+            Menampilkan {suspectedAccounts.length} akun anomali tertinggi
           </span>
         </div>
 
@@ -593,55 +629,137 @@ export function BuzzerRadarPage({ days, onOpenAiWithQuery }: BuzzerRadarPageProp
             Belum ditemukan akun dengan pola anomali bot pada jendela waktu ini.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-white/[0.08] text-[10px] font-mono-code uppercase text-zinc-400">
-                  <th className="py-2.5 px-3">Akun / Handle</th>
-                  <th className="py-2.5 px-3">Platform</th>
-                  <th className="py-2.5 px-3">Volume Post</th>
-                  <th className="py-2.5 px-3">Skor Bot</th>
-                  <th className="py-2.5 px-3">Sinyal Anomali Terdeteksi</th>
-                  <th className="py-2.5 px-3">Sampel Narasi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.06]">
-                {suspectedAccounts.map((acc, idx) => (
-                  <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="py-3 px-3 font-mono-code font-semibold text-white">
-                      {acc.author_name}
-                    </td>
-                    <td className="py-3 px-3">
-                      <PlatformBadge provider={acc.provider} size="xs" compactLabel />
-                    </td>
-                    <td className="py-3 px-3 font-mono-code text-zinc-200">
-                      {acc.post_count} dok
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className="px-2 py-0.5 rounded bg-rose-500/15 text-rose-400 border border-rose-500/30 font-mono-code font-bold text-[11px]">
-                        {Math.round(acc.avg_bot_score * 100)}%
-                      </span>
-                    </td>
-                    <td className="py-3 px-3">
-                      <div className="flex flex-wrap gap-1">
-                        {acc.signals.map((sig, sIdx) => (
-                          <span
-                            key={sIdx}
-                            className="px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.08] text-[10px] text-zinc-300"
-                          >
-                            {sig}
-                          </span>
-                        ))}
+          <>
+            {/* Mobile Card Layout (Zero horizontal scroll on < md) */}
+            <div className="md:hidden space-y-3">
+              {suspectedAccounts.map((acc, idx) => (
+                <div
+                  key={idx}
+                  className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-2.5 text-xs"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 space-y-1">
+                      <div className="font-mono-code font-bold text-white text-sm truncate">
+                        {acc.author_name}
                       </div>
-                    </td>
-                    <td className="py-3 px-3 text-zinc-400 max-w-xs truncate">
-                      {acc.sample_text}
-                    </td>
+                      <div className="flex items-center flex-wrap gap-2">
+                        <PlatformBadge provider={acc.provider} size="xs" compactLabel />
+                        <span className="font-mono-code text-[11px] text-zinc-300 font-tabular">
+                          {acc.post_count} dok
+                        </span>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-300 border border-rose-500/35 font-mono-code font-bold font-tabular text-xs shrink-0">
+                      Bot {Math.round(acc.avg_bot_score * 100)}%
+                    </span>
+                  </div>
+
+                  {acc.signals.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {acc.signals.map((sig, sIdx) => (
+                        <span
+                          key={sIdx}
+                          className="px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.08] text-[10.5px] text-zinc-300"
+                        >
+                          {sig}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <p className="text-xs text-zinc-300 leading-relaxed line-clamp-2 bg-[#08090d]/70 p-2.5 rounded-lg border border-white/[0.05]">
+                    {acc.sample_text}
+                  </p>
+
+                  {onNavigateToMentionsWithFilters && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onNavigateToMentionsWithFilters(selectedTopicId, undefined, undefined, {
+                          authorName: acc.author_name,
+                          onlyInauthentic: true,
+                        })
+                      }
+                      className="w-full min-h-11 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 active:bg-rose-500/30 border border-rose-500/35 text-rose-200 text-xs font-semibold cursor-pointer"
+                    >
+                      <span>Lihat {acc.post_count} Post Akun Ini</span>
+                      <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Tablet & Desktop Data Table (md and above) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-white/[0.08] text-[10px] font-mono-code uppercase text-zinc-400">
+                    <th className="py-2.5 px-3">Akun / Handle</th>
+                    <th className="py-2.5 px-3">Platform</th>
+                    <th className="py-2.5 px-3">Volume Post</th>
+                    <th className="py-2.5 px-3">Skor Bot</th>
+                    <th className="py-2.5 px-3">Sinyal Anomali Terdeteksi</th>
+                    <th className="py-2.5 px-3">Sampel Narasi</th>
+                    {onNavigateToMentionsWithFilters && <th className="py-2.5 px-3 text-right">Aksi</th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-white/[0.06]">
+                  {suspectedAccounts.map((acc, idx) => (
+                    <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
+                      <td className="py-3 px-3 font-mono-code font-semibold text-white">
+                        {acc.author_name}
+                      </td>
+                      <td className="py-3 px-3">
+                        <PlatformBadge provider={acc.provider} size="xs" compactLabel />
+                      </td>
+                      <td className="py-3 px-3 font-mono-code font-tabular text-zinc-200">
+                        {acc.post_count} dok
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="px-2 py-0.5 rounded bg-rose-500/15 text-rose-400 border border-rose-500/30 font-mono-code font-bold font-tabular text-[11px]">
+                          {Math.round(acc.avg_bot_score * 100)}%
+                        </span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="flex flex-wrap gap-1">
+                          {acc.signals.map((sig, sIdx) => (
+                            <span
+                              key={sIdx}
+                              className="px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.08] text-[10px] text-zinc-300"
+                            >
+                              {sig}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 text-zinc-300 max-w-xs truncate">
+                        {acc.sample_text}
+                      </td>
+                      {onNavigateToMentionsWithFilters && (
+                        <td className="py-3 px-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onNavigateToMentionsWithFilters(selectedTopicId, undefined, undefined, {
+                                authorName: acc.author_name,
+                                onlyInauthentic: true,
+                              })
+                            }
+                            className="min-h-9 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/35 text-rose-200 text-[11px] font-semibold cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 whitespace-nowrap"
+                            title={`Buka seluruh sebutan dari akun ${acc.author_name}`}
+                          >
+                            <span>Lihat {acc.post_count} Post</span>
+                            <ArrowRight className="w-3 h-3" aria-hidden="true" />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, HotIssuesRadarData, HotIssueItem } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,6 +15,7 @@ import {
   Activity,
   MessageSquareText,
   Archive,
+  ArrowRight,
 } from 'lucide-react';
 import { PlatformBadge } from '@/components/common/PlatformBadge';
 import { LinkVerificationBadge } from '@/components/common/LinkVerificationBadge';
@@ -26,7 +27,12 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-export function HotIssuesPage() {
+interface HotIssuesPageProps {
+  onNavigateToMentions?: (topicId?: number) => void;
+  onOpenAiWithQuery?: (query: string, topicId?: number) => void;
+}
+
+export function HotIssuesPage({ onNavigateToMentions, onOpenAiWithQuery }: HotIssuesPageProps = {}) {
   const queryClient = useQueryClient();
   const { activeWorkspace } = useAuth();
   const workspaceId = activeWorkspace?.id;
@@ -37,17 +43,29 @@ export function HotIssuesPage() {
   const [urgencyLevel, setUrgencyLevel] = useState<'normal' | 'elevated' | 'critical'>('elevated');
   const [scanMessage, setScanMessage] = useState<string | null>(null);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isModalOpen) {
+        setIsModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isModalOpen]);
+
   // Fetch Hot Issues
   const { data: radarResponse, isLoading } = useQuery({
     queryKey: ['hot-issues-radar', workspaceId],
     enabled: Boolean(workspaceId),
+    staleTime: 60_000,
     queryFn: async () => {
       const res = await api.get<{ data: HotIssuesRadarData }>('/hot-issues', {
         params: { workspace_id: workspaceId },
       });
       return res.data.data;
     },
-    refetchInterval: 15000, // Poll every 15s for breaking surges
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   });
 
   // Automated Discovery Scan Mutation
@@ -97,6 +115,9 @@ export function HotIssuesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hot-issues-radar'] });
+      queryClient.invalidateQueries({ queryKey: ['alerts-data'] });
+      queryClient.invalidateQueries({ queryKey: ['topics-list'] });
+      queryClient.invalidateQueries({ queryKey: ['mentions-explorer'] });
       setIsModalOpen(false);
       setName('');
       setDescription('');
@@ -108,62 +129,76 @@ export function HotIssuesPage() {
   const isSurging = radarResponse?.system_state === 'surging_detected';
 
   return (
-    <div className="space-y-6 font-sans-ui">
+    <div className="space-y-4 sm:space-y-6 font-sans-ui">
       {/* Page Header */}
-      <div className="border-b border-white/[0.08] pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shadow-xs">
-            <Flame className="w-4 h-4 text-amber-400 animate-pulse" />
+      <div className="border-b border-white/[0.08] pb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3.5 sm:gap-4">
+        <div className="flex items-start sm:items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shadow-xs shrink-0 mt-0.5 sm:mt-0">
+            <Flame className="w-4 h-4 text-amber-400" aria-hidden="true" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-editorial text-2xl font-medium text-white tracking-tight">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-editorial text-xl sm:text-2xl font-medium text-white tracking-tight text-balance">
                 Radar Isu Hangat (Breaking &amp; Viral Surge)
               </h1>
               {isSurging && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono-code font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono-code font-bold bg-rose-500/20 text-rose-300 border border-rose-500/35 shrink-0">
                   SURGE DETECTED
                 </span>
               )}
             </div>
-            <p className="text-xs text-zinc-400 font-sans-ui">
+            <p className="text-xs text-zinc-400 font-sans-ui mt-0.5 text-pretty">
               Deteksi anomali lonjakan percakapan publik di luar 17 program prioritas (Jendela {radarResponse?.window_label || '33 Jam Terkini'})
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0">
           <button
+            type="button"
             onClick={() => scanHotIssuesMutation.mutate()}
             disabled={scanHotIssuesMutation.isPending}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            className="flex-1 md:flex-none min-h-11 sm:min-h-10 flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
           >
-            <Sparkles className={`w-3.5 h-3.5 ${scanHotIssuesMutation.isPending ? 'animate-spin' : ''}`} />
-            <span>{scanHotIssuesMutation.isPending ? 'Memindai Google News...' : 'Pindai Isu Terkini'}</span>
+            <Sparkles className={`w-3.5 h-3.5 shrink-0 ${scanHotIssuesMutation.isPending ? 'animate-spin' : ''}`} aria-hidden="true" />
+            <span>{scanHotIssuesMutation.isPending ? 'Memindai...' : 'Pindai Isu Terkini'}</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-bold text-xs shadow-xs transition-colors cursor-pointer"
+            className="flex-1 md:flex-none min-h-11 sm:min-h-10 flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-bold text-xs shadow-xs transition-colors cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
             <span>Pantau Manual</span>
           </button>
         </div>
       </div>
 
+      {/* Zero-Touch Auto Discovery Banner */}
+      {radarResponse?.auto_discovered && radarResponse?.auto_discovery_message && (
+        <div className="p-3.5 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-200 text-xs flex items-center gap-2.5 shadow-xs">
+          <Sparkles className="w-4 h-4 text-sky-300 shrink-0" aria-hidden="true" />
+          <span className="font-medium font-sans-ui">
+            Pemindaian Otomatis Google News: {radarResponse.auto_discovery_message}
+          </span>
+        </div>
+      )}
+
       {/* Toast Notification after Scan */}
       {scanMessage && (
         <div className="p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between shadow-xs animate-in fade-in duration-200">
           <div className="flex items-center gap-2.5">
-            <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+            <Sparkles className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
             <span className="font-medium font-sans-ui">{scanMessage}</span>
           </div>
           <button
+            type="button"
             onClick={() => setScanMessage(null)}
-            className="text-zinc-400 hover:text-white text-xs font-mono-code cursor-pointer"
+            aria-label="Tutup notifikasi pemindaian"
+            className="text-zinc-300 hover:text-white text-xs font-mono-code cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 rounded p-0.5"
           >
-            ✕
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
@@ -222,20 +257,22 @@ export function HotIssuesPage() {
             <p className="text-xs text-zinc-400 max-w-md mx-auto">
               Sistem mendeteksi lonjakan percakapan publik secara otomatis dari Google News. Anda dapat memicu pemindaian berita terkini sekarang atau mendaftarkan topik secara manual.
             </p>
-            <div className="pt-2 flex items-center justify-center gap-3">
+            <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3">
               <button
+                type="button"
                 onClick={() => scanHotIssuesMutation.mutate()}
                 disabled={scanHotIssuesMutation.isPending}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                className="min-h-11 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
               >
-                <Sparkles className={`w-3.5 h-3.5 ${scanHotIssuesMutation.isPending ? 'animate-spin' : ''}`} />
+                <Sparkles className={`w-3.5 h-3.5 shrink-0 ${scanHotIssuesMutation.isPending ? 'animate-spin' : ''}`} aria-hidden="true" />
                 <span>{scanHotIssuesMutation.isPending ? 'Sedang Memindai Google News...' : 'Pindai Berita Terhangat Sekarang'}</span>
               </button>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(true)}
-                className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-white font-semibold text-xs border border-white/[0.1] transition-colors cursor-pointer"
+                className="min-h-11 flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-white font-semibold text-xs border border-white/[0.1] transition-colors cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                 <span>Tambah Manual</span>
               </button>
             </div>
@@ -246,47 +283,78 @@ export function HotIssuesPage() {
             return (
               <div
                 key={issue.id}
-                className="bento-card p-6 bg-[#0e1117] space-y-5 border border-white/[0.08] hover:border-white/[0.16] transition-all"
+                className="bento-card p-4 sm:p-6 bg-[#0e1117] space-y-4 sm:space-y-5 border border-white/[0.08] hover:border-white/[0.16] transition-all"
               >
                 {/* Header ribbon */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-white/[0.08]">
-                  <div className="flex items-center gap-2.5 flex-wrap">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3.5 border-b border-white/[0.08]">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold font-mono-code flex items-center gap-1.5 ${
+                      className={`px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-bold font-mono-code flex items-center gap-1.5 ${
                         isCritical
-                          ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse'
+                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                           : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                       }`}
                     >
-                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                       <span>{isCritical ? 'URGENSI KRITIS' : 'URGENSI TINGGI'}</span>
                     </span>
 
-                    <span className="px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono-code font-bold flex items-center gap-1">
-                      <TrendingUp className="w-3.5 h-3.5" />
-                      <span>{issue.surge_multiplier}x Lonjakan Tren</span>
+                    <span className="px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] sm:text-xs font-mono-code font-bold font-tabular flex items-center gap-1">
+                      <TrendingUp className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                      <span>{issue.surge_multiplier}x Lonjakan</span>
                     </span>
 
                     <span className="text-xs text-zinc-400 font-mono-code flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-zinc-500" />
-                      <span>Jendela 33 Jam</span>
+                      <Clock className="w-3.5 h-3.5 text-zinc-400 shrink-0" aria-hidden="true" />
+                      <span>33 Jam</span>
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-mono-code text-zinc-400">
-                      Total Sebutan: <strong className="text-white">{issue.total_mentions_33h}</strong>
+                  <div className="flex items-center flex-wrap gap-2">
+                    <span className="text-xs font-mono-code font-tabular text-zinc-300 mr-1">
+                      Sebutan: <strong className="text-white">{issue.total_mentions_33h}</strong>
                     </span>
+
+                    {onNavigateToMentions && (
+                      <button
+                        type="button"
+                        onClick={() => onNavigateToMentions(issue.id)}
+                        className="min-h-10 sm:min-h-8 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] text-xs sm:text-[11px] font-semibold text-zinc-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
+                        title="Buka seluruh sebutan terkait isu hangat ini di Mentions Stream"
+                      >
+                        <span>Bedah Sebutan</span>
+                        <ArrowRight className="w-3 h-3 text-amber-400" aria-hidden="true" />
+                      </button>
+                    )}
+
+                    {onOpenAiWithQuery && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onOpenAiWithQuery(
+                            `Analisis mendalam isu hangat "${issue.title}" (lonjakan ${issue.surge_multiplier}x, ${issue.total_mentions_33h} sebutan dalam 33 jam, sentimen kritis ${issue.sentiment.neg_percent}%). Jelaskan pemicu opini publik dan langkah respons komunikasi strategis.`,
+                            issue.id
+                          )
+                        }
+                        className="min-h-10 sm:min-h-8 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-xs sm:text-[11px] font-semibold text-amber-200 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
+                        title="Tanyakan dan analisis isu hangat ini di AI Copilot"
+                      >
+                        <Sparkles className="w-3 h-3 text-amber-400" aria-hidden="true" />
+                        <span>Analisis AI</span>
+                      </button>
+                    )}
+
                     <button
+                      type="button"
                       onClick={() => {
                         if (confirm(`Arsipkan isu '${issue.title}' dari Radar Pantauan?`)) {
                           archiveHotIssueMutation.mutate(issue.id);
                         }
                       }}
                       title="Arsipkan dari Radar"
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-mono-code text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 border border-white/[0.06] hover:border-rose-500/20 transition-all cursor-pointer"
+                      className="min-h-10 sm:min-h-8 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs sm:text-[11px] font-mono-code text-zinc-300 hover:text-rose-300 hover:bg-rose-500/10 border border-white/[0.08] hover:border-rose-500/20 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
                     >
-                      <Archive className="w-3 h-3" />
+                      <Archive className="w-3 h-3" aria-hidden="true" />
                       <span>Arsipkan</span>
                     </button>
                   </div>
@@ -294,24 +362,24 @@ export function HotIssuesPage() {
 
                 {/* Title & Description */}
                 <div>
-                  <h2 className="font-editorial text-xl sm:text-2xl font-medium text-white leading-snug">
+                  <h2 className="font-editorial text-lg sm:text-2xl font-medium text-white leading-snug text-balance">
                     {issue.title}
                   </h2>
-                  <p className="text-xs text-zinc-400 font-sans-ui mt-1 leading-relaxed">
+                  <p className="text-xs text-zinc-400 font-sans-ui mt-1 leading-relaxed text-pretty">
                     {issue.description}
                   </p>
                 </div>
 
                 {/* KPI Triad + Sparkline Curve */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-4">
                   {/* Left: Sentiment Share Bar */}
-                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-3">
+                  <div className="p-3.5 sm:p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-3">
                     <span className="text-[11px] font-mono-code font-bold uppercase text-zinc-400 block">
                       Polaritas Sentimen Publik
                     </span>
-                    <div className="flex items-center justify-between text-xs font-mono-code">
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs font-mono-code font-tabular">
                       <span className="text-emerald-400 font-bold">Positif: {issue.sentiment.pos_percent}%</span>
-                      <span className="text-zinc-400 font-bold">Netral: {issue.sentiment.neu_percent}%</span>
+                      <span className="text-zinc-300 font-bold">Netral: {issue.sentiment.neu_percent}%</span>
                       <span className="text-rose-400 font-bold">Kritis: {issue.sentiment.neg_percent}%</span>
                     </div>
                     {/* Visual Tri-color Bar */}
@@ -320,16 +388,16 @@ export function HotIssuesPage() {
                       <div style={{ width: `${issue.sentiment.neu_percent}%` }} className="bg-zinc-400 h-full" />
                       <div style={{ width: `${issue.sentiment.neg_percent}%` }} className="bg-rose-500 h-full" />
                     </div>
-                    <p className="text-[11px] text-zinc-500 font-sans-ui leading-tight">
+                    <p className="text-[11px] text-zinc-400 font-sans-ui leading-tight">
                       Sentimen kritis didorong oleh tuntutan transparansi dan kekhawatiran dampak kebijakan.
                     </p>
                   </div>
 
                   {/* Middle: 33-Hour Activity Curve */}
-                  <div className="lg:col-span-2 p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
-                    <div className="flex items-center justify-between text-[11px] font-mono-code">
-                      <span className="font-bold uppercase text-zinc-400 flex items-center gap-1.5">
-                        <Activity className="w-3.5 h-3.5 text-amber-400" />
+                  <div className="lg:col-span-2 p-3.5 sm:p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px] font-mono-code">
+                      <span className="font-bold uppercase text-zinc-300 flex items-center gap-1.5">
+                        <Activity className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
                         <span>Kurva Akselerasi Sebutan (Per 3 Jam)</span>
                       </span>
                       <span className="text-amber-400 font-bold">Puncak Lonjakan Terdeteksi</span>
@@ -360,6 +428,7 @@ export function HotIssuesPage() {
                             strokeWidth={2}
                             fillOpacity={1}
                             fill={`url(#colorSurge-${issue.id})`}
+                            isAnimationActive={false}
                           />
                         </AreaChart>
                       </ResponsiveContainer>
@@ -382,12 +451,12 @@ export function HotIssuesPage() {
 
                 {/* Netizen Voices & Multi-Channel Evidence Matrix */}
                 <div className="space-y-3 pt-2">
-                  <div className="flex items-center justify-between text-xs font-mono-code">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs font-mono-code">
                     <span className="font-bold text-zinc-300 flex items-center gap-1.5 uppercase">
-                      <MessageSquareText className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Suara Netizen &amp; Bukti Sebutan Lintas Kanal (X, TikTok, Berita, IG, FB)</span>
+                      <MessageSquareText className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
+                      <span>Suara Netizen &amp; Bukti Lintas Kanal</span>
                     </span>
-                    <span className="text-zinc-500">Urut berdasarkan Resonansi / Likes</span>
+                    <span className="text-zinc-400 text-[11px]">Urut berdasarkan Resonansi / Likes</span>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -454,102 +523,112 @@ export function HotIssuesPage() {
 
       {/* Modal: Tambah Pantauan Isu Hangat Baru */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-lg rounded-2xl border border-white/[0.12] bg-[#0c0e14] p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3.5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center">
-                  <Flame className="w-4 h-4 text-amber-400" />
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-0 sm:p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Pantau Isu Hangat Baru"
+            className="w-full max-w-lg max-h-[90dvh] overflow-y-auto overscroll-y-contain rounded-t-2xl sm:rounded-2xl border border-white/[0.12] bg-[#0c0e14] p-5 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] space-y-4 shadow-2xl"
+          >
+            <div className="flex items-center justify-between gap-2 border-b border-white/[0.08] pb-3.5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+                  <Flame className="w-4 h-4 text-amber-400" aria-hidden="true" />
                 </div>
-                <div>
-                  <h2 className="font-editorial text-lg font-medium text-white">
+                <div className="min-w-0">
+                  <h2 className="font-editorial text-lg font-medium text-white truncate">
                     Pantau Isu Hangat Baru
                   </h2>
-                  <p className="text-[11px] text-zinc-400">
-                    Daftarkan wacana viral atau krisis komunikasi yang sedang meledak
+                  <p className="text-[11px] text-zinc-400 truncate">
+                    Daftarkan wacana viral atau krisis komunikasi
                   </p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
+                aria-label="Tutup jendela pantau isu"
+                className="min-w-11 min-h-11 -mr-1.5 flex items-center justify-center rounded-xl text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer shrink-0"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
 
             <div className="space-y-4 text-xs font-sans-ui">
               <div>
-                <label className="block text-zinc-300 font-semibold mb-1 text-xs">
+                <label htmlFor="hot-issue-name" className="block text-zinc-200 font-semibold mb-1.5 text-xs">
                   Judul Isu Hangat *
                 </label>
                 <input
+                  id="hot-issue-name"
                   type="text"
-                  placeholder="misal: Dugaan Penyadapan Presiden Prabowo"
+                  placeholder="misal: Dugaan Kebocoran Data Publik"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                  className="w-full min-h-11 bg-white/[0.03] border border-white/[0.12] rounded-xl px-3.5 py-2.5 text-white text-base sm:text-xs placeholder:text-zinc-400 focus:outline-none focus:border-amber-500 transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-zinc-300 font-semibold mb-1 text-xs">
+                <label htmlFor="hot-issue-desc" className="block text-zinc-200 font-semibold mb-1.5 text-xs">
                   Deskripsi / Konteks Isu
                 </label>
                 <textarea
+                  id="hot-issue-desc"
                   rows={2}
                   placeholder="Konteks mengapa isu ini sedang hangat diperbincangkan netizen..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-amber-500 transition-colors resize-none"
+                  className="w-full bg-white/[0.03] border border-white/[0.12] rounded-xl px-3.5 py-2.5 text-white text-base sm:text-xs placeholder:text-zinc-400 focus:outline-none focus:border-amber-500 transition-colors resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-zinc-300 font-semibold mb-1 text-xs">
+                <label htmlFor="hot-issue-keywords" className="block text-zinc-200 font-semibold mb-1.5 text-xs">
                   Kata Kunci Pemantauan (Pisahkan dengan koma) *
                 </label>
                 <input
+                  id="hot-issue-keywords"
                   type="text"
-                  placeholder="misal: penyadapan prabowo, sadap istana, kebocoran data bin"
+                  placeholder="misal: kebocoran data, audit keamanan, privasi"
                   value={keywords}
                   onChange={(e) => setKeywords(e.target.value)}
-                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-amber-500 transition-colors font-mono-code"
+                  className="w-full min-h-11 bg-white/[0.03] border border-white/[0.12] rounded-xl px-3.5 py-2.5 text-white text-base sm:text-xs placeholder:text-zinc-400 focus:outline-none focus:border-amber-500 transition-colors font-mono-code"
                 />
               </div>
 
               <div>
-                <label className="block text-zinc-300 font-semibold mb-1 text-xs">
+                <span className="block text-zinc-200 font-semibold mb-1.5 text-xs">
                   Tingkat Urgensi
-                </label>
-                <div className="flex gap-3">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-300">
+                </span>
+                <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
+                  <label className="min-h-11 sm:min-h-9 flex items-center gap-2.5 px-3 py-2 rounded-xl border border-white/[0.08] bg-white/[0.02] cursor-pointer text-xs text-zinc-200">
                     <input
                       type="radio"
                       name="urgency"
                       checked={urgencyLevel === 'critical'}
                       onChange={() => setUrgencyLevel('critical')}
-                      className="text-rose-500 focus:ring-0"
+                      className="accent-rose-500"
                     />
                     <span className="text-rose-400 font-semibold">Kritis (Surge Tinggi)</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-300">
+                  <label className="min-h-11 sm:min-h-9 flex items-center gap-2.5 px-3 py-2 rounded-xl border border-white/[0.08] bg-white/[0.02] cursor-pointer text-xs text-zinc-200">
                     <input
                       type="radio"
                       name="urgency"
                       checked={urgencyLevel === 'elevated'}
                       onChange={() => setUrgencyLevel('elevated')}
-                      className="text-amber-500 focus:ring-0"
+                      className="accent-amber-500"
                     />
                     <span className="text-amber-400 font-semibold">Tinggi (Meningkat)</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-300">
+                  <label className="min-h-11 sm:min-h-9 flex items-center gap-2.5 px-3 py-2 rounded-xl border border-white/[0.08] bg-white/[0.02] cursor-pointer text-xs text-zinc-200">
                     <input
                       type="radio"
                       name="urgency"
                       checked={urgencyLevel === 'normal'}
                       onChange={() => setUrgencyLevel('normal')}
-                      className="accent-amber-400 text-amber-400 focus:ring-0"
+                      className="accent-amber-400"
                     />
                     <span className="text-amber-300 font-semibold">Normal</span>
                   </label>
@@ -557,11 +636,11 @@ export function HotIssuesPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/[0.08] text-xs">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-3 border-t border-white/[0.08] text-xs">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-3.5 py-2 rounded-xl border border-white/[0.08] text-zinc-300 hover:bg-white/[0.05] transition-colors"
+                className="min-h-11 px-4 py-2 rounded-xl border border-white/[0.12] text-zinc-200 hover:bg-white/[0.06] transition-colors"
               >
                 Batal
               </button>
@@ -569,7 +648,7 @@ export function HotIssuesPage() {
                 type="button"
                 disabled={!name.trim() || createHotIssueMutation.isPending}
                 onClick={() => createHotIssueMutation.mutate()}
-                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold disabled:opacity-50 transition-colors cursor-pointer"
+                className="min-h-11 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold disabled:opacity-50 transition-colors cursor-pointer"
               >
                 {createHotIssueMutation.isPending ? 'Menyimpan...' : 'Mulai Pantau Isu'}
               </button>

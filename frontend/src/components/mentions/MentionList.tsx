@@ -100,6 +100,7 @@ export function MentionList({ mentions, isLoading }: MentionListProps) {
                   provider={item.provider}
                   size="xs"
                   isComment={Boolean(item.metadata_json?.is_comment)}
+                  ingestionSource={item.ingestion_source || item.metadata_json?.ingestion_source}
                 />
 
                 {item.author_name && (
@@ -147,9 +148,9 @@ export function MentionList({ mentions, isLoading }: MentionListProps) {
                     e.stopPropagation();
                     setSelectedMention(item);
                   }}
-                  className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white border border-white/[0.08] text-xs transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 min-h-9 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-200 hover:text-white border border-white/[0.08] text-xs transition-colors cursor-pointer"
                 >
-                  <Eye className="w-3.5 h-3.5 text-amber-400" />
+                  <Eye className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
                   <span>Lihat Detail</span>
                 </button>
               </div>

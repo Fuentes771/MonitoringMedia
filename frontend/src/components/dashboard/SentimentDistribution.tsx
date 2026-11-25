@@ -18,13 +18,13 @@ export function SentimentDistribution({
   const unkPct = total > 0 ? Math.round((unknown / total) * 100) : 0;
 
   return (
-    <div className="bento-card p-5 sm:p-6 bg-[#0e1117] flex flex-col justify-between transition-all">
+    <div className="bento-card p-4 sm:p-5 lg:p-6 bg-[#0e1117] flex flex-col justify-between transition-all h-full">
       <div>
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center justify-between gap-2 mb-1">
           <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-emerald-400 block">
             Polaritas Sentimen
           </span>
-          <span className="text-xs text-zinc-400 font-mono-code font-medium">
+          <span className="text-xs text-zinc-400 font-mono-code font-medium font-tabular">
             {total.toLocaleString('id-ID')} sebutan
           </span>
         </div>
@@ -60,40 +60,40 @@ export function SentimentDistribution({
         </div>
 
         {/* Stat Cards Grid */}
-        <div className="grid grid-cols-3 gap-2.5 text-xs">
+        <div className="grid grid-cols-3 gap-2 sm:gap-2.5 text-xs">
           {/* Positif */}
-          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex flex-col justify-between hover:border-emerald-500/30 transition-colors">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex flex-col justify-between hover:border-emerald-500/30 transition-colors min-w-0">
             <div className="flex items-center gap-1.5 mb-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-              <span className="text-zinc-300 font-medium font-sans-ui text-[11px]">Positif</span>
+              <span className="text-zinc-200 font-medium font-sans-ui text-[11px] truncate">Positif</span>
             </div>
             <div>
-              <span className="font-bold text-white font-mono-code text-base block">{posPct}%</span>
-              <span className="text-[10px] text-zinc-500 font-mono-code">({positive})</span>
+              <span className="font-bold text-white font-mono-code font-tabular text-sm sm:text-base block">{posPct}%</span>
+              <span className="text-[10px] text-zinc-400 font-mono-code font-tabular">({positive.toLocaleString('id-ID')})</span>
             </div>
           </div>
 
           {/* Netral */}
-          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex flex-col justify-between hover:border-zinc-700 transition-colors">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex flex-col justify-between hover:border-zinc-700 transition-colors min-w-0">
             <div className="flex items-center gap-1.5 mb-1.5">
               <span className="w-2 h-2 rounded-full bg-zinc-400 shrink-0" />
-              <span className="text-zinc-300 font-medium font-sans-ui text-[11px]">Netral</span>
+              <span className="text-zinc-200 font-medium font-sans-ui text-[11px] truncate">Netral</span>
             </div>
             <div>
-              <span className="font-bold text-white font-mono-code text-base block">{neuPct}%</span>
-              <span className="text-[10px] text-zinc-500 font-mono-code">({neutral})</span>
+              <span className="font-bold text-white font-mono-code font-tabular text-sm sm:text-base block">{neuPct}%</span>
+              <span className="text-[10px] text-zinc-400 font-mono-code font-tabular">({neutral.toLocaleString('id-ID')})</span>
             </div>
           </div>
 
           {/* Negatif */}
-          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex flex-col justify-between hover:border-rose-500/30 transition-colors">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex flex-col justify-between hover:border-rose-500/30 transition-colors min-w-0">
             <div className="flex items-center gap-1.5 mb-1.5">
               <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0" />
-              <span className="text-zinc-300 font-medium font-sans-ui text-[11px]">Negatif</span>
+              <span className="text-zinc-200 font-medium font-sans-ui text-[11px] truncate">Negatif</span>
             </div>
             <div>
-              <span className="font-bold text-rose-400 font-mono-code text-base block">{negPct}%</span>
-              <span className="text-[10px] text-zinc-500 font-mono-code">({negative})</span>
+              <span className="font-bold text-rose-400 font-mono-code font-tabular text-sm sm:text-base block">{negPct}%</span>
+              <span className="text-[10px] text-zinc-400 font-mono-code font-tabular">({negative.toLocaleString('id-ID')})</span>
             </div>
           </div>
         </div>

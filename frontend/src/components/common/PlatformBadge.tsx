@@ -1,7 +1,7 @@
 import React from 'react';
 import { Eye, Globe, Heart, MessageCircle, Repeat2, Rss, Video } from 'lucide-react';
 
-export const SOCIAL_PROVIDER_KEYS = ['x', 'twitter', 'tiktok', 'instagram', 'facebook', 'youtube', 'reddit'] as const;
+export const SOCIAL_PROVIDER_KEYS = ['x', 'twitter', 'tiktok', 'instagram', 'facebook', 'threads', 'youtube', 'reddit'] as const;
 
 export function isSocialProvider(provider?: string | null): boolean {
   if (!provider) return false;
@@ -52,6 +52,14 @@ export function getPlatformMeta(provider?: string | null): PlatformMetaInfo {
         shortLabel: 'FB',
         pillClass: 'bg-blue-500/10 text-blue-300 border-blue-500/30',
         iconColorClass: 'text-blue-400',
+      };
+    case 'threads':
+      return {
+        key: 'threads',
+        label: 'Threads',
+        shortLabel: 'Threads',
+        pillClass: 'bg-zinc-900 text-zinc-100 border-zinc-600/80',
+        iconColorClass: 'text-zinc-100',
       };
     case 'youtube':
       return {
@@ -132,6 +140,23 @@ export const PlatformIcon: React.FC<{ provider?: string | null; className?: stri
           <path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.82 0-1.666.28-1.666 1.369v2.611h3.708l-.571 3.667h-3.137v7.98H9.101z" />
         </svg>
       );
+    case 'threads':
+      return (
+        <svg
+          className={`${className} ${meta.iconColorClass}`}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M19 12a7 7 0 1 0-3.2 5.9" />
+          <path d="M16 12v1.5a2.5 2.5 0 0 0 5 0V12a9 9 0 1 0-4.1 7.5" />
+          <circle cx="12" cy="12" r="3.5" />
+        </svg>
+      );
     case 'youtube':
       return <Video className={`${className} ${meta.iconColorClass}`} aria-hidden="true" />;
     case 'rss':
@@ -146,20 +171,30 @@ export const PlatformBadge: React.FC<{
   size?: 'xs' | 'sm';
   compactLabel?: boolean;
   isComment?: boolean;
+  ingestionSource?: string | null;
   className?: string;
-}> = ({ provider, size = 'xs', compactLabel = false, isComment = false, className = '' }) => {
+}> = ({ provider, size = 'xs', compactLabel = false, isComment = false, ingestionSource = null, className = '' }) => {
   const meta = getPlatformMeta(provider);
   const padding = size === 'xs' ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs';
   const iconSize = size === 'xs' ? 'w-3 h-3' : 'w-3.5 h-3.5';
+  const isMuseSource = typeof ingestionSource === 'string' && ingestionSource.toLowerCase().includes('muse');
 
   return (
-    <span className={`inline-flex items-center gap-1.5 ${className}`}>
+    <span className={`inline-flex items-center flex-wrap gap-1.5 ${className}`}>
       <span
         className={`inline-flex items-center gap-1 rounded border font-mono-code uppercase tracking-wide ${padding} ${meta.pillClass}`}
       >
         <PlatformIcon provider={provider} className={iconSize} />
         <span>{compactLabel ? meta.shortLabel : meta.label}</span>
       </span>
+      {isMuseSource && (
+        <span
+          title="Ditarik melalui konektor resmi Meta via Muse"
+          className="inline-flex items-center px-1.5 py-0.5 rounded bg-sky-500/10 border border-sky-500/30 text-sky-300 text-[10px] font-mono-code"
+        >
+          via Muse
+        </span>
+      )}
       {isComment && (
         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-[10px] font-mono-code">
           <MessageCircle className="w-2.5 h-2.5" aria-hidden="true" />

@@ -10,7 +10,7 @@ interface FieldErrors {
 const RETICLE_ANGLES = Array.from({ length: 12 }, (_, idx) => idx * 30);
 
 const INPUT_BASE_CLASS =
-  'w-full min-h-11 rounded-lg bg-[#06080c]/90 border py-2.5 text-sm text-[#f4f5f8] placeholder:text-[#848b99] shadow-[inset_0_2px_6px_rgba(0,0,0,0.65)] transition-[border-color,box-shadow] duration-150 motion-reduce:transition-none focus:border-[#d4af37] focus:shadow-[inset_0_2px_6px_rgba(0,0,0,0.65),0_0_0_1px_rgba(212,175,55,0.45)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4af37] disabled:opacity-60';
+  'w-full min-h-11 rounded-lg bg-[#06080c]/90 border py-2.5 text-base sm:text-sm text-[#f4f5f8] placeholder:text-[#848b99] shadow-[inset_0_2px_6px_rgba(0,0,0,0.65)] transition-[border-color,box-shadow] duration-150 motion-reduce:transition-none focus:border-[#d4af37] focus:shadow-[inset_0_2px_6px_rgba(0,0,0,0.65),0_0_0_1px_rgba(212,175,55,0.45)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4af37] disabled:opacity-60';
 
 function OpticalReticleSeal({
   isActive,
@@ -197,13 +197,14 @@ export function LoginPage() {
   const isSealActive = isCardHovered || isFormFocused || email.length > 0 || password.length > 0;
 
   return (
-    <main className="relative min-h-dvh overflow-x-hidden bg-[#08090d] text-[#f4f5f8] font-sans-ui selection:bg-[#d4af37]/25 selection:text-[#f4f5f8] flex items-center justify-center px-4 py-8 sm:px-6">
+    <main className="relative min-h-dvh overflow-x-hidden bg-[#08090d] text-[#f4f5f8] font-sans-ui selection:bg-[#d4af37]/25 selection:text-[#f4f5f8] flex items-center justify-center px-4 py-8 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] sm:px-6">
       <img
-        src="/brand/ambient-backdrop.jpg"
+        src="/brand/ambient-backdrop.webp"
         alt=""
         aria-hidden="true"
-        width={1600}
-        height={900}
+        width={1440}
+        height={804}
+        decoding="async"
         fetchPriority="high"
         className="fixed inset-0 w-full h-full object-cover object-center opacity-35 sm:opacity-45 pointer-events-none select-none"
       />
@@ -232,7 +233,7 @@ export function LoginPage() {
             setIsFormFocused(false);
           }
         }}
-        className="animate-vault-enter relative z-10 w-full max-w-[400px] bg-[#0a0d14]/82 backdrop-blur-xl border border-white/[0.12] rounded-xl overflow-hidden shadow-[0_32px_90px_-18px_rgba(0,0,0,0.92)]"
+        className="animate-vault-enter relative z-10 w-full max-w-[400px] bg-[#0a0d14]/86 backdrop-blur-md border border-white/[0.12] rounded-xl overflow-hidden shadow-[0_32px_90px_-18px_rgba(0,0,0,0.92)]"
       >
         {/* Cursor-tracked subtle gold sheen (desktop pointer only, disabled on reduced motion) */}
         <div

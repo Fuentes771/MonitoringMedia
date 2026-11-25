@@ -171,29 +171,42 @@ export function DataSourcesPage() {
           ),
           sources: ['TikTok Feed Search', 'Top Netizen Comments', 'Audio & Video Metrics'],
         };
+      case 'threads':
+        return {
+          title: 'Threads Publik (via Muse)',
+          desc: 'Pencarian percakapan publik per topik di Threads melalui konektor resmi Muse CLI dan didorong ke endpoint ingest TRINETRA.',
+          icon: (
+            <svg className="w-5 h-5 text-zinc-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M19 12a7 7 0 1 0-3.2 5.9" />
+              <path d="M16 12v1.5a2.5 2.5 0 0 0 5 0V12a9 9 0 1 0-4.1 7.5" />
+              <circle cx="12" cy="12" r="3.5" />
+            </svg>
+          ),
+          sources: ['Muse threads-cli search', 'Postingan & Balasan Publik', 'POST /api/v1/ingest/mentions'],
+        };
       case 'instagram':
         return {
-          title: 'Instagram Feed & Reels',
-          desc: 'Ekstraksi postingan publik berbasis keyword/hashtag dan respon komentar netizen pada akun media serta brand.',
+          title: 'Instagram Publik (via Muse)',
+          desc: 'Pengumpulan postingan, Reels, dan komentar publik Instagram melalui konektor resmi Muse dan watchlist akun terverifikasi.',
           icon: (
-            <svg className="w-5 h-5 text-pink-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="w-5 h-5 text-pink-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
               <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
               <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
             </svg>
           ),
-          sources: ['Instagram Hashtags', 'Public Posts & Reels', 'Top Netizen Comments'],
+          sources: ['Muse instagram-cli & social.search', 'Public Posts & Reels', 'POST /api/v1/ingest/mentions'],
         };
       case 'facebook':
         return {
-          title: 'Facebook Public Pages & Groups',
-          desc: 'Pemantauan postingan media berita nasional dan percakapan publik di komunitas Facebook.',
+          title: 'Facebook Publik (via Muse)',
+          desc: 'Pemantauan postingan, komentar, dan reaksi publik Facebook melalui konektor resmi Muse tanpa scraping langsung dari server TRINETRA.',
           icon: (
-            <svg className="w-5 h-5 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
+            <svg className="w-5 h-5 text-blue-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.82 0-1.666.28-1.666 1.369v2.611h3.708l-.571 3.667h-3.137v7.98H9.101z" />
             </svg>
           ),
-          sources: ['Public Posts Search', 'Community Comments', 'Engagement Reactions'],
+          sources: ['Muse facebook-cli & social.search', 'Postingan & Komentar Publik', 'POST /api/v1/ingest/mentions'],
         };
       case 'reddit':
         return {
@@ -225,58 +238,65 @@ export function DataSourcesPage() {
   };
 
   return (
-    <div className="space-y-6 font-sans-ui">
+    <div className="space-y-4 sm:space-y-6 font-sans-ui">
       {/* Page Header */}
-      <div className="border-b border-white/[0.08] pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-400 flex items-center justify-center shadow-xs">
-            <Radio className="w-4 h-4" />
+      <div className="border-b border-white/[0.08] pb-4 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3.5 sm:gap-4">
+        <div className="flex items-start sm:items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-400 flex items-center justify-center shadow-xs shrink-0 mt-0.5 sm:mt-0">
+            <Radio className="w-4 h-4" aria-hidden="true" />
           </div>
-          <div>
-            <h1 className="font-editorial text-2xl font-medium text-white tracking-tight">
+          <div className="min-w-0">
+            <h1 className="font-editorial text-xl sm:text-2xl font-medium text-white tracking-tight text-balance">
               Konektor Sumber Data &amp; Pipeline Ingesti
             </h1>
-            <p className="text-xs text-zinc-400 font-sans-ui">
+            <p className="text-xs text-zinc-400 font-sans-ui mt-0.5 text-pretty">
               Arsitektur pipeline ingesti data media, monitoring latensi koneksi, dan autentikasi resmi
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto shrink-0">
           <button
+            type="button"
             onClick={() => setActiveModalProvider('rapidapi')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 hover:text-amber-200 text-xs font-semibold font-mono-code transition-all shadow-xs cursor-pointer"
+            className="flex-1 sm:flex-none min-h-11 sm:min-h-10 flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 hover:text-amber-200 text-xs font-semibold font-mono-code transition-all shadow-xs cursor-pointer"
           >
-            <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+            <KeyRound className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
             <span>Setup Unified RapidAPI Hub</span>
           </button>
-          <div className="flex items-center gap-2 text-xs font-mono-code bg-white/[0.03] px-3 py-1.5 rounded-xl border border-white/[0.08]">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Status Pipeline: <strong className="text-white">OPERASIONAL</strong></span>
+          <div className="flex items-center gap-2 text-xs font-mono-code bg-white/[0.03] px-3 py-2 rounded-xl border border-white/[0.08]">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+            <span>Pipeline: <strong className="text-white">OPERASIONAL</strong></span>
           </div>
         </div>
       </div>
 
       {/* Visual Data Ingestion Pipeline Flow Architecture */}
-      <div className="bento-card p-6 bg-gradient-to-br from-[#0e1117] via-[#0d1017] to-[#131724] relative overflow-hidden">
-        {/* Ambient Wallpaper Artwork (Gambar 3) */}
+      <div className="bento-card p-4 sm:p-6 bg-gradient-to-br from-[#0e1117] via-[#0d1017] to-[#131724] relative overflow-hidden">
+        {/* Ambient Wallpaper Artwork */}
         <div
-          className="absolute right-0 top-0 bottom-0 w-2/3 bg-cover bg-center pointer-events-none opacity-45 mix-blend-screen"
-          style={{ backgroundImage: `url('/brand/ambient-backdrop.jpg')` }}
+          aria-hidden="true"
+          className="absolute right-0 top-0 bottom-0 w-2/3 bg-cover bg-center pointer-events-none opacity-25"
+          style={{ backgroundImage: `url('/brand/ambient-backdrop.webp')` }}
         />
         {/* Heraldic Crest Watermark in background */}
         <img
-          src="/brand/crest-watermark.jpg"
+          src="/brand/crest-watermark.webp"
           alt=""
-          className="absolute -right-10 -bottom-10 w-64 h-64 object-cover opacity-[0.06] rounded-full pointer-events-none mix-blend-screen filter contrast-125 select-none"
+          aria-hidden="true"
+          width={256}
+          height={256}
+          loading="lazy"
+          decoding="async"
+          className="absolute -right-10 -bottom-10 w-52 h-52 sm:w-64 sm:h-64 object-cover opacity-[0.06] rounded-full pointer-events-none select-none"
         />
 
-        <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.08] relative z-10">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-4 border-b border-white/[0.08] relative z-10">
           <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-amber-400" />
+            <Activity className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
             <span>Arsitektur Aliran Pipeline Ingesti Real-Time</span>
           </span>
-          <span className="text-[11px] text-zinc-500 font-mono-code">Latency SLA: &lt; 2s</span>
+          <span className="text-[11px] text-zinc-400 font-mono-code">Latency SLA: &lt; 2s</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative">
@@ -374,16 +394,16 @@ export function DataSourcesPage() {
             return (
               <div
                 key={conn.id}
-                className="bento-card p-6 bg-[#0e1117] space-y-4 transition-all"
+                className="bento-card p-4 sm:p-6 bg-[#0e1117] space-y-4 transition-all"
               >
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-start gap-3.5">
-                    <div className="p-3 rounded-xl bg-white/[0.04] border border-white/[0.08] shrink-0">
+                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3 sm:gap-3.5 min-w-0">
+                    <div className="p-2.5 sm:p-3 rounded-xl bg-white/[0.04] border border-white/[0.08] shrink-0">
                       {meta.icon}
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2.5">
-                        <h2 className="font-editorial text-xl font-medium text-white tracking-tight">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="font-editorial text-lg sm:text-xl font-medium text-white tracking-tight">
                           {meta.title}
                         </h2>
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono-code font-bold ${
@@ -391,10 +411,15 @@ export function DataSourcesPage() {
                             ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                             : isNeedsConfig
                             ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                            : 'bg-zinc-800 text-zinc-400'
+                            : 'bg-zinc-800 text-zinc-300'
                         }`}>
                           {isConnected ? 'TERHUBUNG' : isNeedsConfig ? 'PERLU KONFIGURASI' : 'NONAKTIF'}
                         </span>
+                        {conn.engine_mode === 'muse_push' && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono-code font-bold bg-sky-500/10 text-sky-300 border border-sky-500/30">
+                            MUSE PUSH
+                          </span>
+                        )}
                         {conn.has_local_engine && (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-mono-code font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
                             EKSTRAKSI PUBLIK GRATIS
@@ -406,22 +431,22 @@ export function DataSourcesPage() {
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-zinc-400 mt-1 max-w-xl leading-relaxed font-sans-ui">
+                      <p className="text-xs text-zinc-400 mt-1 max-w-xl leading-relaxed font-sans-ui text-pretty">
                         {meta.desc}
                       </p>
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-                    {['x', 'tiktok', 'instagram', 'facebook', 'youtube'].includes(conn.provider) && (
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto shrink-0 flex-wrap">
+                    {['x', 'tiktok', 'youtube'].includes(conn.provider) && (
                       <button
                         type="button"
                         onClick={() => handleLivePreview(conn.provider)}
                         disabled={isPreviewLoading}
-                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-xs text-amber-300 hover:text-amber-200 transition-all font-semibold shadow-xs cursor-pointer disabled:opacity-50"
+                        className="min-h-11 sm:min-h-9 flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-xs text-amber-300 hover:text-amber-200 transition-all font-semibold shadow-xs cursor-pointer disabled:opacity-50"
                       >
-                        <Eye className="w-3.5 h-3.5 text-amber-400" />
+                        <Eye className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
                         <span>{isPreviewLoading && activePreviewProvider === conn.provider ? 'Mengambil Data...' : 'Live Preview Data Riil'}</span>
                       </button>
                     )}
@@ -430,9 +455,9 @@ export function DataSourcesPage() {
                       type="button"
                       onClick={() => testConnection(conn.provider)}
                       disabled={isTesting}
-                      className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08] text-xs text-zinc-200 hover:text-white transition-all font-semibold shadow-xs cursor-pointer disabled:opacity-50"
+                      className="min-h-11 sm:min-h-9 flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl border border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08] text-xs text-zinc-200 hover:text-white transition-all font-semibold shadow-xs cursor-pointer disabled:opacity-50"
                     >
-                      <Activity className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin text-amber-400' : 'text-amber-400'}`} />
+                      <Activity className={`w-3.5 h-3.5 shrink-0 ${isTesting ? 'animate-spin text-amber-400' : 'text-amber-400'}`} aria-hidden="true" />
                       <span>{isTesting ? 'Menguji...' : 'Uji Koneksi'}</span>
                     </button>
 
@@ -440,9 +465,9 @@ export function DataSourcesPage() {
                       <button
                         type="button"
                         onClick={() => setActiveModalProvider(conn.provider)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                        className="min-h-11 sm:min-h-9 flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-bold transition-all shadow-xs cursor-pointer"
                       >
-                        <KeyRound className="w-3.5 h-3.5" />
+                        <KeyRound className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                         <span>{conn.has_credentials ? 'Ubah Kunci API' : 'Pasang Kunci API'}</span>
                       </button>
                     )}
@@ -454,11 +479,11 @@ export function DataSourcesPage() {
                   <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-zinc-400 block mb-2">
                     Portal &amp; Saluran Terverifikasi yang Dipantau:
                   </span>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
                     {meta.sources.map((s, idx) => (
                       <span
                         key={idx}
-                        className="px-2.5 py-1 rounded-lg bg-white/[0.02] border border-white/[0.06] text-xs font-mono-code text-zinc-300"
+                        className="px-2.5 py-1 rounded-lg bg-white/[0.02] border border-white/[0.06] text-[11px] sm:text-xs font-mono-code text-zinc-300"
                       >
                         {s}
                       </span>
@@ -467,7 +492,7 @@ export function DataSourcesPage() {
                 </div>
 
                 {/* Capability Matrix & Provenance Checklist */}
-                <div className="pt-3 border-t border-white/[0.06] grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 text-xs font-mono-code">
+                <div className="pt-3 border-t border-white/[0.06] grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs font-mono-code">
                   <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
                     <span className="text-[10px] text-zinc-400 block mb-1">Pencarian Kata Kunci</span>
                     <span className="font-semibold text-white flex items-center gap-1.5 text-xs">
@@ -485,7 +510,11 @@ export function DataSourcesPage() {
                   <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
                     <span className="text-[10px] text-zinc-400 block mb-1">Metode Pengumpulan</span>
                     <span className="font-semibold text-white text-xs">
-                      {conn.provider === 'rss' ? 'RSS/Atom Feeds' : 'API Resmi + Verifikasi Publik'}
+                      {conn.provider === 'rss'
+                        ? 'RSS/Atom Feeds'
+                        : conn.engine_mode === 'muse_push'
+                        ? 'Muse Official CLI Push'
+                        : 'API Resmi + Verifikasi Publik'}
                     </span>
                   </div>
 
@@ -504,44 +533,51 @@ export function DataSourcesPage() {
 
       {/* Configure Credentials Modal */}
       {activeModalProvider && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-2xl border border-white/[0.12] bg-[#0c0e14] p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3.5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center">
-                  <KeyRound className="w-4 h-4" />
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-0 sm:p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Konfigurasi Kredensial API"
+            className="w-full max-w-md max-h-[90dvh] overflow-y-auto overscroll-y-contain rounded-t-2xl sm:rounded-2xl border border-white/[0.12] bg-[#0c0e14] p-5 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] space-y-4 shadow-2xl"
+          >
+            <div className="flex items-center justify-between gap-2 border-b border-white/[0.08] pb-3.5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+                  <KeyRound className="w-4 h-4" aria-hidden="true" />
                 </div>
-                <h2 className="font-editorial text-lg font-medium text-white">
+                <h2 className="font-editorial text-base sm:text-lg font-medium text-white truncate">
                   {activeModalProvider === 'rapidapi'
-                    ? 'Unified RapidAPI Hub (X, TikTok, IG, FB)'
+                    ? 'Unified RapidAPI Hub (X, TikTok)'
                     : activeModalProvider === 'youtube'
                     ? 'Kredensial API YouTube Data v3'
                     : `Kredensial API ${activeModalProvider.toUpperCase()}`}
                 </h2>
               </div>
               <button
+                type="button"
                 onClick={() => setActiveModalProvider(null)}
-                className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
+                className="min-w-11 min-h-11 -mr-1.5 flex items-center justify-center rounded-xl text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer shrink-0"
                 aria-label="Tutup jendela kredensial"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
 
             <div className="space-y-4 text-xs">
               <p className="text-zinc-400 leading-relaxed text-xs font-sans-ui">
                 {activeModalProvider === 'rapidapi'
-                  ? 'Satu kunci RapidAPI ini akan otomatis mengotentikasi dan mengaktifkan ingestion untuk Twitter / X, TikTok, Instagram, dan Facebook sekaligus.'
+                  ? 'Satu kunci RapidAPI ini akan otomatis mengotentikasi dan mengaktifkan ingestion untuk Twitter / X dan TikTok. Untuk Threads, Facebook, dan Instagram, atur TRINETRA_API_KEY di environment server untuk Muse Push.'
                   : 'Kredensial disimpan terenkripsi di database server dan tidak pernah diekspos ke publik atau browser client.'}
               </p>
 
               <div>
-                <label className="block text-zinc-300 font-semibold mb-1.5 text-xs">
+                <label htmlFor="connector-api-key-input" className="block text-zinc-200 font-semibold mb-1.5 text-xs">
                   {activeModalProvider === 'youtube'
                     ? 'Google API Key (YouTube Data API v3) *'
                     : 'RapidAPI Key (X-RapidAPI-Key) *'}
                 </label>
                 <input
+                  id="connector-api-key-input"
                   type="password"
                   placeholder={
                     activeModalProvider === 'youtube'
@@ -550,19 +586,21 @@ export function DataSourcesPage() {
                   }
                   value={apiKeyInput}
                   onChange={(e) => setApiKeyInput(e.target.value)}
-                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs font-mono-code"
+                  className="w-full min-h-11 bg-white/[0.03] border border-white/[0.12] rounded-xl px-3.5 py-2.5 text-white text-base sm:text-xs placeholder:text-zinc-400 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs font-mono-code"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/[0.08] text-xs">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-4 border-t border-white/[0.08] text-xs">
               <button
+                type="button"
                 onClick={() => setActiveModalProvider(null)}
-                className="px-3.5 py-2 rounded-xl border border-white/[0.08] text-zinc-300 hover:bg-white/[0.05] transition-colors font-medium cursor-pointer"
+                className="min-h-11 px-3.5 py-2 rounded-xl border border-white/[0.12] text-zinc-200 hover:bg-white/[0.06] transition-colors font-medium cursor-pointer"
               >
                 Batal
               </button>
               <button
+                type="button"
                 disabled={!apiKeyInput.trim() || saveCredentialsMutation.isPending}
                 onClick={() =>
                   saveCredentialsMutation.mutate({
@@ -570,7 +608,7 @@ export function DataSourcesPage() {
                     apiKey: apiKeyInput,
                   })
                 }
-                className="px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-bold disabled:opacity-50 transition-colors shadow-xs cursor-pointer"
+                className="min-h-11 px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-bold disabled:opacity-50 transition-colors shadow-xs cursor-pointer"
               >
                 {saveCredentialsMutation.isPending ? 'Menyimpan...' : 'Simpan Kredensial'}
               </button>
@@ -581,15 +619,20 @@ export function DataSourcesPage() {
 
       {/* Live Preview Scraper Data Modal */}
       {previewData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl border border-white/[0.12] bg-[#0c0e14] p-6 space-y-4 shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3.5 shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center">
-                  <Eye className="w-4 h-4" />
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-0 sm:p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Live Preview Data Sumber"
+            className="w-full max-w-2xl max-h-[90dvh] flex flex-col rounded-t-2xl sm:rounded-2xl border border-white/[0.12] bg-[#0c0e14] p-4 sm:p-6 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] space-y-3.5 sm:space-y-4 shadow-2xl overflow-hidden"
+          >
+            <div className="flex items-start justify-between gap-2 border-b border-white/[0.08] pb-3.5 shrink-0">
+              <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+                  <Eye className="w-4 h-4" aria-hidden="true" />
                 </div>
-                <div>
-                  <h2 className="font-editorial text-lg font-medium text-white flex items-center flex-wrap gap-2">
+                <div className="min-w-0">
+                  <h2 className="font-editorial text-base sm:text-lg font-medium text-white flex items-center flex-wrap gap-1.5 sm:gap-2">
                     <span>Live Preview:</span>
                     <PlatformBadge provider={previewData.provider} size="sm" />
                     <span
@@ -609,17 +652,17 @@ export function DataSourcesPage() {
                     </span>
                   </h2>
                   <p className="text-[11px] text-zinc-400 font-mono-code mt-0.5 font-tabular">
-                    Latensi: {previewData.latency_ms}ms | Total: {previewData.count} item | Terverifikasi: {previewData.verified_count ?? 0} | Perlu Verifikasi: {previewData.fallback_count ?? 0}
+                    Latensi: {previewData.latency_ms}ms | Total: {previewData.count} | Terverifikasi: {previewData.verified_count ?? 0}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setPreviewData(null)}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
+                className="min-w-11 min-h-11 -mr-1.5 flex items-center justify-center rounded-xl text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer shrink-0"
                 aria-label="Tutup jendela preview"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
 
@@ -636,26 +679,27 @@ export function DataSourcesPage() {
             )}
 
             {/* Keyword tester input */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
               <input
                 type="text"
+                aria-label="Kata kunci uji coba live preview"
                 value={previewQuery}
                 onChange={(e) => setPreviewQuery(e.target.value)}
-                placeholder="Ketik topik uji coba (misal: Makan Bergizi Gratis, Swasembada Pangan)..."
-                className="flex-1 bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs font-mono-code"
+                placeholder="Ketik topik uji coba..."
+                className="flex-1 min-h-11 bg-white/[0.03] border border-white/[0.12] rounded-xl px-3.5 py-2 text-white text-base sm:text-xs placeholder:text-zinc-400 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs font-mono-code"
               />
               <button
                 type="button"
                 onClick={() => handleLivePreview(previewData.provider, previewQuery)}
                 disabled={isPreviewLoading}
-                className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-zinc-950 text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                className="min-h-11 px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-zinc-950 text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 shrink-0"
               >
                 {isPreviewLoading ? 'Mengambil...' : 'Cari Ulang'}
               </button>
             </div>
 
             {/* Scraped Items List */}
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+            <div className="flex-1 overflow-y-auto overscroll-y-contain space-y-3 pr-1">
               {previewData.items.length === 0 ? (
                 <div className="py-12 text-center text-zinc-400 text-xs font-mono-code space-y-2">
                   <div>Tidak ada postingan terverifikasi ditemukan untuk kata kunci ini secara lokal.</div>

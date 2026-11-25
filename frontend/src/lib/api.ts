@@ -95,7 +95,7 @@ export interface ConnectorStatus {
   has_credentials?: boolean;
   has_local_engine?: boolean;
   has_rapidapi?: boolean;
-  engine_mode?: 'hybrid' | 'local' | 'rapidapi' | 'default';
+  engine_mode?: 'hybrid' | 'local' | 'rapidapi' | 'official_api' | 'muse_push' | 'default';
   capabilities?: Record<string, any>;
 }
 
@@ -232,7 +232,15 @@ export interface MentionItem {
   is_inauthentic?: boolean;
   inauthentic_score?: number;
   bot_cluster_id?: string | null;
+  ingestion_source?: string | null;
+  is_near_duplicate?: boolean;
+  near_duplicate_of_id?: number | null;
   metadata_json?: {
+    ingestion_source?: string | null;
+    raw_source?: string | null;
+    collector_note?: string | null;
+    media_type?: string | null;
+    post_code?: string | null;
     is_comment?: boolean;
     parent_external_id?: string;
     likes?: number | null;
@@ -241,7 +249,19 @@ export interface MentionItem {
     link_status?: SocialLinkStatusType;
     link_checked_at?: string;
     link_reason?: string | null;
+    author_username?: string | null;
     author_handle?: string;
+    author_follower_count?: number | null;
+    author_is_verified?: boolean | null;
+    author_profile_url?: string | null;
+    is_near_duplicate?: boolean;
+    near_duplicate_of_id?: number | null;
+    ai_analysis?: {
+      aspect?: string;
+      key_reason?: string;
+      urgency?: string;
+      engine?: string;
+    };
     sarcasm_analysis?: {
       is_sarcasm: boolean;
       sarcasm_score: number;
@@ -296,9 +316,19 @@ export interface AlertEventItem {
     topic_name?: string;
     negative_share_percent?: number;
     threshold_percent?: number;
+    spike_multiplier?: number;
+    actual_multiplier?: number;
+    current_24h_volume?: number;
+    baseline_daily_avg?: number;
     sample_count?: number;
+    organic_sample_count?: number;
+    inauthentic_filtered_count?: number;
+    near_duplicate_filtered_count?: number;
     driving_keywords?: string[];
     sample_text?: string;
+    auto_resolved?: boolean;
+    auto_resolved_at?: string;
+    auto_resolved_reason?: string;
   } | null;
   triggered_at: string;
   alert?: {
@@ -402,6 +432,8 @@ export interface HotIssuesRadarData {
   system_state: 'surging_detected' | 'elevated' | 'normal_calm';
   surging_count: number;
   hot_issues: HotIssueItem[];
+  auto_discovered?: boolean;
+  auto_discovery_message?: string | null;
 }
 
 export interface CopypastaCluster {

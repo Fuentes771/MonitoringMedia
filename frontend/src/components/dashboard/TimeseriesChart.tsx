@@ -34,79 +34,89 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
   const positiveRatio = totalVolume > 0 ? Math.round(((totalPos + totalNeu) / totalVolume) * 100) : 0;
 
   return (
-    <div className="bento-card p-6 sm:p-7 bg-[#0e1117] transition-all">
+    <div className="bento-card p-4 sm:p-6 lg:p-7 bg-[#0e1117] transition-all">
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-white/[0.08]">
-        <div>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3.5 sm:gap-4 mb-4 sm:mb-5 pb-3.5 sm:pb-4 border-b border-white/[0.08]">
+        <div className="min-w-0">
           <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-amber-400 block mb-0.5">
             Dinamika Telemetri
           </span>
-          <h2 className="font-editorial text-xl sm:text-2xl font-medium tracking-tight text-white leading-tight">
+          <h2 className="font-editorial text-lg sm:text-xl lg:text-2xl font-medium tracking-tight text-white leading-tight text-balance">
             Kronologi Percakapan &amp; Fluktuasi Sentimen
           </h2>
-          <p className="text-xs text-zinc-400 mt-1 font-sans-ui">
+          <p className="text-xs text-zinc-400 mt-1 font-sans-ui text-pretty">
             Pemetaan volume harian berdasarkan klasifikasi sentimen publik berita Indonesia
           </p>
         </div>
 
         {/* View toggles */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between sm:justify-end gap-2 w-full md:w-auto shrink-0">
           {/* Sentiment vs Total */}
-          <div className="flex items-center bg-white/[0.03] border border-white/[0.08] rounded-xl p-0.5 text-xs shadow-xs">
+          <div className="flex items-center bg-white/[0.03] border border-white/[0.08] rounded-xl p-0.5 text-xs shadow-xs flex-1 sm:flex-none">
             <button
+              type="button"
               onClick={() => setMetricMode('sentiment')}
-              className={`px-3 py-1.5 rounded-lg transition-all font-sans-ui text-xs font-semibold ${
+              aria-pressed={metricMode === 'sentiment'}
+              className={`min-h-10 sm:min-h-8 flex-1 sm:flex-none px-2.5 sm:px-3 py-1.5 rounded-lg transition-all font-sans-ui text-xs font-semibold ${
                 metricMode === 'sentiment'
                   ? 'bg-white text-zinc-950 shadow-xs'
-                  : 'text-zinc-400 hover:text-white'
+                  : 'text-zinc-300 hover:text-white'
               }`}
             >
-              Polaritas Sentimen
+              <span className="sm:hidden">Sentimen</span>
+              <span className="hidden sm:inline">Polaritas Sentimen</span>
             </button>
             <button
+              type="button"
               onClick={() => setMetricMode('total')}
-              className={`px-3 py-1.5 rounded-lg transition-all font-sans-ui text-xs font-semibold ${
+              aria-pressed={metricMode === 'total'}
+              className={`min-h-10 sm:min-h-8 flex-1 sm:flex-none px-2.5 sm:px-3 py-1.5 rounded-lg transition-all font-sans-ui text-xs font-semibold ${
                 metricMode === 'total'
                   ? 'bg-white text-zinc-950 shadow-xs'
-                  : 'text-zinc-400 hover:text-white'
+                  : 'text-zinc-300 hover:text-white'
               }`}
             >
-              Total Akumulatif
+              <span className="sm:hidden">Total</span>
+              <span className="hidden sm:inline">Total Akumulatif</span>
             </button>
           </div>
 
           {/* Area vs Bar */}
-          <div className="flex items-center bg-white/[0.03] border border-white/[0.08] rounded-xl p-0.5 text-xs shadow-xs">
+          <div className="flex items-center bg-white/[0.03] border border-white/[0.08] rounded-xl p-0.5 text-xs shadow-xs shrink-0">
             <button
+              type="button"
               onClick={() => setChartType('area')}
               aria-label="Tampilan Garis Area"
-              className={`p-1.5 rounded-lg transition-all ${
+              aria-pressed={chartType === 'area'}
+              className={`min-w-10 min-h-10 sm:min-w-8 sm:min-h-8 flex items-center justify-center rounded-lg transition-all ${
                 chartType === 'area'
-                  ? 'bg-white/[0.1] text-white shadow-xs'
+                  ? 'bg-white/[0.12] text-white shadow-xs'
                   : 'text-zinc-400 hover:text-white'
               }`}
               title="Grafik Luminous Area"
             >
-              <LineChart className="w-4 h-4" />
+              <LineChart className="w-4 h-4" aria-hidden="true" />
             </button>
             <button
+              type="button"
               onClick={() => setChartType('bar')}
               aria-label="Tampilan Diagram Batang"
-              className={`p-1.5 rounded-lg transition-all ${
+              aria-pressed={chartType === 'bar'}
+              className={`min-w-10 min-h-10 sm:min-w-8 sm:min-h-8 flex items-center justify-center rounded-lg transition-all ${
                 chartType === 'bar'
-                  ? 'bg-white/[0.1] text-white shadow-xs'
+                  ? 'bg-white/[0.12] text-white shadow-xs'
                   : 'text-zinc-400 hover:text-white'
               }`}
               title="Histogram Kolom"
             >
-              <BarChart3 className="w-4 h-4" />
+              <BarChart3 className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
         </div>
       </div>
 
       {/* Chart Canvas */}
-      <div className="h-68 sm:h-76 w-full">
+      <div className="h-56 sm:h-68 lg:h-76 w-full">
         {timeline.length === 0 ? (
           <div className="h-full flex items-center justify-center text-zinc-500 text-xs font-sans-ui">
             Belum ada data untuk rentang waktu yang dipilih
@@ -137,12 +147,14 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
                 <XAxis
                   dataKey="label"
                   stroke="#474d5a"
-                  tick={{ fill: '#828a99', fontSize: 11, fontFamily: 'JetBrains Mono' }}
+                  tick={{ fill: '#a1a1aa', fontSize: 10, fontFamily: 'JetBrains Mono' }}
                   tickLine={false}
+                  interval="preserveStartEnd"
+                  minTickGap={24}
                 />
                 <YAxis
                   stroke="#474d5a"
-                  tick={{ fill: '#828a99', fontSize: 11, fontFamily: 'JetBrains Mono' }}
+                  tick={{ fill: '#a1a1aa', fontSize: 10, fontFamily: 'JetBrains Mono' }}
                   tickLine={false}
                 />
                 <Tooltip
@@ -178,6 +190,7 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
                       stroke="#10b981"
                       strokeWidth={2.2}
                       fill="url(#areaPos)"
+                      isAnimationActive={false}
                     />
                     <Area
                       type="monotone"
@@ -186,6 +199,7 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
                       stroke="#71717a"
                       strokeWidth={2}
                       fill="url(#areaNeu)"
+                      isAnimationActive={false}
                     />
                     <Area
                       type="monotone"
@@ -194,6 +208,7 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
                       stroke="#f43f5e"
                       strokeWidth={2.2}
                       fill="url(#areaNeg)"
+                      isAnimationActive={false}
                     />
                   </>
                 ) : (
@@ -204,6 +219,7 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
                     stroke="#d4af37"
                     strokeWidth={2.5}
                     fill="url(#areaTot)"
+                    isAnimationActive={false}
                   />
                 )}
               </AreaChart>
@@ -213,12 +229,14 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
                 <XAxis
                   dataKey="label"
                   stroke="#474d5a"
-                  tick={{ fill: '#828a99', fontSize: 11, fontFamily: 'JetBrains Mono' }}
+                  tick={{ fill: '#a1a1aa', fontSize: 10, fontFamily: 'JetBrains Mono' }}
                   tickLine={false}
+                  interval="preserveStartEnd"
+                  minTickGap={24}
                 />
                 <YAxis
                   stroke="#474d5a"
-                  tick={{ fill: '#828a99', fontSize: 11, fontFamily: 'JetBrains Mono' }}
+                  tick={{ fill: '#a1a1aa', fontSize: 10, fontFamily: 'JetBrains Mono' }}
                   tickLine={false}
                 />
                 <Tooltip
@@ -247,12 +265,12 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
                 />
                 {metricMode === 'sentiment' ? (
                   <>
-                    <Bar dataKey="positive" name="Positif" fill="#10b981" radius={[4, 4, 0, 0]} stackId="a" />
-                    <Bar dataKey="neutral" name="Netral" fill="#71717a" radius={[4, 4, 0, 0]} stackId="a" />
-                    <Bar dataKey="negative" name="Negatif" fill="#f43f5e" radius={[4, 4, 0, 0]} stackId="a" />
+                    <Bar dataKey="positive" name="Positif" fill="#10b981" radius={[4, 4, 0, 0]} stackId="a" isAnimationActive={false} />
+                    <Bar dataKey="neutral" name="Netral" fill="#71717a" radius={[4, 4, 0, 0]} stackId="a" isAnimationActive={false} />
+                    <Bar dataKey="negative" name="Negatif" fill="#f43f5e" radius={[4, 4, 0, 0]} stackId="a" isAnimationActive={false} />
                   </>
                 ) : (
-                  <Bar dataKey="total" name="Total Sebutan" fill="#d4af37" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="total" name="Total Sebutan" fill="#d4af37" radius={[4, 4, 0, 0]} isAnimationActive={false} />
                 )}
               </BarChart>
             )}
@@ -306,24 +324,24 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pt-3 mt-3 border-t border-white/[0.06] text-xs text-zinc-400">
-        <div className="flex items-center gap-5">
-          <span className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-3 mt-3 border-t border-white/[0.06] text-xs text-zinc-400">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block shadow-sm shadow-emerald-500/50" />
             <span className="text-zinc-200 font-medium text-[11px] font-sans-ui">Sentimen Positif</span>
           </span>
-          <span className="flex items-center gap-2">
+          <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-zinc-500 inline-block" />
             <span className="text-zinc-200 font-medium text-[11px] font-sans-ui">Sentimen Netral</span>
           </span>
-          <span className="flex items-center gap-2">
+          <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block shadow-sm shadow-rose-500/50" />
             <span className="text-zinc-200 font-medium text-[11px] font-sans-ui">Sentimen Negatif</span>
           </span>
         </div>
 
         <div className="text-[11px] text-zinc-400 flex items-center gap-1.5 font-mono-code">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
           <span>Model: Multilingual Indobert + Slang Lexicon ID</span>
         </div>
       </div>

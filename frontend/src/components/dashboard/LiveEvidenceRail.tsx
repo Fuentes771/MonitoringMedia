@@ -82,21 +82,21 @@ export function LiveEvidenceRail({
   };
 
   return (
-    <div className="bento-card p-5 sm:p-6 bg-[#0e1117] flex flex-col h-[640px]">
+    <div className="bento-card p-4 sm:p-5 lg:p-6 bg-[#0e1117] flex flex-col max-h-[500px] md:max-h-[540px] xl:h-[640px] xl:max-h-none">
       {/* Header */}
-      <div className="pb-4 mb-3 border-b border-white/[0.08]">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-            <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
-            <span>Kawat Media &amp; Opini Publik</span>
+      <div className="pb-3.5 sm:pb-4 mb-3 border-b border-white/[0.08]">
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5 min-w-0">
+            <Radio className="w-3 h-3 text-emerald-400 shrink-0" aria-hidden="true" />
+            <span className="truncate">Kawat Media &amp; Opini Publik</span>
           </span>
           <button
             type="button"
             onClick={onViewAllMentions}
-            className="text-[11px] font-mono-code text-zinc-400 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
+            className="min-h-9 px-2 -mr-2 rounded-lg text-[11px] font-mono-code text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors flex items-center gap-1 cursor-pointer shrink-0"
           >
             <span>Semua</span>
-            <ArrowRight className="w-3 h-3" />
+            <ArrowRight className="w-3 h-3" aria-hidden="true" />
           </button>
         </div>
         <h3 className="font-editorial text-lg sm:text-xl font-medium tracking-tight text-white">
@@ -108,7 +108,7 @@ export function LiveEvidenceRail({
       </div>
 
       {/* Content list */}
-      <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 divide-y divide-white/[0.06]">
+      <div className="flex-1 overflow-y-auto overscroll-y-contain space-y-3.5 pr-1 divide-y divide-white/[0.06]">
         {isLoading ? (
           <div className="space-y-3 py-2">
             {[1, 2, 3, 4, 5].map((i) => (
@@ -120,8 +120,8 @@ export function LiveEvidenceRail({
             ))}
           </div>
         ) : mentions.length === 0 ? (
-          <div className="text-center py-20 text-zinc-500">
-            <Newspaper className="w-7 h-7 mx-auto mb-2 opacity-30 text-zinc-400" />
+          <div className="text-center py-12 sm:py-20 text-zinc-400">
+            <Newspaper className="w-7 h-7 mx-auto mb-2 opacity-40 text-zinc-400" aria-hidden="true" />
             <p className="text-xs font-sans-ui">Belum ada sebutan berita yang terekam</p>
           </div>
         ) : (
@@ -132,11 +132,19 @@ export function LiveEvidenceRail({
             return (
               <div
                 key={item.id || idx}
+                role="button"
+                tabIndex={0}
                 onClick={() => onSelectMention(item)}
-                className="pt-3.5 first:pt-0 group cursor-pointer transition-all"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSelectMention(item);
+                  }
+                }}
+                className="pt-3.5 first:pt-0 group cursor-pointer transition-all rounded-lg"
               >
                 {/* Meta Top */}
-                <div className="flex items-center justify-between gap-2 mb-1.5 text-[11px]">
+                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 mb-1.5 text-[11px]">
                   <div className="flex items-center gap-1.5 text-zinc-400 font-mono-code min-w-0">
                     <PlatformBadge
                       provider={item.provider}
@@ -150,7 +158,7 @@ export function LiveEvidenceRail({
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {getSentimentBadge(item.sentiment?.label)}
-                    <span className="text-zinc-500 font-mono-code text-[10px]">
+                    <span className="text-zinc-400 font-mono-code text-[10px]">
                       {formatTimeAgo(item.published_at)}
                     </span>
                   </div>
@@ -162,8 +170,8 @@ export function LiveEvidenceRail({
                 </h4>
 
                 {/* Sub info */}
-                <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-zinc-400 pt-1">
-                  <div className="flex items-center gap-1.5 min-w-0">
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-zinc-400 pt-1">
+                  <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                     {firstKeyword ? (
                       <span className="inline-flex items-center gap-1 text-zinc-300 bg-white/[0.04] px-1.5 py-0.5 rounded font-mono-code">
                         <span className="text-amber-400">#</span>
@@ -191,15 +199,15 @@ export function LiveEvidenceRail({
                           );
                         }}
                         title="Tanyakan AI tentang sebutan ini"
-                        className="px-1.5 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/25 hover:border-amber-400/45 transition-colors flex items-center gap-1 font-mono-code cursor-pointer"
+                        className="min-h-8 px-2 py-1 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/25 hover:border-amber-400/45 transition-colors flex items-center gap-1 font-mono-code cursor-pointer"
                       >
-                        <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                        <Sparkles className="w-2.5 h-2.5 text-amber-400" aria-hidden="true" />
                         <span>Tanya AI</span>
                       </button>
                     )}
-                    <span className="inline-flex items-center gap-0.5 text-zinc-400 group-hover:text-white transition-colors font-sans-ui">
+                    <span className="inline-flex items-center gap-0.5 text-zinc-300 group-hover:text-white transition-colors font-sans-ui">
                       <span>Inspeksi</span>
-                      <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                      <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
                     </span>
                   </div>
                 </div>
@@ -214,10 +222,10 @@ export function LiveEvidenceRail({
         <button
           type="button"
           onClick={onViewAllMentions}
-          className="w-full py-2.5 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.2] text-xs font-semibold text-zinc-200 hover:text-white flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
+          className="w-full min-h-11 py-2.5 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] active:bg-white/[0.12] border border-white/[0.1] hover:border-white/[0.2] text-xs font-semibold text-zinc-100 hover:text-white flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
         >
           <span>Eksplorasi Seluruh Sebutan</span>
-          <ArrowRight className="w-3.5 h-3.5 text-amber-400" />
+          <ArrowRight className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
         </button>
       </div>
     </div>

@@ -1,22 +1,56 @@
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { lazy, Suspense, useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
-import { api, DashboardOverview } from '@/lib/api';
+import { api, DashboardOverview, HotIssuesRadarData } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { LoginPage } from '@/pages/LoginPage';
 import { Sidebar, NavTab } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
-import { OverviewPage } from '@/pages/OverviewPage';
-import { MentionsPage } from '@/pages/MentionsPage';
-import { TopicsPage } from '@/pages/TopicsPage';
-import { AlertsPage } from '@/pages/AlertsPage';
-import { DataSourcesPage } from '@/pages/DataSourcesPage';
-import { HotIssuesPage } from '@/pages/HotIssuesPage';
-import { BuzzerRadarPage } from '@/pages/BuzzerRadarPage';
-import { AiIntelligenceDrawer } from '@/components/ai/AiIntelligenceDrawer';
+import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
 import { FloatingAiAssistantButton } from '@/components/ai/FloatingAiAssistantButton';
 
+const OverviewPage = lazy(() =>
+  import('@/pages/OverviewPage').then((m) => ({ default: m.OverviewPage }))
+);
+const MentionsPage = lazy(() =>
+  import('@/pages/MentionsPage').then((m) => ({ default: m.MentionsPage }))
+);
+const TopicsPage = lazy(() =>
+  import('@/pages/TopicsPage').then((m) => ({ default: m.TopicsPage }))
+);
+const AlertsPage = lazy(() =>
+  import('@/pages/AlertsPage').then((m) => ({ default: m.AlertsPage }))
+);
+const DataSourcesPage = lazy(() =>
+  import('@/pages/DataSourcesPage').then((m) => ({ default: m.DataSourcesPage }))
+);
+const HotIssuesPage = lazy(() =>
+  import('@/pages/HotIssuesPage').then((m) => ({ default: m.HotIssuesPage }))
+);
+const BuzzerRadarPage = lazy(() =>
+  import('@/pages/BuzzerRadarPage').then((m) => ({ default: m.BuzzerRadarPage }))
+);
+const AiIntelligenceDrawer = lazy(() =>
+  import('@/components/ai/AiIntelligenceDrawer').then((m) => ({
+    default: m.AiIntelligenceDrawer,
+  }))
+);
+
+function PageRouteFallback() {
+  return (
+    <div className="space-y-4 sm:space-y-6" aria-busy="true" aria-label="Memuat halaman">
+      <div className="h-12 bg-white/[0.03] border border-white/[0.06] rounded-xl animate-pulse" />
+      <div className="h-56 bg-white/[0.03] border border-white/[0.06] rounded-2xl animate-pulse" />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+        <div className="lg:col-span-8 h-72 bg-white/[0.03] border border-white/[0.06] rounded-2xl animate-pulse" />
+        <div className="lg:col-span-4 h-72 bg-white/[0.03] border border-white/[0.06] rounded-2xl animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
+  const queryClient = useQueryClient();
   const { status, activeWorkspace } = useAuth();
   const workspaceId = activeWorkspace?.id;
 
@@ -25,7 +59,9 @@ export default function App() {
   const [organicOnly, setOrganicOnly] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
+  const [hasOpenedAiDrawer, setHasOpenedAiDrawer] = useState(false);
   const [aiInitialQuery, setAiInitialQuery] = useState<string | undefined>(undefined);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Enforce permanent Dark Mode (Stealth Intelligence Theme)
   useEffect(() => {
@@ -38,48 +74,134 @@ export default function App() {
     }
   }, []);
 
+  // Keyboard shortcut Ctrl+K / Cmd+K opens Mentions Explorer search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCurrentTab('mentions');
+        setIsMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Selected filters passed across pages
   const [targetTopicId, setTargetTopicId] = useState<number | undefined>(undefined);
   const [targetKeyword, setTargetKeyword] = useState<string | undefined>(undefined);
   const [targetSentiment, setTargetSentiment] = useState<string | undefined>(undefined);
+  const [targetAuthorName, setTargetAuthorName] = useState<string | undefined>(undefined);
+  const [targetBotClusterId, setTargetBotClusterId] = useState<string | undefined>(undefined);
+  const [targetOnlyInauthentic, setTargetOnlyInauthentic] = useState<boolean>(false);
 
-  // Fetch overview data for topbar coverage strip only after authentication succeeds
+  const resetMentionTargets = () => {
+    setTargetTopicId(undefined);
+    setTargetKeyword(undefined);
+    setTargetSentiment(undefined);
+    setTargetAuthorName(undefined);
+    setTargetBotClusterId(undefined);
+    setTargetOnlyInauthentic(false);
+  };
+
+  const navigateTab = (tab: NavTab) => {
+    setCurrentTab(tab);
+    setIsMobileMenuOpen(false);
+    if (tab !== 'mentions') {
+      resetMentionTargets();
+    }
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  };
+
+  // Fetch overview data shared with OverviewPage via identical queryKey (deduplicated)
   const { data: overview, refetch: refetchOverview, isFetching } = useQuery({
-    queryKey: ['dashboard-overview', workspaceId, days],
+    queryKey: ['dashboard-overview', workspaceId, days, organicOnly],
     enabled: status === 'authenticated' && Boolean(workspaceId),
     queryFn: async () => {
       const res = await api.get<DashboardOverview>('/dashboard/overview', {
-        params: { workspace_id: workspaceId, days },
+        params: {
+          workspace_id: workspaceId,
+          days,
+          exclude_inauthentic: organicOnly || undefined,
+        },
       });
       return res.data;
     },
   });
 
-  const handleNavigateToTopic = (topicId: number) => {
+  // Lightweight surge badge check (never triggers synchronous RSS auto-discovery on dashboard boot)
+  const { data: hotIssuesData } = useQuery({
+    queryKey: ['hot-issues-badge', workspaceId],
+    enabled: status === 'authenticated' && Boolean(workspaceId),
+    staleTime: 60_000,
+    queryFn: async () => {
+      const res = await api.get<{ data: HotIssuesRadarData }>('/hot-issues', {
+        params: { workspace_id: workspaceId, skip_autodiscover: 1 },
+      });
+      return res.data.data;
+    },
+    refetchInterval: 120_000,
+    refetchIntervalInBackground: false,
+  });
+
+  const hasSurge = (hotIssuesData?.surging_count ?? 0) > 0;
+
+  const conducivePercent = (() => {
+    if (!overview?.sentiment) return undefined;
+    const total =
+      overview.sentiment.positive +
+      overview.sentiment.neutral +
+      overview.sentiment.negative;
+    if (total === 0) return 0;
+    return Math.round(((overview.sentiment.positive + overview.sentiment.neutral) / total) * 100);
+  })();
+
+  const handleNavigateToTopic = (topicId?: number) => {
+    resetMentionTargets();
     setTargetTopicId(topicId);
-    setTargetKeyword(undefined);
-    setTargetSentiment(undefined);
     setCurrentTab('mentions');
+    setIsMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'auto' });
   };
 
   const handleNavigateToMentionsWithKeyword = (kw: string) => {
+    resetMentionTargets();
     setTargetKeyword(kw);
-    setTargetTopicId(undefined);
-    setTargetSentiment(undefined);
     setCurrentTab('mentions');
+    setIsMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'auto' });
   };
 
-  const handleNavigateToMentionsWithFilters = (topicId?: number, sentiment?: string, keyword?: string) => {
+  const handleNavigateToMentionsWithFilters = (
+    topicId?: number,
+    sentiment?: string,
+    keyword?: string,
+    extra?: { authorName?: string; botClusterId?: string; onlyInauthentic?: boolean }
+  ) => {
     setTargetTopicId(topicId);
     setTargetSentiment(sentiment);
     setTargetKeyword(keyword);
+    setTargetAuthorName(extra?.authorName);
+    setTargetBotClusterId(extra?.botClusterId);
+    setTargetOnlyInauthentic(Boolean(extra?.onlyInauthentic));
     setCurrentTab('mentions');
+    setIsMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'auto' });
   };
 
   const handleOpenAiWithQuery = (query: string, topicId?: number) => {
     if (topicId) setTargetTopicId(topicId);
     setAiInitialQuery(query);
+    setHasOpenedAiDrawer(true);
     setIsAiDrawerOpen(true);
+  };
+
+  const handleRefreshWorkspaceData = () => {
+    void refetchOverview();
+    void queryClient.invalidateQueries({ queryKey: ['dashboard-timeseries', workspaceId] });
+    void queryClient.invalidateQueries({ queryKey: ['trends', workspaceId] });
+    void queryClient.invalidateQueries({ queryKey: ['recent-mentions', workspaceId] });
+    void queryClient.invalidateQueries({ queryKey: ['hot-issues-badge', workspaceId] });
   };
 
   // CSV Export action
@@ -131,112 +253,141 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex font-sans-ui relative bg-[#08090d] text-[#f4f5f8] selection:bg-amber-500/20 selection:text-amber-200">
-      {/* High-Visibility Ambient Telemetry Backdrop (Gambar 3) */}
+    <div className="min-h-dvh flex font-sans-ui relative isolate bg-[#08090d] text-[#f4f5f8] selection:bg-amber-500/20 selection:text-amber-200 overflow-x-clip">
+      {/* Ambient Telemetry Backdrop (lightweight non-blended layer to avoid full-screen GPU repaints) */}
       <div
-        className="fixed top-0 left-0 right-0 h-[720px] pointer-events-none z-0 opacity-60 mix-blend-screen bg-cover bg-top bg-no-repeat transition-opacity duration-700"
-        style={{ backgroundImage: `url('/brand/ambient-backdrop.jpg')` }}
+        aria-hidden="true"
+        className="fixed top-0 left-0 right-0 h-[520px] sm:h-[720px] pointer-events-none -z-10 opacity-25 sm:opacity-30 bg-cover bg-top bg-no-repeat"
+        style={{ backgroundImage: `url('/brand/ambient-backdrop.webp')` }}
       />
-      <div className="fixed top-0 left-0 right-0 h-[720px] pointer-events-none z-0 bg-gradient-to-b from-transparent via-[#08090d]/30 to-[#08090d]" />
+      <div
+        aria-hidden="true"
+        className="fixed top-0 left-0 right-0 h-[520px] sm:h-[720px] pointer-events-none -z-10 bg-gradient-to-b from-transparent via-[#08090d]/45 to-[#08090d]"
+      />
 
-      {/* Sidebar Navigation */}
-      <div className="relative z-20">
+      {/* Sidebar Navigation (Desktop persistent + Mobile/Tablet slide-over drawer) */}
+      <div className="shrink-0">
         <Sidebar
           currentTab={currentTab}
-          onSelectTab={(tab) => {
-            setCurrentTab(tab);
-            if (tab !== 'mentions') {
-              setTargetTopicId(undefined);
-              setTargetKeyword(undefined);
-              setTargetSentiment(undefined);
-            }
-          }}
+          onSelectTab={navigateTab}
           onExportCsv={handleExportCsv}
           isExporting={isExporting}
+          isMobileOpen={isMobileMenuOpen}
+          onCloseMobile={() => setIsMobileMenuOpen(false)}
+          conducivePercent={conducivePercent}
+          totalMentionsCount={overview?.kpis?.total_mentions}
+          hasSurge={hasSurge}
         />
       </div>
 
       {/* Main View Area */}
-      <div className="flex-1 flex flex-col min-w-0 relative z-10">
+      <div className="flex-1 flex flex-col min-w-0">
         <Topbar
           currentTab={currentTab}
           coverage={overview?.coverage}
-          onRefresh={() => refetchOverview()}
+          onRefresh={handleRefreshWorkspaceData}
           isRefreshing={isFetching}
           days={days}
           onChangeDays={setDays}
-          onNavigateToAlerts={() => setCurrentTab('alerts')}
+          onNavigateToAlerts={() => navigateTab('alerts')}
           organicOnly={organicOnly}
           onToggleOrganicOnly={() => setOrganicOnly((v) => !v)}
+          onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
+          isMobileMenuOpen={isMobileMenuOpen}
         />
 
-        <main className="flex-1 p-6 sm:p-8 max-w-7xl w-full mx-auto overflow-y-auto">
-          {currentTab === 'overview' && (
-            <OverviewPage
-              days={days}
-              organicOnly={organicOnly}
-              onNavigateToTopic={handleNavigateToTopic}
-              onNavigateToMentionsWithKeyword={handleNavigateToMentionsWithKeyword}
-              onOpenAiWithQuery={handleOpenAiWithQuery}
-            />
-          )}
+        <main className="flex-1 px-3.5 py-4 sm:px-5 sm:py-6 lg:p-8 pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] md:pb-10 max-w-7xl w-full mx-auto min-w-0">
+          <Suspense fallback={<PageRouteFallback />}>
+            {currentTab === 'overview' && (
+              <OverviewPage
+                days={days}
+                organicOnly={organicOnly}
+                onNavigateToTopic={handleNavigateToTopic}
+                onNavigateToMentionsWithKeyword={handleNavigateToMentionsWithKeyword}
+                onOpenAiWithQuery={handleOpenAiWithQuery}
+              />
+            )}
 
-          {currentTab === 'hot_issues' && <HotIssuesPage />}
+            {currentTab === 'hot_issues' && (
+              <HotIssuesPage
+                onNavigateToMentions={handleNavigateToTopic}
+                onOpenAiWithQuery={handleOpenAiWithQuery}
+              />
+            )}
 
-          {currentTab === 'bot_radar' && (
-            <BuzzerRadarPage
-              days={days}
-              onOpenAiWithQuery={handleOpenAiWithQuery}
-            />
-          )}
+            {currentTab === 'bot_radar' && (
+              <BuzzerRadarPage
+                days={days}
+                onOpenAiWithQuery={handleOpenAiWithQuery}
+                onNavigateToMentionsWithFilters={handleNavigateToMentionsWithFilters}
+              />
+            )}
 
-          {currentTab === 'mentions' && (
-            <MentionsPage
-              initialKeyword={targetKeyword}
-              initialTopicId={targetTopicId}
-              initialSentiment={targetSentiment}
-              organicOnly={organicOnly}
-              onOpenAiWithQuery={handleOpenAiWithQuery}
-            />
-          )}
+            {currentTab === 'mentions' && (
+              <MentionsPage
+                initialKeyword={targetKeyword}
+                initialTopicId={targetTopicId}
+                initialSentiment={targetSentiment}
+                initialAuthorName={targetAuthorName}
+                initialBotClusterId={targetBotClusterId}
+                initialOnlyInauthentic={targetOnlyInauthentic}
+                organicOnly={organicOnly}
+                onOpenAiWithQuery={handleOpenAiWithQuery}
+              />
+            )}
 
-          {currentTab === 'topics' && (
-            <TopicsPage
-              onNavigateToMentions={handleNavigateToTopic}
-              onOpenAiWithQuery={handleOpenAiWithQuery}
-            />
-          )}
+            {currentTab === 'topics' && (
+              <TopicsPage
+                onNavigateToMentions={handleNavigateToTopic}
+                onOpenAiWithQuery={handleOpenAiWithQuery}
+              />
+            )}
 
-          {currentTab === 'alerts' && (
-            <AlertsPage
-              onNavigateToMentions={handleNavigateToMentionsWithFilters}
-              onOpenAiWithQuery={handleOpenAiWithQuery}
-            />
-          )}
+            {currentTab === 'alerts' && (
+              <AlertsPage
+                onNavigateToMentions={handleNavigateToMentionsWithFilters}
+                onOpenAiWithQuery={handleOpenAiWithQuery}
+              />
+            )}
 
-          {currentTab === 'sources' && <DataSourcesPage />}
+            {currentTab === 'sources' && <DataSourcesPage />}
+          </Suspense>
         </main>
       </div>
+
+      {/* Mobile Primary Bottom Navigation Bar */}
+      <MobileBottomNav
+        currentTab={currentTab}
+        onSelectTab={navigateTab}
+        onOpenMenu={() => setIsMobileMenuOpen(true)}
+        isMenuOpen={isMobileMenuOpen}
+        hasSurge={hasSurge}
+      />
 
       {/* Floating Action Button (FAB) Bottom-Right AI Assistant */}
       <FloatingAiAssistantButton
         onClick={() => {
           setAiInitialQuery(undefined);
+          setHasOpenedAiDrawer(true);
           setIsAiDrawerOpen(true);
         }}
-        isOpen={isAiDrawerOpen}
+        isOpen={isAiDrawerOpen || isMobileMenuOpen}
       />
 
-      {/* AI Intelligence Chatbot Drawer */}
-      <AiIntelligenceDrawer
-        isOpen={isAiDrawerOpen}
-        onClose={() => {
-          setIsAiDrawerOpen(false);
-          setAiInitialQuery(undefined);
-        }}
-        selectedTopicId={targetTopicId}
-        initialQuery={aiInitialQuery}
-      />
+      {/* AI Intelligence Chatbot Drawer (lazy-mounted on first open) */}
+      {hasOpenedAiDrawer && (
+        <Suspense fallback={null}>
+          <AiIntelligenceDrawer
+            isOpen={isAiDrawerOpen}
+            onClose={() => {
+              setIsAiDrawerOpen(false);
+              setAiInitialQuery(undefined);
+            }}
+            selectedTopicId={targetTopicId}
+            initialQuery={aiInitialQuery}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

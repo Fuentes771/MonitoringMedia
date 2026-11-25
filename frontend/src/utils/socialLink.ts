@@ -30,9 +30,12 @@ export function isSyntheticOrBrokenUrl(url: string): boolean {
   const trimmed = url.trim();
   if (!trimmed) return false;
   const lower = trimmed.toLowerCase();
+  const isThreadsPost = /^https?:\/\/(?:www\.)?threads\.(?:com|net)\/@[a-zA-Z0-9_.-]+\/post\/[a-zA-Z0-9_-]+\/?(?:\?.*)?$/i.test(
+    trimmed
+  );
 
   // Synthetic BaseScraper artifact previously emitted on dead queries
-  if (/\/post\/[a-f0-9]{6,}\/?(?:\?|$)/i.test(trimmed)) {
+  if (!isThreadsPost && /\/post\/[a-f0-9]{6,}\/?(?:\?|$)/i.test(trimmed)) {
     return true;
   }
 
@@ -62,6 +65,8 @@ export function buildPlatformSearchFallbackUrl(provider: string, query: string):
       return `https://www.instagram.com/explore/search/keyword/?q=${encoded}`;
     case 'facebook':
       return `https://www.facebook.com/search/posts/?q=${encoded}`;
+    case 'threads':
+      return `https://www.threads.com/search?q=${encoded}&serp_type=default`;
     case 'youtube':
       return `https://www.youtube.com/results?search_query=${encoded}`;
     default:
@@ -109,6 +114,12 @@ export function classifyCanonicalPostUrl(providerKey: string, url: string): Soci
       return /^https?:\/\/(?:www\.|m\.|web\.)?facebook\.com\/(?:reel\/\d+|watch\/?\?(?:[^#]*&)?v=\d+|permalink\.php\?.*story_fbid=|story\.php\?.*story_fbid=|share\/(?:p|r|v)\/[a-zA-Z0-9_-]+|[^/?#]+\/(?:posts|videos)\/[a-zA-Z0-9_.-]+|groups\/[^/?#]+\/(?:posts|permalink)\/[a-zA-Z0-9_.-]+)/i.test(
         url
       ) || /^https?:\/\/fb\.watch\/[a-zA-Z0-9_-]+/i.test(url)
+        ? 'verified_post'
+        : 'search_fallback';
+    case 'threads':
+      return /^https?:\/\/(?:www\.)?threads\.(?:com|net)\/@[a-zA-Z0-9_.-]+\/post\/[a-zA-Z0-9_-]{5,30}\/?(?:\?.*)?$/i.test(
+        url
+      )
         ? 'verified_post'
         : 'search_fallback';
     case 'youtube':

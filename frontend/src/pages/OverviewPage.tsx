@@ -71,19 +71,24 @@ export function OverviewPage({
     },
   });
 
-  // 4. Fetch Recent Mentions (for the live evidence rail & marquee)
+  // 4. Fetch Recent Mentions (lightweight: skip expensive near-duplicate count)
   const { data: recentMentions, isLoading: isMentionsLoading } = useQuery({
     queryKey: ['recent-mentions', workspaceId, organicOnly],
     enabled: Boolean(workspaceId),
     queryFn: async () => {
       const res = await api.get<{ data: MentionItem[] }>('/mentions', {
-        params: { workspace_id: workspaceId, per_page: 10, exclude_inauthentic: organicOnly || undefined },
+        params: {
+          workspace_id: workspaceId,
+          per_page: 10,
+          exclude_inauthentic: organicOnly || undefined,
+          skip_meta_counts: 1,
+        },
       });
       return res.data.data;
     },
   });
 
-  if (isOverviewLoading || isTimeseriesLoading || isTrendsLoading) {
+  if (isOverviewLoading) {
     return (
       <div className="space-y-6">
         {/* Marquee skeleton */}
@@ -147,7 +152,7 @@ export function OverviewPage({
     : rawMentions;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* 1. Breaking Dispatch Marquee (Live Feed Ticker) */}
       <BreakingDispatchMarquee
         mentions={rawMentions}
@@ -180,103 +185,130 @@ export function OverviewPage({
       />
 
       {/* 3. Interactive Operational Lens & Status Strip */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white/[0.02] border border-white/[0.08] rounded-xl text-xs">
-        {/* Left: Operational Lenses */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-zinc-400 font-medium mr-1.5 flex items-center gap-1.5 font-sans-ui">
-            <Filter className="w-3.5 h-3.5 text-zinc-400" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3 p-3 bg-white/[0.02] border border-white/[0.08] rounded-xl text-xs">
+        {/* Left: Operational Lenses (Clean 3-col fit on phone, inline wrap on sm+) */}
+        <div className="grid grid-cols-3 sm:flex items-center gap-1.5 w-full md:w-auto">
+          <span className="hidden sm:flex text-zinc-400 font-medium mr-1.5 items-center gap-1.5 font-sans-ui shrink-0">
+            <Filter className="w-3.5 h-3.5 text-zinc-400" aria-hidden="true" />
             <span>Lensa Analitik:</span>
           </span>
           <button
+            type="button"
             onClick={() => setActiveLens('all')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 font-sans-ui ${
+            aria-pressed={activeLens === 'all'}
+            className={`min-h-11 sm:min-h-9 px-2 sm:px-3 py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 font-sans-ui ${
               activeLens === 'all'
                 ? 'bg-white text-zinc-950 font-bold shadow-xs'
-                : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+                : 'text-zinc-300 hover:text-white hover:bg-white/[0.04]'
             }`}
           >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Semua Isu</span>
+            <Layers className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            <span className="sm:hidden truncate">Semua</span>
+            <span className="hidden sm:inline">Semua Isu</span>
           </button>
           <button
+            type="button"
             onClick={() => setActiveLens('rising')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 font-sans-ui ${
+            aria-pressed={activeLens === 'rising'}
+            className={`min-h-11 sm:min-h-9 px-2 sm:px-3 py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 font-sans-ui ${
               activeLens === 'rising'
                 ? 'bg-white text-zinc-950 font-bold shadow-xs'
-                : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+                : 'text-zinc-300 hover:text-white hover:bg-white/[0.04]'
             }`}
           >
-            <Flame className="w-3.5 h-3.5 text-amber-400" />
-            <span>Tren Akselerasi</span>
+            <Flame className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
+            <span className="sm:hidden truncate">Akselerasi</span>
+            <span className="hidden sm:inline">Tren Akselerasi</span>
           </button>
           <button
+            type="button"
             onClick={() => setActiveLens('critical')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 font-sans-ui ${
+            aria-pressed={activeLens === 'critical'}
+            className={`min-h-11 sm:min-h-9 px-2 sm:px-3 py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 font-sans-ui ${
               activeLens === 'critical'
                 ? 'bg-rose-500 text-white font-bold shadow-xs'
-                : 'text-zinc-400 hover:text-rose-400 hover:bg-white/[0.04]'
+                : 'text-zinc-300 hover:text-rose-400 hover:bg-white/[0.04]'
             }`}
           >
-            <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
-            <span>Fokus Kritis (Negatif)</span>
+            <ShieldAlert className={`w-3.5 h-3.5 shrink-0 ${activeLens === 'critical' ? 'text-white' : 'text-rose-400'}`} aria-hidden="true" />
+            <span className="sm:hidden truncate">Kritis</span>
+            <span className="hidden sm:inline">Fokus Kritis</span>
           </button>
         </div>
 
         {/* Right: Realtime Ingestion Pulse */}
-        <div className="flex items-center gap-2 text-zinc-400 text-[11px] font-mono-code">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>
-            {overview.kpis.total_mentions} berita terindeks real-time dari Google News Indonesia
+        <div className="flex items-center gap-2 text-zinc-400 text-[11px] font-mono-code shrink-0">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+          <span className="font-tabular">
+            {overview.kpis.total_mentions.toLocaleString('id-ID')} berita terindeks Google News ID
           </span>
         </div>
       </div>
 
-      {/* 4. The Asymmetric Bento Intelligence Grid (8 : 4 Layout) */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+      {/* 4. Three-State Responsive Intelligence Grid (1 col mobile -> 2 col tablet -> 8:4 desktop) */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6 items-start">
         
-        {/* LEFT / MAIN ANALYTICAL STAGE (8 COLUMNS) */}
-        <div className="xl:col-span-8 space-y-6">
+        {/* LEFT / MAIN ANALYTICAL STAGE (8 COLUMNS ON XL) */}
+        <div className="xl:col-span-8 space-y-4 sm:space-y-6 min-w-0">
           {/* Primary Timeseries Telemetry Studio */}
-          <TimeseriesChart timeline={timeseriesData?.timeline || []} />
+          {isTimeseriesLoading ? (
+            <div className="h-84 bg-white/[0.03] border border-white/[0.06] rounded-2xl animate-pulse" />
+          ) : (
+            <TimeseriesChart timeline={timeseriesData?.timeline || []} />
+          )}
 
-          {/* Asymmetric Intelligence Drivers (Topics 7 cols : Keywords 5 cols) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            <div className="lg:col-span-7">
-              <RisingTopicsCard
-                topics={filteredTopics}
-                onSelectTopic={onNavigateToTopic}
-              />
+          {/* Asymmetric Intelligence Drivers (Topics 7 cols : Keywords 5 cols from md+) */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 items-start">
+            <div className="md:col-span-7 min-w-0">
+              {isTrendsLoading ? (
+                <div className="h-64 bg-white/[0.03] border border-white/[0.06] rounded-2xl animate-pulse" />
+              ) : (
+                <RisingTopicsCard
+                  topics={filteredTopics}
+                  onSelectTopic={onNavigateToTopic}
+                />
+              )}
             </div>
-            <div className="lg:col-span-5">
-              <TopKeywordsCard
-                keywords={trendsData?.top_keywords || []}
-                onSelectKeyword={onNavigateToMentionsWithKeyword}
-              />
+            <div className="md:col-span-5 min-w-0">
+              {isTrendsLoading ? (
+                <div className="h-64 bg-white/[0.03] border border-white/[0.06] rounded-2xl animate-pulse" />
+              ) : (
+                <TopKeywordsCard
+                  keywords={trendsData?.top_keywords || []}
+                  onSelectKeyword={onNavigateToMentionsWithKeyword}
+                />
+              )}
             </div>
           </div>
         </div>
 
-        {/* RIGHT / TACTICAL RAIL (4 COLUMNS) */}
-        <div className="xl:col-span-4 space-y-6">
-          {/* Live Real-time Evidence Wire (Reuters/Bloomberg style) */}
-          <LiveEvidenceRail
-            mentions={displayMentions}
-            isLoading={isMentionsLoading}
-            onSelectMention={(mention) => setSelectedMention(mention)}
-            onViewAllMentions={() => onNavigateToMentionsWithKeyword('')}
-            onAskAi={(query) => onOpenAiWithQuery?.(query)}
-          />
+        {/* RIGHT / TACTICAL RAIL (4 COLUMNS ON XL, 2-COL SUBGRID ON MD-LG) */}
+        <div className="xl:col-span-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-4 sm:gap-6 min-w-0">
+          {/* Live Real-time Evidence Wire */}
+          <div className="md:col-span-2 xl:col-span-1 min-w-0">
+            <LiveEvidenceRail
+              mentions={displayMentions}
+              isLoading={isMentionsLoading}
+              onSelectMention={(mention) => setSelectedMention(mention)}
+              onViewAllMentions={() => onNavigateToMentionsWithKeyword('')}
+              onAskAi={(query) => onOpenAiWithQuery?.(query)}
+            />
+          </div>
 
           {/* Sentiment Polarization Matrix */}
-          <SentimentDistribution
-            positive={overview.sentiment.positive}
-            neutral={overview.sentiment.neutral}
-            negative={overview.sentiment.negative}
-            unknown={overview.sentiment.unknown}
-          />
+          <div className="min-w-0">
+            <SentimentDistribution
+              positive={overview.sentiment.positive}
+              neutral={overview.sentiment.neutral}
+              negative={overview.sentiment.negative}
+              unknown={overview.sentiment.unknown}
+            />
+          </div>
 
           {/* Platform Ingestion Share */}
-          <PlatformBreakdown platforms={overview.platform_breakdown} />
+          <div className="min-w-0">
+            <PlatformBreakdown platforms={overview.platform_breakdown} />
+          </div>
         </div>
 
       </div>
