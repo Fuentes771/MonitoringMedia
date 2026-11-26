@@ -1,11 +1,22 @@
 import React from 'react';
 import { Eye, Globe, Heart, MessageCircle, Repeat2, Rss, Video } from 'lucide-react';
 
-export const SOCIAL_PROVIDER_KEYS = ['x', 'twitter', 'tiktok', 'instagram', 'facebook', 'threads', 'youtube', 'reddit'] as const;
+export const SOCIAL_PROVIDER_KEYS = [
+  'x',
+  'twitter',
+  'tiktok',
+  'instagram',
+  'facebook',
+  'threads',
+  'youtube',
+  'reddit',
+] as const;
 
 export function isSocialProvider(provider?: string | null): boolean {
   if (!provider) return false;
-  return SOCIAL_PROVIDER_KEYS.includes(provider.toLowerCase().trim() as (typeof SOCIAL_PROVIDER_KEYS)[number]);
+  return SOCIAL_PROVIDER_KEYS.includes(
+    provider.toLowerCase().trim() as (typeof SOCIAL_PROVIDER_KEYS)[number]
+  );
 }
 
 export interface PlatformMetaInfo {
@@ -26,72 +37,81 @@ export function getPlatformMeta(provider?: string | null): PlatformMetaInfo {
         key: 'x',
         label: 'X (Twitter)',
         shortLabel: 'X',
-        pillClass: 'bg-zinc-900 text-zinc-100 border-zinc-700/80',
-        iconColorClass: 'text-zinc-100',
+        pillClass:
+          'bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--border-medium)]',
+        iconColorClass: 'text-[var(--text-primary)]',
       };
     case 'tiktok':
       return {
         key: 'tiktok',
         label: 'TikTok',
         shortLabel: 'TikTok',
-        pillClass: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30',
-        iconColorClass: 'text-cyan-400',
+        pillClass:
+          'bg-teal-600/10 text-teal-800 border-teal-700/25 dark:bg-teal-400/12 dark:text-teal-300 dark:border-teal-400/30',
+        iconColorClass: 'text-teal-700 dark:text-teal-300',
       };
     case 'instagram':
       return {
         key: 'instagram',
         label: 'Instagram',
         shortLabel: 'IG',
-        pillClass: 'bg-pink-500/10 text-pink-300 border-pink-500/30',
-        iconColorClass: 'text-pink-400',
+        pillClass:
+          'bg-rose-600/10 text-rose-800 border-rose-700/25 dark:bg-rose-400/12 dark:text-rose-300 dark:border-rose-400/30',
+        iconColorClass: 'text-rose-700 dark:text-rose-300',
       };
     case 'facebook':
       return {
         key: 'facebook',
         label: 'Facebook',
         shortLabel: 'FB',
-        pillClass: 'bg-blue-500/10 text-blue-300 border-blue-500/30',
-        iconColorClass: 'text-blue-400',
+        pillClass:
+          'bg-blue-600/10 text-blue-800 border-blue-700/25 dark:bg-blue-400/12 dark:text-blue-300 dark:border-blue-400/30',
+        iconColorClass: 'text-blue-700 dark:text-blue-300',
       };
     case 'threads':
       return {
         key: 'threads',
         label: 'Threads',
         shortLabel: 'Threads',
-        pillClass: 'bg-zinc-900 text-zinc-100 border-zinc-600/80',
-        iconColorClass: 'text-zinc-100',
+        pillClass:
+          'bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--border-medium)]',
+        iconColorClass: 'text-[var(--text-primary)]',
       };
     case 'youtube':
       return {
         key: 'youtube',
         label: 'YouTube',
         shortLabel: 'YouTube',
-        pillClass: 'bg-rose-500/10 text-rose-300 border-rose-500/30',
-        iconColorClass: 'text-rose-400',
+        pillClass:
+          'bg-[var(--sentiment-neg-subtle)] text-[var(--sentiment-neg)] border-[var(--sentiment-neg-border)]',
+        iconColorClass: 'text-[var(--sentiment-neg)]',
       };
     case 'rss':
       return {
         key: 'rss',
         label: 'Berita RSS',
         shortLabel: 'RSS',
-        pillClass: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
-        iconColorClass: 'text-amber-400',
+        pillClass:
+          'bg-[var(--accent-gold-subtle)] text-[var(--accent-gold-text)] border-[var(--accent-gold-border)]',
+        iconColorClass: 'text-[var(--accent-gold-text)]',
       };
     case 'reddit':
       return {
         key: 'reddit',
         label: 'Reddit',
         shortLabel: 'Reddit',
-        pillClass: 'bg-orange-500/10 text-orange-300 border-orange-500/30',
-        iconColorClass: 'text-orange-400',
+        pillClass:
+          'bg-orange-600/10 text-orange-800 border-orange-700/25 dark:bg-orange-400/12 dark:text-orange-300 dark:border-orange-400/30',
+        iconColorClass: 'text-orange-700 dark:text-orange-300',
       };
     default:
       return {
         key,
         label: key.toUpperCase(),
         shortLabel: key.toUpperCase(),
-        pillClass: 'bg-white/[0.05] text-zinc-300 border-white/10',
-        iconColorClass: 'text-zinc-400',
+        pillClass:
+          'bg-[var(--bg-surface-elevated)] text-[var(--text-secondary)] border-[var(--border-subtle)]',
+        iconColorClass: 'text-[var(--text-secondary)]',
       };
   }
 }
@@ -173,16 +193,24 @@ export const PlatformBadge: React.FC<{
   isComment?: boolean;
   ingestionSource?: string | null;
   className?: string;
-}> = ({ provider, size = 'xs', compactLabel = false, isComment = false, ingestionSource = null, className = '' }) => {
+}> = ({
+  provider,
+  size = 'xs',
+  compactLabel = false,
+  isComment = false,
+  ingestionSource = null,
+  className = '',
+}) => {
   const meta = getPlatformMeta(provider);
-  const padding = size === 'xs' ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs';
+  const padding = size === 'xs' ? 'px-2 py-0.5 text-[10.5px]' : 'px-2.5 py-1 text-xs';
   const iconSize = size === 'xs' ? 'w-3 h-3' : 'w-3.5 h-3.5';
-  const isMuseSource = typeof ingestionSource === 'string' && ingestionSource.toLowerCase().includes('muse');
+  const isMuseSource =
+    typeof ingestionSource === 'string' && ingestionSource.toLowerCase().includes('muse');
 
   return (
     <span className={`inline-flex items-center flex-wrap gap-1.5 ${className}`}>
       <span
-        className={`inline-flex items-center gap-1 rounded border font-mono-code uppercase tracking-wide ${padding} ${meta.pillClass}`}
+        className={`inline-flex items-center gap-1 rounded-lg border font-semibold ${padding} ${meta.pillClass}`}
       >
         <PlatformIcon provider={provider} className={iconSize} />
         <span>{compactLabel ? meta.shortLabel : meta.label}</span>
@@ -190,13 +218,13 @@ export const PlatformBadge: React.FC<{
       {isMuseSource && (
         <span
           title="Ditarik melalui konektor resmi Meta via Muse"
-          className="inline-flex items-center px-1.5 py-0.5 rounded bg-sky-500/10 border border-sky-500/30 text-sky-300 text-[10px] font-mono-code"
+          className="inline-flex items-center px-1.5 py-0.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-secondary)] text-[10px] font-medium"
         >
           via Muse
         </span>
       )}
       {isComment && (
-        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-[10px] font-mono-code">
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-secondary)] text-[10px] font-medium">
           <MessageCircle className="w-2.5 h-2.5" aria-hidden="true" />
           <span>Komentar</span>
         </span>
@@ -224,10 +252,34 @@ export const SocialEngagementBar: React.FC<{
   metricsAvailable?: boolean;
   showUnavailableHint?: boolean;
   className?: string;
-}> = ({ metrics, likesFallback = null, metricsAvailable, showUnavailableHint = false, className = '' }) => {
-  const likes = pickFirstNumber(metrics?.likes, metrics?.favorite_count, metrics?.digg_count, metrics?.reactions_count, likesFallback);
-  const comments = pickFirstNumber(metrics?.comments, metrics?.comments_count, metrics?.reply_count, metrics?.comment_count, metrics?.replies);
-  const shares = pickFirstNumber(metrics?.shares, metrics?.shares_count, metrics?.retweet_count, metrics?.share_count, metrics?.retweets);
+}> = ({
+  metrics,
+  likesFallback = null,
+  metricsAvailable,
+  showUnavailableHint = false,
+  className = '',
+}) => {
+  const likes = pickFirstNumber(
+    metrics?.likes,
+    metrics?.favorite_count,
+    metrics?.digg_count,
+    metrics?.reactions_count,
+    likesFallback
+  );
+  const comments = pickFirstNumber(
+    metrics?.comments,
+    metrics?.comments_count,
+    metrics?.reply_count,
+    metrics?.comment_count,
+    metrics?.replies
+  );
+  const shares = pickFirstNumber(
+    metrics?.shares,
+    metrics?.shares_count,
+    metrics?.retweet_count,
+    metrics?.share_count,
+    metrics?.retweets
+  );
   const views = pickFirstNumber(metrics?.views, metrics?.view_count, metrics?.play_count);
 
   const hasAnyMetric = likes !== null || comments !== null || shares !== null || views !== null;
@@ -235,39 +287,38 @@ export const SocialEngagementBar: React.FC<{
   if (!hasAnyMetric || metricsAvailable === false) {
     if (!showUnavailableHint) return null;
     return (
-      <span className={`text-[10px] text-zinc-500 font-mono-code ${className}`}>
-        Metrik: -
+      <span className={`text-[11px] text-[var(--text-muted)] font-tabular ${className}`}>
+        Metrik tidak tersedia
       </span>
     );
   }
 
   return (
-    <div className={`inline-flex items-center flex-wrap gap-3 text-[11px] font-mono-code font-tabular text-zinc-400 ${className}`}>
+    <div className={`inline-flex items-center flex-wrap gap-3 text-[11px] font-tabular text-[var(--text-secondary)] ${className}`}>
       {likes !== null && (
-        <span className="inline-flex items-center gap-1" title="Likes">
-          <Heart className="w-3 h-3 text-rose-400/80" aria-hidden="true" />
+        <span className="inline-flex items-center gap-1" title="Suka">
+          <Heart className="w-3 h-3 text-[var(--sentiment-neg)]" aria-hidden="true" />
           <span>{formatCompactCount(likes)}</span>
         </span>
       )}
       {comments !== null && (
         <span className="inline-flex items-center gap-1" title="Komentar">
-          <MessageCircle className="w-3 h-3 text-indigo-400/80" aria-hidden="true" />
+          <MessageCircle className="w-3 h-3 text-[var(--text-muted)]" aria-hidden="true" />
           <span>{formatCompactCount(comments)}</span>
         </span>
       )}
       {shares !== null && (
         <span className="inline-flex items-center gap-1" title="Bagikan / Repost">
-          <Repeat2 className="w-3 h-3 text-emerald-400/80" aria-hidden="true" />
+          <Repeat2 className="w-3 h-3 text-[var(--sentiment-pos)]" aria-hidden="true" />
           <span>{formatCompactCount(shares)}</span>
         </span>
       )}
       {views !== null && (
         <span className="inline-flex items-center gap-1" title="Tayangan">
-          <Eye className="w-3 h-3 text-zinc-400" aria-hidden="true" />
+          <Eye className="w-3 h-3 text-[var(--text-muted)]" aria-hidden="true" />
           <span>{formatCompactCount(views)}</span>
         </span>
       )}
     </div>
   );
 };
-

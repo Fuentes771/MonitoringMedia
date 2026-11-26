@@ -11,7 +11,6 @@ import {
   Tag,
   Flame,
   Activity,
-  Sparkles,
   Loader2,
   CheckCircle2,
   AlertTriangle,
@@ -39,19 +38,16 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
   const [syncingTopicId, setSyncingTopicId] = useState<number | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
-  // AI Topic Summary Modal State
   const [summaryTopic, setSummaryTopic] = useState<TopicItem | null>(null);
   const [summaryData, setSummaryData] = useState<AiTopicSummary | null>(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
 
-  // Form State
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [includeKeywords, setIncludeKeywords] = useState('');
   const [excludeKeywords, setExcludeKeywords] = useState('');
   const [selectedProviders, setSelectedProviders] = useState<string[]>(DEFAULT_TOPIC_PROVIDERS);
 
-  // Handle escape key to close modals (R-32)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -63,7 +59,6 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isModalOpen, summaryTopic]);
 
-  // Fetch active and paused Topics for zero-touch lifecycle management
   const { data: topics, isLoading } = useQuery({
     queryKey: ['topics-list', workspaceId, 'manage'],
     enabled: Boolean(workspaceId),
@@ -75,11 +70,16 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
     },
   });
 
-  // Create Topic Mutation (with zero-touch alerts + initial sync)
   const createTopicMutation = useMutation({
     mutationFn: async () => {
-      const inc = includeKeywords.split(',').map((s) => s.trim()).filter(Boolean);
-      const exc = excludeKeywords.split(',').map((s) => s.trim()).filter(Boolean);
+      const inc = includeKeywords
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const exc = excludeKeywords
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
 
       const res = await api.post(`/workspaces/${workspaceId}/topics`, {
         name,
@@ -90,11 +90,11 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
       });
       return res.data;
     },
-    onSuccess: (res: any) => {
-      queryClient.invalidateQueries({ queryKey: ['topics-list'] });
-      queryClient.invalidateQueries({ queryKey: ['alerts-data'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] });
-      queryClient.invalidateQueries({ queryKey: ['mentions-explorer'] });
+    onSuccess: (res: { message?: string }) => {
+      void queryClient.invalidateQueries({ queryKey: ['topics-list'] });
+      void queryClient.invalidateQueries({ queryKey: ['alerts-data'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] });
+      void queryClient.invalidateQueries({ queryKey: ['mentions-explorer'] });
       setIsModalOpen(false);
       setName('');
       setDescription('');
@@ -102,48 +102,46 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
       setExcludeKeywords('');
       setSelectedProviders(DEFAULT_TOPIC_PROVIDERS);
       setFeedbackMsg(
-        res?.message || 'Topik pemantauan baru berhasil dibuat, aturan alert otomatis aktif, dan sinkronisasi awal selesai.'
+        res?.message ||
+          'Topik pemantauan baru berhasil dibuat, aturan alert otomatis aktif, dan sinkronisasi awal selesai.'
       );
       setTimeout(() => setFeedbackMsg(null), 5000);
     },
   });
 
-  // Update Topic Status (Pause / Resume) Mutation
   const updateTopicStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: 'active' | 'paused' }) => {
       const res = await api.patch(`/topics/${id}`, { status });
       return res.data;
     },
-    onSuccess: (res: any) => {
-      queryClient.invalidateQueries({ queryKey: ['topics-list'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] });
+    onSuccess: (res: { message?: string }) => {
+      void queryClient.invalidateQueries({ queryKey: ['topics-list'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] });
       setFeedbackMsg(res?.message || 'Status topik berhasil diperbarui.');
       setTimeout(() => setFeedbackMsg(null), 4000);
     },
   });
 
-  // Archive Topic Mutation
   const archiveTopicMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await api.delete(`/topics/${id}`);
       return res.data;
     },
-    onSuccess: (res: any) => {
-      queryClient.invalidateQueries({ queryKey: ['topics-list'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] });
+    onSuccess: (res: { message?: string }) => {
+      void queryClient.invalidateQueries({ queryKey: ['topics-list'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] });
       setFeedbackMsg(res?.message || 'Topik berhasil diarsipkan.');
       setTimeout(() => setFeedbackMsg(null), 4000);
     },
   });
 
-  // Sync Topic Mutation
   const handleSyncTopic = async (topicId: number) => {
     setSyncingTopicId(topicId);
     try {
       const res = await api.post(`/topics/${topicId}/sync`);
-      queryClient.invalidateQueries({ queryKey: ['topics-list'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] });
-      queryClient.invalidateQueries({ queryKey: ['mentions-explorer'] });
+      void queryClient.invalidateQueries({ queryKey: ['topics-list'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard-overview'] });
+      void queryClient.invalidateQueries({ queryKey: ['mentions-explorer'] });
       setFeedbackMsg(res.data.message || 'Sinkronisasi topik berhasil diselesaikan.');
     } catch {
       setFeedbackMsg('Gagal melakukan sinkronisasi topik.');
@@ -158,9 +156,10 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
     setIsSummaryLoading(true);
     setSummaryData(null);
     try {
-      const res = await api.get<{ status: string; data: AiTopicSummary }>(`/topics/${topic.id}/ai-summary`, {
-        params: { refresh: forceRefresh }
-      });
+      const res = await api.get<{ status: string; data: AiTopicSummary }>(
+        `/topics/${topic.id}/ai-summary`,
+        { params: { refresh: forceRefresh } }
+      );
       setSummaryData(res.data.data);
     } catch {
       setFeedbackMsg('Gagal memuat ringkasan eksekutif AI untuk topik ini.');
@@ -170,13 +169,13 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
     }
   };
 
-  const toggleProvider = (provider: string) => {
-    if (selectedProviders.includes(provider)) {
+  const toggleProvider = (prov: string) => {
+    if (selectedProviders.includes(prov)) {
       if (selectedProviders.length > 1) {
-        setSelectedProviders(selectedProviders.filter((p) => p !== provider));
+        setSelectedProviders(selectedProviders.filter((p) => p !== prov));
       }
     } else {
-      setSelectedProviders([...selectedProviders, provider]);
+      setSelectedProviders([...selectedProviders, prov]);
     }
   };
 
@@ -188,27 +187,22 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
   }, null);
 
   return (
-    <div className="space-y-4 sm:space-y-6 font-sans-ui">
-      {/* Page Header */}
-      <div className="border-b border-white/[0.08] pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 sm:gap-4">
-        <div className="flex items-start sm:items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-400 flex items-center justify-center shadow-xs shrink-0 mt-0.5 sm:mt-0">
-            <Target className="w-4 h-4" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="font-editorial text-xl sm:text-2xl font-medium text-white tracking-tight text-balance">
-              Radar Topik &amp; Manajemen Isu
-            </h1>
-            <p className="text-xs text-zinc-400 font-sans-ui mt-0.5 text-pretty">
-              Konfigurasi entitas pantau, kata kunci inklusi, eksklusi, dan status akselerasi tren publik
-            </p>
-          </div>
+    <div className="space-y-6 font-sans-ui animate-surface-enter">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-5 border-b border-[var(--border-subtle)]">
+        <div className="space-y-1">
+          <h1 className="font-editorial text-2xl sm:text-3xl font-medium text-[var(--text-primary)] tracking-tight">
+            Program Prioritas &amp; Topik Pantau
+          </h1>
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)]">
+            Kelola entitas pantau, kata kunci inklusi dan eksklusi, serta sinkronisasi lintas saluran.
+          </p>
         </div>
 
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="w-full sm:w-auto min-h-11 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0"
+          className="btn-contrast w-full sm:w-auto min-h-11 px-5 text-xs inline-flex items-center justify-center gap-2 shrink-0"
         >
           <Plus className="w-4 h-4 shrink-0" aria-hidden="true" />
           <span>Tambah Topik Baru</span>
@@ -216,90 +210,99 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
       </div>
 
       {feedbackMsg && (
-        <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-xs flex items-center justify-between gap-2 shadow-xs">
+        <div
+          role="status"
+          className="p-3.5 rounded-2xl border border-[var(--sentiment-pos-border)] bg-[var(--sentiment-pos-subtle)] text-[var(--sentiment-pos)] text-xs font-medium flex items-center justify-between gap-2"
+        >
           <div className="flex items-center gap-2 min-w-0">
-            <Check className="w-4 h-4 text-emerald-400 shrink-0" aria-hidden="true" />
+            <Check className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>{feedbackMsg}</span>
           </div>
-          <button type="button" onClick={() => setFeedbackMsg(null)} className="min-w-9 min-h-9 flex items-center justify-center text-zinc-300 hover:text-white shrink-0" aria-label="Tutup pesan">
+          <button
+            type="button"
+            onClick={() => setFeedbackMsg(null)}
+            className="min-w-9 min-h-9 flex items-center justify-center rounded-lg hover:bg-[var(--bg-surface)] shrink-0"
+            aria-label="Tutup pesan"
+          >
             <X className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
       )}
 
-      {/* Top Bento Metrics Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-        <div className="bento-card p-4 sm:p-5 bg-[#0e1117] flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <span className="text-[10px] uppercase font-semibold text-zinc-400 font-mono-code block mb-1">
-              Topik Aktif Dipantau
-            </span>
-            <div className="text-2xl font-extrabold text-white font-mono-code font-tabular">
-              {topicItems.length} <span className="text-xs font-normal text-zinc-400 font-sans-ui">Entitas</span>
+      {/* Unified Summary Dock */}
+      <div className="surface-card p-5 sm:p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <span className="text-xs text-[var(--text-muted)] block">Topik Terdaftar</span>
+              <div className="text-2xl font-bold text-[var(--text-primary)] font-tabular">
+                {topicItems.length}{' '}
+                <span className="text-xs font-normal text-[var(--text-secondary)]">entitas</span>
+              </div>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-[var(--accent-gold-subtle)] text-[var(--accent-gold-text)] flex items-center justify-center shrink-0">
+              <Target className="w-4.5 h-4.5" aria-hidden="true" />
             </div>
           </div>
-          <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-400 flex items-center justify-center shrink-0">
-            <Target className="w-4 h-4" aria-hidden="true" />
-          </div>
-        </div>
 
-        <div className="bento-card p-4 sm:p-5 bg-[#0e1117] flex items-center justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <span className="text-[10px] uppercase font-semibold text-zinc-400 font-mono-code block mb-1">
-              Topik Terhangat Hari Ini
-            </span>
-            <div className="text-sm font-bold text-white truncate">
-              {highestTopic ? highestTopic.name : 'Belum Terdeteksi'}
+          <div className="flex items-start justify-between gap-3 sm:border-l sm:border-[var(--border-subtle)] sm:pl-5">
+            <div className="min-w-0 flex-1 space-y-1">
+              <span className="text-xs text-[var(--text-muted)] block">Volume Tertinggi</span>
+              <div className="text-sm font-bold text-[var(--text-primary)] truncate">
+                {highestTopic ? highestTopic.name : 'Belum terdeteksi'}
+              </div>
+              {highestTopic && (
+                <span className="text-xs text-[var(--accent-gold-text)] font-semibold font-tabular">
+                  {highestTopic.mentions_count.toLocaleString('id-ID')} sebutan
+                </span>
+              )}
             </div>
-            <span className="text-[11px] text-amber-400 font-mono-code font-tabular">
-              {highestTopic ? `${highestTopic.mentions_count} Sebutan` : ''}
-            </span>
+            <div className="w-9 h-9 rounded-xl bg-[var(--accent-gold-subtle)] text-[var(--accent-gold-text)] flex items-center justify-center shrink-0">
+              <Flame className="w-4.5 h-4.5" aria-hidden="true" />
+            </div>
           </div>
-          <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
-            <Flame className="w-4 h-4" aria-hidden="true" />
-          </div>
-        </div>
 
-        <div className="bento-card p-4 sm:p-5 bg-[#0e1117] flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <span className="text-[10px] uppercase font-semibold text-zinc-400 font-mono-code block mb-1">
-              Total Sebutan Terpetakan
-            </span>
-            <div className="text-2xl font-extrabold text-white font-mono-code font-tabular">
-              {totalTrackedMentions.toLocaleString('id-ID')}
+          <div className="flex items-start justify-between gap-3 sm:border-l sm:border-[var(--border-subtle)] sm:pl-5">
+            <div className="space-y-1">
+              <span className="text-xs text-[var(--text-muted)] block">Total Sebutan Terpetakan</span>
+              <div className="text-2xl font-bold text-[var(--text-primary)] font-tabular">
+                {totalTrackedMentions.toLocaleString('id-ID')}
+              </div>
             </div>
-          </div>
-          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-            <Activity className="w-4 h-4" aria-hidden="true" />
+            <div className="w-9 h-9 rounded-xl bg-[var(--sentiment-pos-subtle)] text-[var(--sentiment-pos)] flex items-center justify-center shrink-0">
+              <Activity className="w-4.5 h-4.5" aria-hidden="true" />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Topic Cards Grid (1 col mobile -> 2 col tablet & desktop) */}
+      {/* Topic Cards Grid */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5" role="status" aria-label="Memuat topik">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-44 rounded-2xl bg-white/[0.03] border border-white/[0.06] animate-pulse" />
+            <div key={i} className="h-52 surface-card animate-pulse" />
           ))}
         </div>
       ) : topicItems.length === 0 ? (
-        <div className="bento-card p-10 sm:p-12 text-center bg-[#0e1117]">
-          <Target className="w-10 h-10 text-zinc-500 mx-auto mb-3" aria-hidden="true" />
-          <h3 className="text-sm font-semibold text-white mb-1">Belum Ada Topik Pemantauan</h3>
-          <p className="text-xs text-zinc-400 max-w-sm mx-auto mb-4 font-sans-ui">
-            Buat topik baru untuk mulai memantau percakapan publik di media digital terhubung.
+        <div className="surface-card p-10 sm:p-12 text-center space-y-3">
+          <Target className="w-9 h-9 text-[var(--text-muted)] mx-auto" aria-hidden="true" />
+          <h2 className="font-editorial text-xl text-[var(--text-primary)]">Belum Ada Topik Pemantauan</h2>
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] max-w-sm mx-auto">
+            Tambahkan topik pertama untuk mulai memantau percakapan publik lintas media dan media sosial.
           </p>
-          <button
-            type="button"
-            onClick={() => setIsModalOpen(true)}
-            className="min-h-11 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-bold transition-colors cursor-pointer"
-          >
-            <Plus className="w-4 h-4" aria-hidden="true" />
-            <span>Buat Topik Pertama</span>
-          </button>
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(true)}
+              className="btn-contrast min-h-11 px-5 text-xs inline-flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" aria-hidden="true" />
+              <span>Buat Topik Pertama</span>
+            </button>
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {topicItems.map((topic, idx) => {
             const isSyncing = syncingTopicId === topic.id;
             const incKws = topic.keywords.filter((k) => k.type === 'include');
@@ -315,115 +318,115 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
             const isPaused = topic.status === 'paused';
 
             return (
-              <div
+              <article
                 key={topic.id}
-                className={`bento-card p-4 sm:p-5 bg-[#0c0f16] border flex flex-col justify-between transition-all hover:border-white/20 shadow-lg min-w-0 ${
+                className={`surface-card p-5 sm:p-6 flex flex-col justify-between gap-4 min-w-0 ${
                   isPaused
-                    ? 'opacity-75 border-zinc-700/60'
+                    ? 'opacity-75'
                     : isTopTopic
-                    ? 'border-amber-500/40 bg-gradient-to-br from-[#121624] to-[#0c0f16]'
-                    : 'border-white/[0.08]'
+                      ? 'border-[var(--accent-gold-border)]'
+                      : ''
                 }`}
               >
-                {/* Top Section */}
-                <div className="space-y-3.5">
-                  {/* Header Row: Rank, Title, and Main Mentions KPI */}
-                  <div className="flex items-start justify-between gap-2.5 sm:gap-3">
-                    <div className="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
-                      {/* Rank Indicator */}
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-mono-code text-xs font-bold shrink-0 mt-0.5 border ${
-                        isTopTopic
-                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm shadow-amber-500/20'
-                          : 'bg-white/[0.04] text-zinc-300 border-white/[0.08]'
-                      }`}>
+                <div className="space-y-4">
+                  {/* Top Row */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <span
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center font-tabular text-xs font-bold shrink-0 mt-0.5 border ${
+                          isTopTopic
+                            ? 'bg-[var(--accent-gold-subtle)] text-[var(--accent-gold-text)] border-[var(--accent-gold-border)]'
+                            : 'bg-[var(--bg-surface-elevated)] text-[var(--text-secondary)] border-[var(--border-subtle)]'
+                        }`}
+                      >
                         #{idx + 1}
-                      </div>
+                      </span>
 
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <h2 className="font-editorial text-base sm:text-lg font-medium text-white tracking-tight leading-snug break-words">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h2 className="font-editorial text-lg font-medium text-[var(--text-primary)] leading-snug break-words">
                             {topic.name}
                           </h2>
                           {isPaused && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono-code font-bold bg-zinc-700/50 text-zinc-200 border border-zinc-500/40">
-                              DIJEDA
+                            <span className="px-2 py-0.5 rounded-lg text-[10.5px] font-semibold bg-[var(--bg-surface-elevated)] text-[var(--text-muted)] border border-[var(--border-subtle)]">
+                              Dijeda
                             </span>
                           )}
                           {isTopTopic && !isPaused && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono-code font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                              <Flame className="w-3 h-3 text-amber-400" aria-hidden="true" /> Terbanyak
+                            <span className="px-2 py-0.5 rounded-lg text-[10.5px] font-semibold bg-[var(--accent-gold-subtle)] text-[var(--accent-gold-text)] border border-[var(--accent-gold-border)] inline-flex items-center gap-1">
+                              <Flame className="w-3 h-3" aria-hidden="true" />
+                              <span>Terbanyak</span>
                             </span>
                           )}
                         </div>
                         {topic.description && (
-                          <p className="text-[11.5px] text-zinc-400 mt-0.5 line-clamp-1 font-sans-ui">
+                          <p className="text-xs text-[var(--text-muted)] mt-0.5 line-clamp-1">
                             {topic.description}
                           </p>
                         )}
                       </div>
                     </div>
 
-                    {/* Prominent Bold Mention KPI */}
-                    <div className="text-right shrink-0 bg-white/[0.03] border border-white/[0.06] rounded-xl px-2.5 sm:px-3 py-1.5">
-                      <div className="text-lg sm:text-2xl font-black font-mono-code font-tabular text-white tracking-tight">
+                    <div className="text-right shrink-0 surface-inset px-3 py-1.5">
+                      <div className="text-xl font-bold font-tabular text-[var(--text-primary)] leading-tight">
                         {topic.mentions_count.toLocaleString('id-ID')}
                       </div>
-                      <span className="text-[10px] text-zinc-400 font-sans-ui block -mt-0.5">
-                        sebutan
-                      </span>
+                      <span className="text-[10.5px] text-[var(--text-muted)] block">sebutan</span>
                     </div>
                   </div>
 
-                  {/* Sentiment Barometer Strip */}
-                  <div className="p-2.5 rounded-xl bg-black/30 border border-white/[0.05] space-y-1.5">
-                    <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px] font-mono-code">
-                      <span className="text-zinc-400 font-medium">Distribusi Sentimen:</span>
+                  {/* Sentiment Strip */}
+                  <div className="surface-inset p-3 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span className="text-[var(--text-muted)] font-medium">Sentimen</span>
                       {totalSent > 0 ? (
-                        <div className="flex flex-wrap items-center gap-2 font-tabular">
-                          <span className="text-emerald-400 font-semibold">{posPct}% Pos</span>
-                          <span className="text-zinc-300 font-semibold">{neuPct}% Net</span>
-                          <span className="text-rose-400 font-semibold">{negPct}% Neg</span>
+                        <div className="flex flex-wrap items-center gap-2.5 font-tabular text-[11px] font-semibold">
+                          <span className="text-[var(--sentiment-pos)]">{posPct}% Pos</span>
+                          <span className="text-[var(--text-secondary)]">{neuPct}% Net</span>
+                          <span className="text-[var(--sentiment-neg)]">{negPct}% Neg</span>
                         </div>
                       ) : (
-                        <span className="text-zinc-400 italic">Belum ada sebutan masuk</span>
+                        <span className="text-[11px] text-[var(--text-muted)]">Belum ada sebutan</span>
                       )}
                     </div>
 
-                    <div className="w-full h-2 bg-white/[0.05] rounded-full overflow-hidden flex border border-white/[0.06]">
+                    <div className="w-full h-2 bg-[var(--bg-surface)] rounded-full overflow-hidden flex gap-0.5">
                       {totalSent > 0 ? (
                         <>
-                          <div style={{ width: `${posPct}%` }} className="h-full bg-emerald-500 transition-all duration-300" title={`Positif: ${posPct}% (${pos})`} />
-                          <div style={{ width: `${neuPct}%` }} className="h-full bg-zinc-600 transition-all duration-300" title={`Netral: ${neuPct}% (${neu})`} />
-                          <div style={{ width: `${negPct}%` }} className="h-full bg-rose-500 transition-all duration-300" title={`Negatif: ${negPct}% (${neg})`} />
+                          <div style={{ width: `${posPct}%` }} className="h-full bg-[var(--sentiment-pos-bar)]" />
+                          <div style={{ width: `${neuPct}%` }} className="h-full bg-[var(--sentiment-neu-bar)]" />
+                          <div style={{ width: `${negPct}%` }} className="h-full bg-[var(--sentiment-neg-bar)]" />
                         </>
                       ) : (
-                        <div className="w-full h-full bg-zinc-800" />
+                        <div className="w-full h-full bg-[var(--border-subtle)]" />
                       )}
                     </div>
                   </div>
 
-                  {/* Compact Keywords Chips */}
-                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                    <Tag className="w-3 h-3 text-zinc-400 shrink-0" aria-hidden="true" />
-                    {incKws.slice(0, 3).map((kw) => (
-                      <span
-                        key={kw.id}
-                        className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[11px] font-mono-code"
-                      >
-                        +{kw.keyword}
-                      </span>
-                    ))}
-                    {incKws.length > 3 && (
-                      <span className="px-1.5 py-0.5 rounded-md bg-white/[0.04] text-zinc-400 border border-white/[0.06] text-[10px] font-mono-code">
-                        +{incKws.length - 3} lainnya
-                      </span>
-                    )}
-                  </div>
+                  {/* Keywords */}
+                  {incKws.length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Tag className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" aria-hidden="true" />
+                      {incKws.slice(0, 3).map((kw) => (
+                        <span
+                          key={kw.id}
+                          className="px-2 py-0.5 rounded-lg bg-[var(--sentiment-pos-subtle)] text-[var(--sentiment-pos)] text-[11px] font-medium"
+                        >
+                          +{kw.keyword}
+                        </span>
+                      ))}
+                      {incKws.length > 3 && (
+                        <span className="px-2 py-0.5 rounded-lg bg-[var(--bg-surface-elevated)] text-[var(--text-muted)] text-[11px]">
+                          +{incKws.length - 3} lainnya
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {/* Bottom Row: Platforms & Clean 3x2 Mobile Action Grid */}
-                <div className="flex flex-col gap-3 pt-3 mt-3 border-t border-white/[0.06]">
-                  <div className="flex items-center flex-wrap gap-1">
+                {/* Platforms & Actions */}
+                <div className="space-y-3 pt-4 border-t border-[var(--border-subtle)]">
+                  <div className="flex items-center flex-wrap gap-1.5">
                     {(topic.providers && topic.providers.length > 0 ? topic.providers : ['rss']).map((prov) => (
                       <PlatformBadge key={prov} provider={prov} size="xs" compactLabel />
                     ))}
@@ -434,10 +437,9 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                       <button
                         type="button"
                         onClick={() => onNavigateToMentions(topic.id)}
-                        className="min-h-10 sm:min-h-8 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-[11.5px] sm:text-xs text-amber-300 font-semibold transition-all cursor-pointer shadow-xs"
-                        title="Buka seluruh dokumen sebutan topik ini di Mentions Explorer"
+                        className="min-h-10 sm:min-h-9 px-3 rounded-xl bg-[var(--accent-gold-subtle)] border border-[var(--accent-gold-border)] text-[var(--accent-gold-text)] text-xs font-semibold inline-flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity"
                       >
-                        <MessageSquareText className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
+                        <MessageSquareText className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                         <span className="truncate">Sebutan</span>
                       </button>
                     )}
@@ -445,35 +447,37 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                     {onOpenAiWithQuery && (
                       <button
                         type="button"
-                        onClick={() => onOpenAiWithQuery(
-                          `Konsultasi intelijen strategis untuk program ${topic.name}: jelaskan dinamika polaritas sentimen publik, isu paling kontroversial atau apresiatif, dan saran tindak lanjut komunikasinya.`,
-                          topic.id
-                        )}
-                        className="min-h-10 sm:min-h-8 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl border border-amber-500/35 bg-amber-500/15 hover:bg-amber-500/25 text-[11.5px] sm:text-xs text-amber-200 font-semibold transition-all cursor-pointer shadow-xs"
-                        title="Tanyakan dan analisis topik ini langsung di Asisten AI TRINETRA"
+                        onClick={() =>
+                          onOpenAiWithQuery(
+                            `Konsultasi intelijen strategis untuk program ${topic.name}: jelaskan dinamika polaritas sentimen publik, isu paling kontroversial atau apresiatif, dan saran tindak lanjut komunikasinya.`,
+                            topic.id
+                          )
+                        }
+                        className="btn-ghost-surface min-h-10 sm:min-h-9 px-3 text-xs font-semibold inline-flex items-center justify-center gap-1.5"
                       >
-                        <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
                         <span className="truncate">Tanya AI</span>
                       </button>
                     )}
 
                     <button
                       type="button"
-                      onClick={() => handleViewAiSummary(topic)}
-                      className="min-h-10 sm:min-h-8 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl border border-white/[0.1] bg-white/[0.03] hover:bg-white/[0.08] text-[11.5px] sm:text-xs text-zinc-200 font-semibold transition-all cursor-pointer shadow-xs"
-                      title="Lihat Sintesis Analisis AI"
+                      onClick={() => void handleViewAiSummary(topic)}
+                      className="btn-ghost-surface min-h-10 sm:min-h-9 px-3 text-xs font-semibold inline-flex items-center justify-center gap-1.5"
                     >
-                      <FileText className="w-3.5 h-3.5 text-zinc-300 shrink-0" aria-hidden="true" />
+                      <FileText className="w-3.5 h-3.5 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
                       <span className="truncate">Ringkasan</span>
                     </button>
 
                     <button
                       type="button"
-                      onClick={() => handleSyncTopic(topic.id)}
+                      onClick={() => void handleSyncTopic(topic.id)}
                       disabled={isSyncing || isPaused}
-                      className="min-h-10 sm:min-h-8 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl border border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08] text-[11.5px] sm:text-xs text-white font-semibold transition-all disabled:opacity-50 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
+                      className="btn-ghost-surface min-h-10 sm:min-h-9 px-3 text-xs font-semibold inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
                     >
-                      <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isSyncing ? 'animate-spin text-amber-400' : ''}`} aria-hidden="true" />
+                      <RefreshCw
+                        className={`w-3.5 h-3.5 shrink-0 ${isSyncing ? 'animate-spin text-[var(--accent-gold-text)]' : ''}`}
+                        aria-hidden="true"
+                      />
                       <span className="truncate">{isSyncing ? 'Sinkron...' : 'Sinkron'}</span>
                     </button>
 
@@ -486,11 +490,10 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                         })
                       }
                       disabled={updateTopicStatusMutation.isPending}
-                      title={isPaused ? 'Aktifkan kembali pemantauan topik ini' : 'Jeda sementara pemantauan topik ini'}
-                      className={`min-h-10 sm:min-h-8 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11.5px] sm:text-xs font-semibold transition-all disabled:opacity-50 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 ${
+                      className={`min-h-10 sm:min-h-9 px-3 rounded-xl border text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 ${
                         isPaused
-                          ? 'border-emerald-500/35 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300'
-                          : 'border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08] text-zinc-200'
+                          ? 'border-[var(--sentiment-pos-border)] bg-[var(--sentiment-pos-subtle)] text-[var(--sentiment-pos)]'
+                          : 'border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] hover:bg-[var(--bg-surface-hover)] text-[var(--text-primary)]'
                       }`}
                     >
                       {isPaused ? (
@@ -514,16 +517,15 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                         }
                       }}
                       disabled={archiveTopicMutation.isPending}
-                      title="Arsipkan topik dari pemantauan aktif"
                       aria-label={`Arsipkan topik ${topic.name}`}
-                      className="min-h-10 sm:min-h-8 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-rose-500/15 hover:border-rose-500/35 text-[11.5px] sm:text-xs text-zinc-300 hover:text-rose-300 font-semibold transition-all disabled:opacity-50 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
+                      className="min-h-10 sm:min-h-9 px-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:bg-[var(--sentiment-neg-subtle)] hover:border-[var(--sentiment-neg-border)] text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--sentiment-neg)] inline-flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
                     >
                       <Archive className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                       <span className="truncate">Arsip</span>
                     </button>
                   </div>
                 </div>
-              </div>
+              </article>
             );
           })}
         </div>
@@ -531,26 +533,21 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
 
       {/* Create Topic Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-0 sm:p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[var(--bg-backdrop)] backdrop-blur-xs p-0 sm:p-4">
           <div
             role="dialog"
             aria-modal="true"
             aria-label="Buat Topik Pemantauan Baru"
-            className="w-full max-w-lg max-h-[90dvh] overflow-y-auto overscroll-y-contain rounded-t-2xl sm:rounded-2xl border border-white/[0.12] bg-[#0c0e14] p-5 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] space-y-5 shadow-2xl"
+            className="w-full max-w-lg max-h-[90dvh] overflow-y-auto overscroll-y-contain rounded-t-3xl sm:rounded-3xl border border-[var(--border-medium)] bg-[var(--bg-surface)] p-5 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] space-y-5 shadow-[var(--shadow-elevated)]"
           >
-            <div className="flex items-center justify-between gap-2 border-b border-white/[0.08] pb-3.5">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
-                  <Target className="w-4 h-4" aria-hidden="true" />
-                </div>
-                <h2 className="font-editorial text-lg font-medium text-white truncate">
-                  Buat Topik Pemantauan Baru
-                </h2>
-              </div>
+            <div className="flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] pb-4">
+              <h2 className="font-editorial text-xl font-medium text-[var(--text-primary)] truncate">
+                Buat Topik Pemantauan Baru
+              </h2>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="min-w-11 min-h-11 -mr-1.5 flex items-center justify-center rounded-xl text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer shrink-0"
+                className="min-w-11 min-h-11 -mr-1.5 flex items-center justify-center rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-elevated)] shrink-0"
                 aria-label="Tutup formulir"
               >
                 <X className="w-5 h-5" aria-hidden="true" />
@@ -559,7 +556,7 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
 
             <div className="space-y-4 text-xs">
               <div>
-                <label htmlFor="topic-create-name" className="block text-zinc-200 font-semibold mb-1.5 text-xs">
+                <label htmlFor="topic-create-name" className="block text-[var(--text-primary)] font-semibold mb-1.5">
                   Nama Topik Pemantauan *
                 </label>
                 <input
@@ -568,12 +565,12 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                   placeholder="Contoh: Kualitas Kebijakan Publik"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full min-h-11 bg-white/[0.03] border border-white/[0.12] rounded-xl px-3.5 py-2.5 text-white text-base sm:text-xs placeholder:text-zinc-400 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs"
+                  className="input-field w-full min-h-11 px-3.5 py-2.5 text-base sm:text-xs"
                 />
               </div>
 
               <div>
-                <label htmlFor="topic-create-desc" className="block text-zinc-200 font-semibold mb-1.5 text-xs">
+                <label htmlFor="topic-create-desc" className="block text-[var(--text-primary)] font-semibold mb-1.5">
                   Deskripsi / Konteks Pemantauan
                 </label>
                 <textarea
@@ -582,13 +579,13 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                   placeholder="Catatan tujuan atau fokus pemantauan isu..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-white/[0.03] border border-white/[0.12] rounded-xl px-3.5 py-2.5 text-white text-base sm:text-xs placeholder:text-zinc-400 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs"
+                  className="input-field w-full px-3.5 py-2.5 text-base sm:text-xs"
                 />
               </div>
 
               <div>
-                <label htmlFor="topic-create-include" className="block text-zinc-200 font-semibold mb-1.5 text-xs">
-                  Kata Kunci Pantau (Pisahkan Koma) *
+                <label htmlFor="topic-create-include" className="block text-[var(--text-primary)] font-semibold mb-1.5">
+                  Kata Kunci Pantau (pisahkan koma) *
                 </label>
                 <input
                   id="topic-create-include"
@@ -596,13 +593,13 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                   placeholder="Contoh: Pemerintah, kebijakan, anggaran"
                   value={includeKeywords}
                   onChange={(e) => setIncludeKeywords(e.target.value)}
-                  className="w-full min-h-11 bg-white/[0.03] border border-white/[0.12] rounded-xl px-3.5 py-2.5 text-white text-base sm:text-xs placeholder:text-zinc-400 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs"
+                  className="input-field w-full min-h-11 px-3.5 py-2.5 text-base sm:text-xs"
                 />
               </div>
 
               <div>
-                <label htmlFor="topic-create-exclude" className="block text-zinc-200 font-semibold mb-1.5 text-xs">
-                  Kata Kunci Pengecualian / Exclude (Pisahkan Koma)
+                <label htmlFor="topic-create-exclude" className="block text-[var(--text-primary)] font-semibold mb-1.5">
+                  Kata Kunci Pengecualian (pisahkan koma)
                 </label>
                 <input
                   id="topic-create-exclude"
@@ -610,34 +607,34 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                   placeholder="Contoh: lowongan, karir, promo, spam"
                   value={excludeKeywords}
                   onChange={(e) => setExcludeKeywords(e.target.value)}
-                  className="w-full min-h-11 bg-white/[0.03] border border-white/[0.12] rounded-xl px-3.5 py-2.5 text-white text-base sm:text-xs placeholder:text-zinc-400 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs"
+                  className="input-field w-full min-h-11 px-3.5 py-2.5 text-base sm:text-xs"
                 />
               </div>
 
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <span className="block text-zinc-200 font-semibold text-xs">
-                    Pilih Platform Sumber Data ({selectedProviders.length}/7 aktif)
+                  <span className="text-[var(--text-primary)] font-semibold">
+                    Platform Sumber Data ({selectedProviders.length}/7 aktif)
                   </span>
-                  <div className="flex items-center gap-1.5 text-[11px] font-mono-code">
+                  <div className="flex items-center gap-1.5 text-[11px]">
                     <button
                       type="button"
                       onClick={() => setSelectedProviders(DEFAULT_TOPIC_PROVIDERS)}
-                      className="min-h-8 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.08] text-zinc-200 cursor-pointer transition-colors"
+                      className="btn-ghost-surface min-h-8 px-2.5 font-medium"
                     >
                       Semua
                     </button>
                     <button
                       type="button"
                       onClick={() => setSelectedProviders(SOCIAL_ONLY_PROVIDERS)}
-                      className="min-h-8 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.08] text-zinc-200 cursor-pointer transition-colors"
+                      className="btn-ghost-surface min-h-8 px-2.5 font-medium"
                     >
                       Sosial
                     </button>
                     <button
                       type="button"
                       onClick={() => setSelectedProviders(['rss'])}
-                      className="min-h-8 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.08] text-zinc-200 cursor-pointer transition-colors"
+                      className="btn-ghost-surface min-h-8 px-2.5 font-medium"
                     >
                       Berita
                     </button>
@@ -655,13 +652,13 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
                   ].map((prov) => (
                     <label
                       key={prov.key}
-                      className="min-h-11 flex items-center gap-2 cursor-pointer text-zinc-200 text-xs px-2.5 py-2 rounded-xl bg-white/[0.02] border border-white/[0.08] hover:bg-white/[0.05]"
+                      className="min-h-11 flex items-center gap-2 cursor-pointer text-[var(--text-primary)] text-xs px-3 py-2 rounded-xl bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)]"
                     >
                       <input
                         type="checkbox"
                         checked={selectedProviders.includes(prov.key)}
                         onChange={() => toggleProvider(prov.key)}
-                        className="w-4 h-4 rounded border-white/[0.15] bg-white/[0.05] accent-amber-400"
+                        className="w-4 h-4 rounded accent-[var(--accent-gold)]"
                       />
                       <span>{prov.label}</span>
                     </label>
@@ -670,189 +667,184 @@ export function TopicsPage({ onNavigateToMentions, onOpenAiWithQuery }: TopicsPa
               </div>
             </div>
 
-            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-4 border-t border-white/[0.08] text-xs">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-4 border-t border-[var(--border-subtle)] text-xs">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="min-h-11 px-4 py-2 rounded-xl border border-white/[0.12] text-zinc-200 hover:bg-white/[0.06] transition-colors font-medium cursor-pointer"
+                className="btn-ghost-surface min-h-11 px-4 font-semibold"
               >
                 Batal
               </button>
               <button
                 type="button"
-                disabled={!name.trim() || !includeKeywords.trim() || selectedProviders.length === 0 || createTopicMutation.isPending}
+                disabled={
+                  !name.trim() ||
+                  !includeKeywords.trim() ||
+                  selectedProviders.length === 0 ||
+                  createTopicMutation.isPending
+                }
                 onClick={() => createTopicMutation.mutate()}
-                className="min-h-11 px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-bold disabled:opacity-50 transition-colors shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
+                className="btn-contrast min-h-11 px-5 disabled:opacity-50"
               >
-                {createTopicMutation.isPending ? 'Menyimpan...' : 'Simpan & Aktifkan Otomatis'}
+                {createTopicMutation.isPending ? 'Menyimpan...' : 'Simpan & Aktifkan'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* AI Executive Intelligence Briefing Modal */}
+      {/* AI Topic Summary Modal */}
       {summaryTopic && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-0 sm:p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[var(--bg-backdrop)] backdrop-blur-xs p-0 sm:p-4">
           <div
             role="dialog"
             aria-modal="true"
-            aria-label="Ringkasan Eksekutif AI"
-            className="w-full max-w-2xl rounded-t-2xl sm:rounded-2xl border border-white/[0.12] bg-[#0d101a] p-5 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] space-y-4 sm:space-y-5 shadow-2xl max-h-[90dvh] overflow-y-auto overscroll-y-contain"
+            aria-label="Ringkasan Eksekutif Topik"
+            className="w-full max-w-2xl rounded-t-3xl sm:rounded-3xl border border-[var(--border-medium)] bg-[var(--bg-surface)] p-5 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] space-y-5 shadow-[var(--shadow-elevated)] max-h-[90dvh] overflow-y-auto overscroll-y-contain"
           >
-            
-            {/* Modal Header */}
-            <div className="flex items-start justify-between gap-2 border-b border-white/[0.08] pb-3.5 sm:pb-4">
-              <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-400 flex items-center justify-center shadow-xs shrink-0">
-                  <Sparkles className="w-4 h-4" aria-hidden="true" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                    <h2 className="font-editorial text-lg sm:text-xl font-medium text-white tracking-tight">
-                      Executive Intelligence Briefing
-                    </h2>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono-code font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                      SINTESIS AI
-                    </span>
-                  </div>
-                  <p className="text-xs text-zinc-400 font-sans-ui mt-0.5 truncate">
-                    Program: <strong className="text-white font-medium">{summaryTopic.name}</strong>
-                  </p>
-                </div>
+            <div className="flex items-start justify-between gap-3 border-b border-[var(--border-subtle)] pb-4">
+              <div className="min-w-0">
+                <h2 className="font-editorial text-xl font-medium text-[var(--text-primary)]">
+                  Ringkasan Eksekutif Topik
+                </h2>
+                <p className="text-xs text-[var(--text-secondary)] mt-0.5 truncate">
+                  Program: <strong className="text-[var(--text-primary)]">{summaryTopic.name}</strong>
+                </p>
               </div>
 
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   type="button"
-                  onClick={() => handleViewAiSummary(summaryTopic, true)}
+                  onClick={() => void handleViewAiSummary(summaryTopic, true)}
                   disabled={isSummaryLoading}
-                  aria-label="Muat ulang ringkasan AI"
-                  className="min-w-11 min-h-11 sm:min-w-9 sm:min-h-9 flex items-center justify-center text-zinc-300 hover:text-white rounded-xl hover:bg-white/[0.08] transition-colors"
-                  title="Perbarui ringkasan live"
+                  aria-label="Muat ulang ringkasan"
+                  className="min-w-10 min-h-10 flex items-center justify-center rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-elevated)]"
                 >
-                  <RefreshCw className={`w-4 h-4 ${isSummaryLoading ? 'animate-spin text-amber-400' : ''}`} aria-hidden="true" />
+                  <RefreshCw
+                    className={`w-4 h-4 ${isSummaryLoading ? 'animate-spin text-[var(--accent-gold-text)]' : ''}`}
+                    aria-hidden="true"
+                  />
                 </button>
                 <button
                   type="button"
                   onClick={() => setSummaryTopic(null)}
-                  aria-label="Tutup ringkasan AI"
-                  className="min-w-11 min-h-11 sm:min-w-9 sm:min-h-9 flex items-center justify-center text-zinc-300 hover:text-white rounded-xl hover:bg-white/[0.08] transition-colors"
+                  aria-label="Tutup ringkasan"
+                  className="min-w-10 min-h-10 flex items-center justify-center rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-elevated)]"
                 >
                   <X className="w-5 h-5" aria-hidden="true" />
                 </button>
               </div>
             </div>
 
-            {/* Modal Body */}
             {isSummaryLoading ? (
-              <div className="py-12 flex flex-col items-center justify-center gap-3 text-zinc-300 text-xs">
-                <Loader2 className="w-8 h-8 animate-spin text-amber-400" aria-hidden="true" />
-                <span>Sedang merangkum sebutan dan sentimen terkini...</span>
+              <div className="py-12 flex flex-col items-center justify-center gap-3 text-[var(--text-secondary)] text-xs">
+                <Loader2 className="w-7 h-7 animate-spin text-[var(--accent-gold-text)]" aria-hidden="true" />
+                <span>Merangkum sebutan dan arah sentimen terbaru...</span>
               </div>
             ) : summaryData ? (
               <div className="space-y-4 text-xs">
-                
-                {/* Meta Strip */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                  <div className="flex items-center gap-2">
-                    <span className="text-zinc-400">Total Sebutan Dianalisis:</span>
-                    <strong className="text-white font-mono-code font-tabular">{summaryData.mentions_analyzed}</strong>
+                <div className="surface-inset p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <span className="text-[var(--text-muted)]">Sebutan dianalisis: </span>
+                    <strong className="text-[var(--text-primary)] font-tabular">
+                      {summaryData.mentions_analyzed}
+                    </strong>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-zinc-400">Kecenderungan Sentimen:</span>
-                    <span className={`px-2 py-0.5 rounded-md uppercase font-bold text-[10px] ${
-                      summaryData.dominant_sentiment === 'positive' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                      summaryData.dominant_sentiment === 'negative' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' :
-                      'bg-zinc-800 text-zinc-300 border border-zinc-700'
-                    }`}>
+                    <span className="text-[var(--text-muted)]">Dominan:</span>
+                    <span
+                      className={`px-2 py-0.5 rounded-lg font-semibold capitalize border ${
+                        summaryData.dominant_sentiment === 'positive'
+                          ? 'bg-[var(--sentiment-pos-subtle)] text-[var(--sentiment-pos)] border-[var(--sentiment-pos-border)]'
+                          : summaryData.dominant_sentiment === 'negative'
+                            ? 'bg-[var(--sentiment-neg-subtle)] text-[var(--sentiment-neg)] border-[var(--sentiment-neg-border)]'
+                            : 'bg-[var(--sentiment-neu-subtle)] text-[var(--sentiment-neu)] border-[var(--sentiment-neu-border)]'
+                      }`}
+                    >
                       {summaryData.dominant_sentiment}
                     </span>
                   </div>
                 </div>
 
-                {/* Executive Overview */}
-                <div className="p-4 rounded-xl bg-[#131622] border border-white/[0.08] space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-amber-400 font-semibold uppercase text-[11px] tracking-wider">
-                    <FileText className="w-3.5 h-3.5" />
+                <div className="p-4 rounded-2xl bg-[var(--accent-gold-subtle)] border border-[var(--accent-gold-border)] space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-[var(--accent-gold-text)] font-semibold">
+                    <FileText className="w-3.5 h-3.5" aria-hidden="true" />
                     <span>Ringkasan Situasi Publik</span>
                   </div>
-                  <p className="text-[13px] text-zinc-200 leading-relaxed font-sans-ui">
+                  <p className="text-[13px] text-[var(--text-primary)] leading-relaxed">
                     {summaryData.executive_overview}
                   </p>
                 </div>
 
-                {/* Positive and Critical Themes */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {/* Positives */}
-                  <div className="p-3.5 rounded-xl bg-emerald-950/20 border border-emerald-800/20 space-y-2">
-                    <div className="flex items-center gap-1.5 text-emerald-400 font-semibold text-[11px] uppercase">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  <div className="p-4 rounded-2xl bg-[var(--sentiment-pos-subtle)] border border-[var(--sentiment-pos-border)] space-y-2">
+                    <div className="flex items-center gap-1.5 text-[var(--sentiment-pos)] font-semibold">
+                      <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
                       <span>Sorotan Positif Utama</span>
                     </div>
-                    <ul className="space-y-1.5 text-zinc-300">
+                    <ul className="space-y-1.5 text-[var(--text-primary)]">
                       {summaryData.key_positive_themes && summaryData.key_positive_themes.length > 0 ? (
                         summaryData.key_positive_themes.map((theme, i) => (
                           <li key={i} className="flex items-start gap-2">
-                            <span className="text-emerald-400 mt-0.5">•</span>
+                            <span className="text-[var(--sentiment-pos)] mt-0.5">&bull;</span>
                             <span>{theme}</span>
                           </li>
                         ))
                       ) : (
-                        <li className="text-zinc-500 italic">Tidak ada tema positif menonjol.</li>
+                        <li className="text-[var(--text-muted)] italic">Tidak ada tema positif menonjol.</li>
                       )}
                     </ul>
                   </div>
 
-                  {/* Critical Issues */}
-                  <div className="p-3.5 rounded-xl bg-rose-950/20 border border-rose-800/20 space-y-2">
-                    <div className="flex items-center gap-1.5 text-rose-400 font-semibold text-[11px] uppercase">
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      <span>Kekhawatiran / Isu Kritis</span>
+                  <div className="p-4 rounded-2xl bg-[var(--sentiment-neg-subtle)] border border-[var(--sentiment-neg-border)] space-y-2">
+                    <div className="flex items-center gap-1.5 text-[var(--sentiment-neg)] font-semibold">
+                      <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
+                      <span>Kekhawatiran &amp; Isu Kritis</span>
                     </div>
-                    <ul className="space-y-1.5 text-zinc-300">
+                    <ul className="space-y-1.5 text-[var(--text-primary)]">
                       {summaryData.key_critical_themes && summaryData.key_critical_themes.length > 0 ? (
                         summaryData.key_critical_themes.map((theme, i) => (
                           <li key={i} className="flex items-start gap-2">
-                            <span className="text-rose-400 mt-0.5">•</span>
+                            <span className="text-[var(--sentiment-neg)] mt-0.5">&bull;</span>
                             <span>{theme}</span>
                           </li>
                         ))
                       ) : (
-                        <li className="text-zinc-500 italic">Tidak ada isu kritis menonjol.</li>
+                        <li className="text-[var(--text-muted)] italic">Tidak ada isu kritis menonjol.</li>
                       )}
                     </ul>
                   </div>
                 </div>
 
-                {/* Recommendations */}
-                {summaryData.strategic_recommendations && summaryData.strategic_recommendations.length > 0 && (
-                  <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
-                    <div className="font-semibold text-zinc-300 text-[11px] uppercase tracking-wider">
-                      Rekomendasi Respons &amp; Kebijakan Komunikasi
+                {summaryData.strategic_recommendations &&
+                  summaryData.strategic_recommendations.length > 0 && (
+                    <div className="surface-inset p-4 space-y-2">
+                      <div className="font-semibold text-[var(--text-primary)]">
+                        Rekomendasi Respons Komunikasi
+                      </div>
+                      <ul className="space-y-1.5 text-[var(--text-secondary)]">
+                        {summaryData.strategic_recommendations.map((rec, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="text-[var(--accent-gold-text)] mt-0.5">&bull;</span>
+                            <span>{rec}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <ul className="space-y-1 text-zinc-300">
-                      {summaryData.strategic_recommendations.map((rec, i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <span className="text-amber-400 mt-0.5">→</span>
-                          <span>{rec}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                  )}
               </div>
             ) : null}
 
-            {/* Modal Footer */}
-            <div className="flex items-center justify-between pt-3 border-t border-white/[0.08] text-xs">
-              <span className="text-zinc-500 font-mono-code text-[11px]">
-                {summaryData?.cached_at ? `Diperbarui: ${new Date(summaryData.cached_at).toLocaleTimeString()}` : ''}
+            <div className="flex items-center justify-between pt-3 border-t border-[var(--border-subtle)] text-xs">
+              <span className="text-[var(--text-muted)] font-mono-code font-tabular">
+                {summaryData?.cached_at
+                  ? `Diperbarui: ${new Date(summaryData.cached_at).toLocaleTimeString('id-ID')}`
+                  : ''}
               </span>
               <button
                 type="button"
                 onClick={() => setSummaryTopic(null)}
-                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium transition-colors cursor-pointer"
+                className="btn-ghost-surface min-h-10 px-4 font-semibold"
               >
                 Tutup
               </button>

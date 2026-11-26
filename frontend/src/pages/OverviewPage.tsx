@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { api, DashboardOverview, TimelinePoint, MentionItem } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { ExecutiveBriefingCard } from '@/components/dashboard/ExecutiveBriefingCard';
-import { BreakingDispatchMarquee } from '@/components/dashboard/BreakingDispatchMarquee';
 import { TimeseriesChart } from '@/components/dashboard/TimeseriesChart';
 import { SentimentDistribution } from '@/components/dashboard/SentimentDistribution';
 import { PlatformBreakdown } from '@/components/dashboard/PlatformBreakdown';
@@ -11,7 +10,7 @@ import { RisingTopicsCard } from '@/components/dashboard/RisingTopicsCard';
 import { TopKeywordsCard } from '@/components/dashboard/TopKeywordsCard';
 import { LiveEvidenceRail } from '@/components/dashboard/LiveEvidenceRail';
 import { MentionInspectorDrawer } from '@/components/mentions/MentionInspectorDrawer';
-import { AlertCircle, RefreshCw, Filter, Flame, ShieldAlert, Layers } from 'lucide-react';
+import { AlertCircle, RefreshCw, Flame, ShieldAlert, Layers } from 'lucide-react';
 
 interface OverviewPageProps {
   days: number;
@@ -35,8 +34,13 @@ export function OverviewPage({
   const [activeLens, setActiveLens] = useState<OperationalLens>('all');
   const [selectedMention, setSelectedMention] = useState<MentionItem | null>(null);
 
-  // 1. Fetch Overview KPIs
-  const { data: overview, isLoading: isOverviewLoading, error: overviewError, refetch: refetchOverview } = useQuery({
+  // 1. Overview KPIs & Daily Briefing
+  const {
+    data: overview,
+    isLoading: isOverviewLoading,
+    error: overviewError,
+    refetch: refetchOverview,
+  } = useQuery({
     queryKey: ['dashboard-overview', workspaceId, days, organicOnly],
     enabled: Boolean(workspaceId),
     queryFn: async () => {
@@ -47,7 +51,7 @@ export function OverviewPage({
     },
   });
 
-  // 2. Fetch Timeseries
+  // 2. Timeseries
   const { data: timeseriesData, isLoading: isTimeseriesLoading } = useQuery({
     queryKey: ['dashboard-timeseries', workspaceId, days, organicOnly],
     enabled: Boolean(workspaceId),
@@ -59,7 +63,7 @@ export function OverviewPage({
     },
   });
 
-  // 3. Fetch Trends
+  // 3. Trends & Keywords
   const { data: trendsData, isLoading: isTrendsLoading } = useQuery({
     queryKey: ['trends', workspaceId],
     enabled: Boolean(workspaceId),
@@ -71,7 +75,7 @@ export function OverviewPage({
     },
   });
 
-  // 4. Fetch Recent Mentions (lightweight: skip expensive near-duplicate count)
+  // 4. Recent Mentions
   const { data: recentMentions, isLoading: isMentionsLoading } = useQuery({
     queryKey: ['recent-mentions', workspaceId, organicOnly],
     enabled: Boolean(workspaceId),
@@ -90,28 +94,23 @@ export function OverviewPage({
 
   if (isOverviewLoading) {
     return (
-      <div className="space-y-6">
-        {/* Marquee skeleton */}
-        <div className="h-10 bg-white/[0.03] border border-white/[0.06] rounded-xl animate-pulse" />
-
-        {/* Hero Briefing Card skeleton */}
-        <div className="h-64 bg-white/[0.03] border border-white/[0.06] rounded-2xl animate-pulse" />
-        
-        {/* Scope bar skeleton */}
-        <div className="h-12 bg-white/[0.02] border border-white/[0.06] rounded-xl animate-pulse" />
-
-        {/* 8:4 Grid skeleton */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-          <div className="xl:col-span-8 space-y-6">
-            <div className="h-84 bg-white/[0.03] border border-white/[0.06] rounded-2xl animate-pulse" />
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              <div className="lg:col-span-7 h-64 bg-white/[0.03] border border-white/[0.06] rounded-2xl animate-pulse" />
-              <div className="lg:col-span-5 h-64 bg-white/[0.03] border border-white/[0.06] rounded-2xl animate-pulse" />
+      <div className="space-y-6" role="status" aria-busy="true" aria-label="Memuat ringkasan intelijen">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="lg:col-span-7 h-80 surface-card animate-pulse" />
+          <div className="lg:col-span-5 h-80 surface-card animate-pulse" />
+        </div>
+        <div className="h-12 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] animate-pulse" />
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+          <div className="xl:col-span-8 space-y-5">
+            <div className="h-84 surface-card animate-pulse" />
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+              <div className="md:col-span-7 h-72 surface-card animate-pulse" />
+              <div className="md:col-span-5 h-72 surface-card animate-pulse" />
             </div>
           </div>
-          <div className="xl:col-span-4 space-y-6">
-            <div className="h-[520px] bg-white/[0.03] border border-white/[0.06] rounded-2xl animate-pulse" />
-            <div className="h-56 bg-white/[0.03] border border-white/[0.06] rounded-2xl animate-pulse" />
+          <div className="xl:col-span-4 space-y-5">
+            <div className="h-[520px] surface-card animate-pulse" />
+            <div className="h-52 surface-card animate-pulse" />
           </div>
         </div>
       </div>
@@ -120,47 +119,59 @@ export function OverviewPage({
 
   if (overviewError || !overview) {
     return (
-      <div className="p-8 text-center border border-rose-500/20 rounded-2xl bg-rose-500/5 text-rose-300 max-w-lg mx-auto my-12">
-        <div className="w-12 h-12 rounded-full bg-rose-500/10 text-rose-400 flex items-center justify-center mx-auto mb-3">
-          <AlertCircle className="w-6 h-6" />
+      <div
+        role="alert"
+        className="surface-card p-8 text-center max-w-lg mx-auto my-12 space-y-4 border-[var(--sentiment-neg-border)]"
+      >
+        <div className="w-12 h-12 rounded-2xl bg-[var(--sentiment-neg-subtle)] text-[var(--sentiment-neg)] flex items-center justify-center mx-auto">
+          <AlertCircle className="w-6 h-6" aria-hidden="true" />
         </div>
-        <h3 className="font-semibold text-base text-white mb-1 font-sans-ui">Gagal Memuat Ringkasan Analitik</h3>
-        <p className="text-xs text-zinc-400 mb-4 font-sans-ui">
-          Terjadi kendala saat menghubungkan ke server data. Pastikan backend server aktif dan database terhubung.
-        </p>
+        <div className="space-y-1.5">
+          <h1 className="font-editorial text-xl font-medium text-[var(--text-primary)]">
+            Ringkasan Analitik Tidak Dapat Dimuat
+          </h1>
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
+            Koneksi ke server data terputus atau belum merespons. Pastikan layanan API backend aktif lalu muat ulang data.
+          </p>
+        </div>
         <button
-          onClick={() => refetchOverview()}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-semibold transition-colors"
+          type="button"
+          onClick={() => void refetchOverview()}
+          className="btn-contrast min-h-11 px-5 text-xs inline-flex items-center gap-2"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>Coba Muat Ulang</span>
+          <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
+          <span>Muat Ulang Data</span>
         </button>
       </div>
     );
   }
 
-  // Filter topics based on active operational lens
   const allTopics = trendsData?.rising_topics || [];
-  const filteredTopics = activeLens === 'critical'
-    ? allTopics.filter((t: any) => (t.trend_score || 0) > 70)
-    : allTopics;
+  const filteredTopics =
+    activeLens === 'critical'
+      ? allTopics.filter((t: { trend_score?: number }) => (t.trend_score || 0) > 70)
+      : allTopics;
 
-  // Filter mentions based on active lens
   const rawMentions = recentMentions || [];
-  const displayMentions = activeLens === 'critical'
-    ? rawMentions.filter((m) => m.sentiment?.label === 'negative')
-    : rawMentions;
+  const displayMentions =
+    activeLens === 'critical'
+      ? rawMentions.filter((m) => m.sentiment?.label === 'negative')
+      : rawMentions;
+
+  const lensItems: Array<{
+    id: OperationalLens;
+    label: string;
+    shortLabel: string;
+    icon: React.ComponentType<{ className?: string }>;
+  }> = [
+    { id: 'all', label: 'Semua Isu', shortLabel: 'Semua', icon: Layers },
+    { id: 'rising', label: 'Tren Akselerasi', shortLabel: 'Akselerasi', icon: Flame },
+    { id: 'critical', label: 'Fokus Kritis', shortLabel: 'Kritis', icon: ShieldAlert },
+  ];
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* 1. Breaking Dispatch Marquee (Live Feed Ticker) */}
-      <BreakingDispatchMarquee
-        mentions={rawMentions}
-        onSelectMention={(m) => setSelectedMention(m)}
-        onAskAi={(query) => onOpenAiWithQuery?.(query)}
-      />
-
-      {/* 2. Master Executive Briefing Card (Editorial Bento Anchor) */}
+    <div className="space-y-6 animate-surface-enter">
+      {/* 1. Split Executive Hero & Factual Chronology */}
       <ExecutiveBriefingCard
         totalMentions={overview.kpis.total_mentions}
         changePercent={overview.kpis.mentions_change_percent}
@@ -184,84 +195,58 @@ export function OverviewPage({
         onAskAi={(query, topicId) => onOpenAiWithQuery?.(query, topicId)}
       />
 
-      {/* 3. Interactive Operational Lens & Status Strip */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3 p-3 bg-white/[0.02] border border-white/[0.08] rounded-xl text-xs">
-        {/* Left: Operational Lenses (Clean 3-col fit on phone, inline wrap on sm+) */}
-        <div className="grid grid-cols-3 sm:flex items-center gap-1.5 w-full md:w-auto">
-          <span className="hidden sm:flex text-zinc-400 font-medium mr-1.5 items-center gap-1.5 font-sans-ui shrink-0">
-            <Filter className="w-3.5 h-3.5 text-zinc-400" aria-hidden="true" />
-            <span>Lensa Analitik:</span>
-          </span>
-          <button
-            type="button"
-            onClick={() => setActiveLens('all')}
-            aria-pressed={activeLens === 'all'}
-            className={`min-h-11 sm:min-h-9 px-2 sm:px-3 py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 font-sans-ui ${
-              activeLens === 'all'
-                ? 'bg-white text-zinc-950 font-bold shadow-xs'
-                : 'text-zinc-300 hover:text-white hover:bg-white/[0.04]'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-            <span className="sm:hidden truncate">Semua</span>
-            <span className="hidden sm:inline">Semua Isu</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveLens('rising')}
-            aria-pressed={activeLens === 'rising'}
-            className={`min-h-11 sm:min-h-9 px-2 sm:px-3 py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 font-sans-ui ${
-              activeLens === 'rising'
-                ? 'bg-white text-zinc-950 font-bold shadow-xs'
-                : 'text-zinc-300 hover:text-white hover:bg-white/[0.04]'
-            }`}
-          >
-            <Flame className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
-            <span className="sm:hidden truncate">Akselerasi</span>
-            <span className="hidden sm:inline">Tren Akselerasi</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveLens('critical')}
-            aria-pressed={activeLens === 'critical'}
-            className={`min-h-11 sm:min-h-9 px-2 sm:px-3 py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 font-sans-ui ${
-              activeLens === 'critical'
-                ? 'bg-rose-500 text-white font-bold shadow-xs'
-                : 'text-zinc-300 hover:text-rose-400 hover:bg-white/[0.04]'
-            }`}
-          >
-            <ShieldAlert className={`w-3.5 h-3.5 shrink-0 ${activeLens === 'critical' ? 'text-white' : 'text-rose-400'}`} aria-hidden="true" />
-            <span className="sm:hidden truncate">Kritis</span>
-            <span className="hidden sm:inline">Fokus Kritis</span>
-          </button>
+      {/* 2. Operational Lens Filter Strip */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+        <div
+          role="group"
+          aria-label="Filter lensa analitik"
+          className="inline-flex items-center p-1 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] w-full sm:w-auto"
+        >
+          {lensItems.map((lens) => {
+            const Icon = lens.icon;
+            const active = activeLens === lens.id;
+            const isCrit = lens.id === 'critical';
+            return (
+              <button
+                key={lens.id}
+                type="button"
+                onClick={() => setActiveLens(lens.id)}
+                aria-pressed={active}
+                className={`min-h-10 sm:min-h-9 flex-1 sm:flex-none px-3.5 sm:px-4 rounded-full text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors ${
+                  active
+                    ? isCrit
+                      ? 'bg-[var(--sentiment-neg-bar)] text-white'
+                      : 'bg-[var(--action-contrast-bg)] text-[var(--action-contrast-fg)]'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                <span className="sm:hidden">{lens.shortLabel}</span>
+                <span className="hidden sm:inline">{lens.label}</span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Right: Realtime Ingestion Pulse */}
-        <div className="flex items-center gap-2 text-zinc-400 text-[11px] font-mono-code shrink-0">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-          <span className="font-tabular">
-            {overview.kpis.total_mentions.toLocaleString('id-ID')} berita terindeks Google News ID
-          </span>
-        </div>
+        <p className="text-xs text-[var(--text-muted)] font-tabular">
+          Menampilkan <span className="font-semibold text-[var(--text-primary)]">{overview.kpis.total_mentions.toLocaleString('id-ID')}</span> sebutan terindeks dalam rentang {days === 1 ? '24 jam' : `${days} hari`} terakhir
+        </p>
       </div>
 
-      {/* 4. Three-State Responsive Intelligence Grid (1 col mobile -> 2 col tablet -> 8:4 desktop) */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6 items-start">
-        
-        {/* LEFT / MAIN ANALYTICAL STAGE (8 COLUMNS ON XL) */}
-        <div className="xl:col-span-8 space-y-4 sm:space-y-6 min-w-0">
-          {/* Primary Timeseries Telemetry Studio */}
+      {/* 3. Asymmetric Analytical Workspace (8:4 on xl, 2-col tablet, 1-col phone) */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 sm:gap-6 items-start">
+        {/* Left Main Stage */}
+        <div className="xl:col-span-8 space-y-5 sm:space-y-6 min-w-0">
           {isTimeseriesLoading ? (
-            <div className="h-84 bg-white/[0.03] border border-white/[0.06] rounded-2xl animate-pulse" />
+            <div className="h-84 surface-card animate-pulse" aria-busy="true" />
           ) : (
             <TimeseriesChart timeline={timeseriesData?.timeline || []} />
           )}
 
-          {/* Asymmetric Intelligence Drivers (Topics 7 cols : Keywords 5 cols from md+) */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 sm:gap-6 items-start">
             <div className="md:col-span-7 min-w-0">
               {isTrendsLoading ? (
-                <div className="h-64 bg-white/[0.03] border border-white/[0.06] rounded-2xl animate-pulse" />
+                <div className="h-72 surface-card animate-pulse" aria-busy="true" />
               ) : (
                 <RisingTopicsCard
                   topics={filteredTopics}
@@ -271,7 +256,7 @@ export function OverviewPage({
             </div>
             <div className="md:col-span-5 min-w-0">
               {isTrendsLoading ? (
-                <div className="h-64 bg-white/[0.03] border border-white/[0.06] rounded-2xl animate-pulse" />
+                <div className="h-72 surface-card animate-pulse" aria-busy="true" />
               ) : (
                 <TopKeywordsCard
                   keywords={trendsData?.top_keywords || []}
@@ -282,9 +267,8 @@ export function OverviewPage({
           </div>
         </div>
 
-        {/* RIGHT / TACTICAL RAIL (4 COLUMNS ON XL, 2-COL SUBGRID ON MD-LG) */}
-        <div className="xl:col-span-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-4 sm:gap-6 min-w-0">
-          {/* Live Real-time Evidence Wire */}
+        {/* Right Tactical Rail */}
+        <div className="xl:col-span-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-5 sm:gap-6 min-w-0">
           <div className="md:col-span-2 xl:col-span-1 min-w-0">
             <LiveEvidenceRail
               mentions={displayMentions}
@@ -295,7 +279,6 @@ export function OverviewPage({
             />
           </div>
 
-          {/* Sentiment Polarization Matrix */}
           <div className="min-w-0">
             <SentimentDistribution
               positive={overview.sentiment.positive}
@@ -305,12 +288,10 @@ export function OverviewPage({
             />
           </div>
 
-          {/* Platform Ingestion Share */}
           <div className="min-w-0">
             <PlatformBreakdown platforms={overview.platform_breakdown} />
           </div>
         </div>
-
       </div>
 
       {/* Deep-dive Mention Inspector Drawer */}

@@ -3,14 +3,10 @@ import {
   TrendingDown,
   ShieldCheck,
   AlertTriangle,
-  Flame,
-  Radio,
-  Activity,
-  CalendarClock,
   Clock,
   ExternalLink,
-  Zap,
-  Sparkles,
+  MessageSquareText,
+  ArrowUpRight,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -21,6 +17,7 @@ import {
   Tooltip,
 } from 'recharts';
 import { DailyBriefingInfo } from '@/lib/api';
+import { useTheme } from '@/hooks/useTheme';
 
 interface ExecutiveBriefingCardProps {
   totalMentions: number;
@@ -47,6 +44,7 @@ export function ExecutiveBriefingCard({
   onSelectEventMention,
   onAskAi,
 }: ExecutiveBriefingCardProps) {
+  const { chartTokens } = useTheme();
   const isPositiveGrowth = changePercent >= 0;
   const isCriticalNegative = negativeSharePercent > 25;
   const totalSentiment = positiveCount + neutralCount + negativeCount;
@@ -57,418 +55,396 @@ export function ExecutiveBriefingCard({
 
   const velocityData = dailyBriefing?.hourly_velocity || [];
   const events = dailyBriefing?.chronological_events || [];
+  const topProgram = dailyBriefing?.top_programs?.[0];
+
+  const peakVelocity = velocityData.reduce<{ time_label: string; count: number } | null>(
+    (max, item) => (!max || item.count > max.count ? item : max),
+    null
+  );
+
+  const handlePrimaryHeroAction = () => {
+    if (!onAskAi) return;
+    if (topProgram) {
+      onAskAi(
+        `Analisis mendalam persepsi publik, isu kunci, dan dinamika sentimen pada program prioritas ${topProgram.name}`,
+        topProgram.id
+      );
+      return;
+    }
+    onAskAi('Berikan sintesis eksekutif terbaru atas dinamika wacana publik dan isu yang perlu diprioritaskan hari ini.');
+  };
 
   return (
-    <div className="bento-card p-4 sm:p-6 lg:p-8 bg-[#0c0f16] relative overflow-hidden">
-      {/* Ambient Telemetry Backdrop */}
-      <div
-        aria-hidden="true"
-        className="absolute right-0 top-0 bottom-0 w-full md:w-3/4 bg-cover bg-right md:bg-center pointer-events-none opacity-30 sm:opacity-35"
-        style={{ backgroundImage: `url('/brand/ambient-backdrop.webp')` }}
-      />
-      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-[#0c0f16] via-[#0c0f16]/85 to-transparent pointer-events-none" />
+    <section aria-label="Ringkasan eksekutif intelijen" className="space-y-5">
+      {/* Split Hero Grid: Left Executive Focus (7 cols) + Right Activity & Polarity Studio (5 cols) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        {/* Left Focal Card (Ref 1 Inspired Hero + Integrated Clean 4-KPI Dock) */}
+        <div className="lg:col-span-7 surface-hero p-5 sm:p-7 lg:p-8 relative overflow-hidden flex flex-col justify-between gap-6">
+          {/* Subtle Crest Watermark */}
+          <img
+            src="/brand/crest-watermark.webp"
+            alt=""
+            aria-hidden="true"
+            width={240}
+            height={240}
+            loading="lazy"
+            decoding="async"
+            className="absolute -right-8 -top-8 w-52 h-52 sm:w-60 sm:h-60 object-cover opacity-[0.045] rounded-full pointer-events-none select-none"
+          />
 
-      {/* Heraldic Watermark Seal in Background */}
-      <img
-        src="/brand/crest-watermark.webp"
-        alt=""
-        aria-hidden="true"
-        width={288}
-        height={288}
-        loading="lazy"
-        decoding="async"
-        className="absolute -right-8 -bottom-10 w-52 h-52 sm:w-72 sm:h-72 object-cover opacity-[0.07] rounded-full pointer-events-none select-none"
-      />
-
-      {/* Header Eyebrow & Status */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 mb-4 sm:mb-5 relative z-10">
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center shrink-0">
-            <img
-              src="/brand/trinetra-logo.svg"
-              alt="TRINETRA Emblem"
-              width={40}
-              height={40}
-              className="w-full h-full object-contain filter drop-shadow-[0_0_12px_rgba(212,175,55,0.45)]"
-            />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center flex-wrap gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10.5px] sm:text-[11px] font-mono-code font-semibold tracking-wider uppercase">
-                <Radio className="w-3 h-3 text-amber-400 shrink-0" aria-hidden="true" />
-                <span>Executive Intelligence Briefing</span>
+          <div className="relative z-10 space-y-4">
+            {/* Real Operational Status Row */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5">
+              <span
+                className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-semibold border ${
+                  isCriticalNegative
+                    ? 'bg-[var(--sentiment-neg-subtle)] border-[var(--sentiment-neg-border)] text-[var(--sentiment-neg)]'
+                    : 'bg-[var(--sentiment-pos-subtle)] border-[var(--sentiment-pos-border)] text-[var(--sentiment-pos)]'
+                }`}
+              >
+                {isCriticalNegative ? (
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                ) : (
+                  <ShieldCheck className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                )}
+                <span>{isCriticalNegative ? 'Perlu Atensi: Sentimen Negatif Tinggi' : 'Kondisi Wacana Stabil Kondusif'}</span>
               </span>
-              <span className="text-[11px] text-zinc-400 font-sans-ui hidden md:inline">
-                Sintesis Pemantauan 17 Program Prioritas Nasional
-              </span>
-            </div>
-            <div className="text-[10px] text-zinc-400 font-mono-code mt-0.5 truncate">
-              DATA TERVERIFIKASI &bull; TRINETRA SYSTEM
-            </div>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2 text-xs">
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono-code text-[11px] font-semibold border ${
-            isCriticalNegative
-              ? 'bg-rose-500/15 border-rose-500/30 text-rose-300'
-              : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
-          }`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${isCriticalNegative ? 'bg-rose-400' : 'bg-emerald-400'}`} />
-            <span>{isCriticalNegative ? 'Status: Risiko Kritis' : 'Status: Stabil Kondusif'}</span>
-          </span>
-        </div>
-      </div>
-
-      {/* Executive Daily Briefing (00:00 Kemarin s/d 09:00 WIB Hari Ini) */}
-      {dailyBriefing && (
-        <div className="relative z-10 mb-4 sm:mb-6 p-3.5 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-950/30 via-[#12151c] to-zinc-900/40 border border-amber-500/25 shadow-lg shadow-black/40 space-y-3.5 sm:space-y-4">
-          {/* Top Row: Window Label & Quick KPIs */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 pb-3 border-b border-white/10">
-            <div className="flex items-start sm:items-center gap-2.5 min-w-0">
-              <div className="p-2 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30 shrink-0">
-                <CalendarClock className="w-4 h-4" aria-hidden="true" />
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
-                <span className="text-xs font-bold text-white tracking-wide uppercase">
-                  Ringkasan Harian Intelijen
-                </span>
-                <span className="text-[11px] text-amber-300 font-mono-code px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+              {dailyBriefing?.window_label && (
+                <span className="text-xs text-[var(--text-muted)] font-mono-code font-tabular">
                   {dailyBriefing.window_label}
                 </span>
-              </div>
+              )}
             </div>
 
-            <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
-              <span className="text-xs text-zinc-400">Total Sebutan:</span>
-              <span className="text-xs sm:text-sm font-bold font-mono-code font-tabular text-amber-300 px-2.5 py-0.5 rounded-lg bg-amber-400/10 border border-amber-400/25">
-                {dailyBriefing.total_mentions.toLocaleString('id-ID')} sebutan
-              </span>
+            {/* Editorial Headline & Synthesis */}
+            <div className="space-y-2.5">
+              <h1 className="font-editorial text-2xl sm:text-[32px] lg:text-[36px] font-medium tracking-tight text-[var(--text-primary)] leading-[1.15] text-balance">
+                Ringkasan Situasi Wacana Publik
+              </h1>
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed max-w-[66ch] text-pretty">
+                {dailyBriefing?.ai_summary ||
+                  'Pemantauan percakapan media nasional dan kanal sosial terhubung sedang aktif untuk memetakan arah sentimen dan lonjakan isu prioritas.'}
+              </p>
+            </div>
+
+            {/* Direct Action Row */}
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              {onAskAi && (
+                <button
+                  type="button"
+                  onClick={handlePrimaryHeroAction}
+                  className="btn-contrast min-h-11 px-5 text-xs sm:text-[13px] inline-flex items-center gap-2"
+                >
+                  <MessageSquareText className="w-4 h-4 shrink-0" aria-hidden="true" />
+                  <span>{topProgram ? `Bedah Isu: ${topProgram.name}` : 'Bedah Ringkasan dengan AI'}</span>
+                </button>
+              )}
+
+              {topProgram && (
+                <span className="text-xs text-[var(--text-muted)] font-tabular">
+                  Sorotan terbanyak: <strong className="text-[var(--text-primary)]">{topProgram.mentions.toLocaleString('id-ID')}</strong> sebutan
+                </span>
+              )}
             </div>
           </div>
 
-          {/* AI-Generated Daily Executive Synthesis */}
-          {dailyBriefing.ai_summary && (
-            <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-r from-amber-950/25 via-zinc-900/50 to-black/40 border border-amber-500/20 relative overflow-hidden shadow-sm">
-              <div className="flex items-center gap-2 mb-1.5 text-amber-300 text-xs font-bold tracking-wide uppercase font-mono-code">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
-                <span>Sintesis Intelijen AI (33 Jam)</span>
-              </div>
-              <p className="text-[12.5px] sm:text-[13px] text-zinc-200 leading-relaxed font-sans-ui text-pretty">
-                {dailyBriefing.ai_summary}
-              </p>
-            </div>
-          )}
-
-          {/* Grid: Hourly Velocity Chart (Left) & Sentiment Barometer (Right) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-5 items-center">
-            {/* Left: Hourly Velocity Curve */}
-            <div className="lg:col-span-7 p-3 rounded-xl bg-black/40 border border-white/[0.08] space-y-2 min-w-0">
-              <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
-                <span className="text-[11px] font-semibold text-zinc-300 uppercase tracking-wider font-mono-code flex items-center gap-1.5">
-                  <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
-                  <span>Kurva Aktivitas Jam-ke-Jam (33 Jam)</span>
-                </span>
-                <span className="text-[10px] text-zinc-400 font-mono-code">
-                  Puncak sebutan terpetakan
-                </span>
-              </div>
-
-              {velocityData.length > 0 ? (
-                <div className="h-28 w-full pt-1">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={velocityData} margin={{ top: 5, right: 16, left: -24, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="velocityGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#d4af37" stopOpacity={0.55} />
-                          <stop offset="95%" stopColor="#d4af37" stopOpacity={0.0} />
-                        </linearGradient>
-                      </defs>
-                      <XAxis
-                        dataKey="time_label"
-                        tick={{ fill: '#a1a1aa', fontSize: 9 }}
-                        tickLine={false}
-                        axisLine={false}
-                        interval="preserveStartEnd"
-                        minTickGap={22}
-                      />
-                      <YAxis
-                        tick={{ fill: '#a1a1aa', fontSize: 9 }}
-                        tickLine={false}
-                        axisLine={false}
-                        allowDecimals={false}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#0c0e14',
-                          borderColor: 'rgba(255,255,255,0.15)',
-                          borderRadius: '8px',
-                          fontSize: '11px',
-                          color: '#fff',
-                        }}
-                        formatter={(val: any) => [`${val} sebutan`, 'Volume']}
-                        labelStyle={{ color: '#e6ca65', fontWeight: 600 }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="count"
-                        stroke="#d4af37"
-                        strokeWidth={2}
-                        fillOpacity={1}
-                        fill="url(#velocityGradient)"
-                        isAnimationActive={false}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+          {/* Integrated Ref-1 Style 4-KPI Dock (Flat, Clean, No Nested Box Clutter) */}
+          <div className="relative z-10 surface-inset p-4 sm:p-5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-5">
+              {/* KPI 1 */}
+              <div className="min-w-0 space-y-1">
+                <div className="text-2xl sm:text-[26px] font-bold text-[var(--text-primary)] font-tabular tracking-tight leading-none">
+                  {totalMentions.toLocaleString('id-ID')}
                 </div>
-              ) : (
-                <div className="h-24 flex items-center justify-center text-xs text-zinc-400 font-mono-code">
-                  Menunggu data sebutan periode ini...
+                <div className="text-xs text-[var(--text-secondary)] font-medium">Total Sebutan</div>
+                <div className="flex items-center gap-1 text-[11px] font-semibold font-tabular pt-0.5">
+                  {isPositiveGrowth ? (
+                    <TrendingUp className="w-3 h-3 text-[var(--sentiment-pos)] shrink-0" aria-hidden="true" />
+                  ) : (
+                    <TrendingDown className="w-3 h-3 text-[var(--sentiment-neg)] shrink-0" aria-hidden="true" />
+                  )}
+                  <span className={isPositiveGrowth ? 'text-[var(--sentiment-pos)]' : 'text-[var(--sentiment-neg)]'}>
+                    {isPositiveGrowth ? '+' : ''}
+                    {changePercent}%
+                  </span>
+                </div>
+              </div>
+
+              {/* KPI 2 */}
+              <div className="min-w-0 space-y-1 sm:border-l sm:border-[var(--border-subtle)] sm:pl-4">
+                <div className="text-2xl sm:text-[26px] font-bold text-[var(--text-primary)] font-tabular tracking-tight leading-none">
+                  {isPositiveGrowth ? `+${changePercent}%` : `${changePercent}%`}
+                </div>
+                <div className="text-xs text-[var(--text-secondary)] font-medium">Laju Volume</div>
+                <div className="text-[11px] text-[var(--text-muted)] pt-0.5 truncate">
+                  {isPositiveGrowth ? 'Eskalasi aktif' : 'Volume stabil'}
+                </div>
+              </div>
+
+              {/* KPI 3 */}
+              <div className="min-w-0 space-y-1 sm:border-l sm:border-[var(--border-subtle)] sm:pl-4">
+                <div
+                  className={`text-2xl sm:text-[26px] font-bold font-tabular tracking-tight leading-none ${
+                    isCriticalNegative ? 'text-[var(--sentiment-neg)]' : 'text-[var(--text-primary)]'
+                  }`}
+                >
+                  {negativeSharePercent}%
+                </div>
+                <div className="text-xs text-[var(--text-secondary)] font-medium">Porsi Negatif</div>
+                <div className="w-full h-1 rounded-full bg-[var(--border-subtle)] overflow-hidden mt-1.5">
+                  <div
+                    className={`h-full rounded-full ${
+                      isCriticalNegative ? 'bg-[var(--sentiment-neg-bar)]' : 'bg-[var(--accent-gold)]'
+                    }`}
+                    style={{ width: `${Math.min(100, Math.max(4, negativeSharePercent))}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* KPI 4 */}
+              <div className="min-w-0 space-y-1 sm:border-l sm:border-[var(--border-subtle)] sm:pl-4">
+                <div className="text-2xl sm:text-[26px] font-bold text-[var(--text-primary)] font-tabular tracking-tight leading-none">
+                  {risingTopicsCount}
+                </div>
+                <div className="text-xs text-[var(--text-secondary)] font-medium">Topik Lonjakan</div>
+                <div className="text-[11px] text-[var(--accent-gold-text)] font-medium pt-0.5 truncate">
+                  Isu berakselerasi
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Companion Studio Card: Smooth 33h Velocity Curve + Unified Sentiment Barometer */}
+        <div className="lg:col-span-5 surface-card p-5 sm:p-6 flex flex-col justify-between gap-5">
+          {/* Top: Hourly Activity Curve */}
+          <div className="space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-sm sm:text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
+                  Aktivitas Percakapan 33 Jam Terakhir
+                </h2>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                  {dailyBriefing
+                    ? `${dailyBriefing.total_mentions.toLocaleString('id-ID')} sebutan terekam per jam`
+                    : 'Distribusi intensitas percakapan per jam'}
+                </p>
+              </div>
+
+              {peakVelocity && (
+                <div className="px-2.5 py-1 rounded-full bg-[var(--action-contrast-bg)] text-[var(--action-contrast-fg)] text-[11px] font-semibold font-tabular shrink-0">
+                  Puncak {peakVelocity.count}
                 </div>
               )}
             </div>
 
-            {/* Right: Sentiment Split & Top Focus */}
-            <div className="lg:col-span-5 p-3.5 rounded-xl bg-black/40 border border-white/[0.08] space-y-3 min-w-0">
-              <div className="flex items-center justify-between gap-2 text-xs font-mono-code">
-                <span className="text-[11px] font-semibold text-zinc-300 uppercase tracking-wider">
-                  Distribusi Sentimen
-                </span>
-                <span className="text-amber-300 text-[11px] font-bold font-tabular">
-                  {dailyBriefing.pos_percent}% Positif
-                </span>
-              </div>
-
-              {/* Progress Stack */}
-              <div className="w-full h-3 bg-white/[0.05] rounded-full overflow-hidden flex border border-white/10">
-                <div style={{ width: `${dailyBriefing.pos_percent}%` }} className="h-full bg-emerald-500" title={`Positif: ${dailyBriefing.pos_percent}% (${dailyBriefing.positive})`} />
-                <div style={{ width: `${dailyBriefing.neu_percent}%` }} className="h-full bg-zinc-500" title={`Netral: ${dailyBriefing.neu_percent}% (${dailyBriefing.neutral})`} />
-                <div style={{ width: `${dailyBriefing.neg_percent}%` }} className="h-full bg-rose-500" title={`Negatif: ${dailyBriefing.neg_percent}% (${dailyBriefing.negative})`} />
-              </div>
-
-              <div className="grid grid-cols-3 gap-1.5 text-center text-[10.5px] font-mono-code font-tabular pt-1">
-                <div className="p-1.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
-                  Pos: {dailyBriefing.positive}
-                </div>
-                <div className="p-1.5 rounded bg-white/5 border border-white/10 text-zinc-200">
-                  Net: {dailyBriefing.neutral}
-                </div>
-                <div className="p-1.5 rounded bg-rose-500/10 border border-rose-500/20 text-rose-300">
-                  Neg: {dailyBriefing.negative}
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-white/10 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <span className="text-zinc-400 text-[11px] shrink-0">Fokus Isu Terbanyak:</span>
-                {dailyBriefing.top_programs.slice(0, 1).map((tp) => (
-                  <button
-                    key={tp.id}
-                    type="button"
-                    onClick={() => onAskAi?.(`Analisis mendalam persepsi publik, isu kunci, dan dinamika sentimen pada program prioritas ${tp.name}`, tp.id)}
-                    className="min-h-10 sm:min-h-8 w-full sm:w-auto sm:max-w-[210px] font-semibold text-white px-2.5 py-1 rounded-lg bg-white/5 hover:bg-amber-500/20 border border-white/10 hover:border-amber-500/40 text-[11px] flex items-center justify-center sm:justify-start gap-1.5 cursor-pointer transition-colors"
-                    title={`Klik untuk menganalisis ${tp.name} dengan AI`}
-                  >
-                    <Sparkles className="w-3 h-3 text-amber-400 shrink-0" aria-hidden="true" />
-                    <span className="truncate">{tp.name} ({tp.mentions})</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Kronologi Kejadian Nyata yang Terjadi (Factual Chronicle) */}
-          {events.length > 0 && (
-            <div className="pt-3 border-t border-white/10 space-y-2.5">
-              <div className="text-[11px] font-semibold text-amber-300 uppercase tracking-wider font-mono-code flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
-                <span>Kronologi Peristiwa Lapangan (33 Jam Terakhir)</span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                {events.slice(0, 3).map((ev) => (
-                  <div
-                    key={ev.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => onSelectEventMention?.(ev.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        onSelectEventMention?.(ev.id);
-                      }
-                    }}
-                    className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-amber-500/30 transition-all text-xs space-y-2 flex flex-col justify-between group cursor-pointer"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-2 text-[10px] text-zinc-400 mb-1">
-                        <span className="font-mono-code text-amber-300">{ev.time_label}</span>
-                        <span className={`px-1.5 py-0.5 rounded uppercase font-bold text-[9px] shrink-0 ${
-                          ev.sentiment === 'positive'
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                            : ev.sentiment === 'negative'
-                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                            : 'bg-zinc-800 text-zinc-200'
-                        }`}>
-                          {ev.sentiment}
-                        </span>
-                      </div>
-
-                      <div className="text-[10.5px] font-semibold text-zinc-400 font-mono-code mb-1 truncate">
-                        {ev.program_name}
-                      </div>
-
-                      <p className="text-[12.5px] text-white font-medium line-clamp-2 leading-snug group-hover:text-amber-200 transition-colors">
-                        {ev.headline}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 text-[10.5px] text-zinc-400 border-t border-white/5">
-                      <span className="truncate max-w-[130px]">{ev.source}</span>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {onAskAi && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onAskAi(`Analisis konteks dan dampak peristiwa: "${ev.headline}" pada program ${ev.program_name}`);
+            {velocityData.length > 0 ? (
+              <div className="h-44 sm:h-48 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={velocityData} margin={{ top: 8, right: 8, left: -24, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="heroVelocityFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={chartTokens.goldStroke} stopOpacity={0.32} />
+                        <stop offset="95%" stopColor={chartTokens.goldStroke} stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis
+                      dataKey="time_label"
+                      tick={{ fill: chartTokens.tickFill, fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={false}
+                      interval="preserveStartEnd"
+                      minTickGap={24}
+                    />
+                    <YAxis
+                      tick={{ fill: chartTokens.tickFill, fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={false}
+                      allowDecimals={false}
+                    />
+                    <Tooltip
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload?.length) return null;
+                        return (
+                          <div
+                            className="px-3 py-1.5 rounded-full text-xs font-semibold font-tabular shadow-lg border"
+                            style={{
+                              backgroundColor: chartTokens.tooltipBg,
+                              borderColor: chartTokens.tooltipBorder,
+                              color: chartTokens.tooltipText,
                             }}
-                            title="Tanyakan AI tentang kronologi ini"
-                            className="min-h-8 px-2 py-1 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/25 flex items-center gap-1 text-[10.5px] font-mono-code cursor-pointer transition-colors"
                           >
-                            <Sparkles className="w-3 h-3 text-amber-400" aria-hidden="true" />
-                            <span>Tanya AI</span>
-                          </button>
-                        )}
-                        {ev.url && (
-                          <a
-                            href={ev.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="min-h-8 px-2 py-1 rounded-md text-zinc-300 hover:text-amber-300 flex items-center gap-1"
-                          >
-                            <span>Link</span>
-                            <ExternalLink className="w-3 h-3" aria-hidden="true" />
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                            <span>{label}: </span>
+                            <span style={{ color: '#DFB84F' }}>{payload[0].value} sebutan</span>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="count"
+                      stroke={chartTokens.goldStroke}
+                      strokeWidth={2.25}
+                      fillOpacity={1}
+                      fill="url(#heroVelocityFill)"
+                      isAnimationActive={false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Proportional Polarity Barometer (Keseluruhan Window Aktif) */}
-      <div className="relative z-10 mb-4 sm:mb-6 p-3.5 sm:p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 text-xs mb-2.5">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-300 font-mono-code">
-            Barometer Keseimbangan Sentimen Kumulatif
-          </span>
-          <div className="flex flex-wrap items-center gap-x-3 sm:gap-x-4 gap-y-1 text-xs font-mono-code font-tabular">
-            <span className="text-emerald-400 font-semibold">{posPct}% Positif</span>
-            <span className="text-zinc-300 font-semibold">{neuPct}% Netral</span>
-            <span className="text-rose-400 font-semibold">{negPct}% Negatif</span>
-          </div>
-        </div>
-
-        {/* Visual Progress Stack */}
-        <div className="w-full h-2.5 bg-white/[0.05] rounded-full overflow-hidden flex p-0.5 border border-white/[0.08]">
-          <div
-            style={{ width: `${posPct}%` }}
-            className="h-full bg-emerald-500 rounded-l-full transition-all duration-500 shadow-sm shadow-emerald-500/50"
-            title={`Positif: ${posPct}%`}
-          />
-          <div
-            style={{ width: `${neuPct}%` }}
-            className="h-full bg-zinc-600 transition-all duration-500"
-            title={`Netral: ${neuPct}%`}
-          />
-          <div
-            style={{ width: `${negPct}%` }}
-            className="h-full bg-rose-500 rounded-r-full transition-all duration-500 shadow-sm shadow-rose-500/50"
-            title={`Negatif: ${negPct}%`}
-          />
-        </div>
-      </div>
-
-      {/* Integrated Metrics Dock */}
-      <div className="relative z-10 grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 pt-4 sm:pt-5 border-t border-white/[0.08]">
-        {/* Metric 1: Total Mentions */}
-        <div className="p-3 sm:p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.05] min-w-0">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 font-mono-code block mb-1 truncate">
-            Total Sebutan
-          </span>
-          <div className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white font-mono-code font-tabular tracking-tight">
-            {totalMentions.toLocaleString('id-ID')}
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
-            <span className={`inline-flex items-center gap-0.5 font-semibold text-[11px] font-mono-code font-tabular ${
-              isPositiveGrowth ? 'text-emerald-400' : 'text-rose-400'
-            }`}>
-              {isPositiveGrowth ? <TrendingUp className="w-3 h-3 shrink-0" aria-hidden="true" /> : <TrendingDown className="w-3 h-3 shrink-0" aria-hidden="true" />}
-              <span>{isPositiveGrowth ? '+' : ''}{changePercent}%</span>
-            </span>
-            <span className="text-zinc-400 text-[10px]">vs periode lalu</span>
-          </div>
-        </div>
-
-        {/* Metric 2: Momentum Velocity */}
-        <div className="p-3 sm:p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.05] min-w-0">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 font-mono-code block mb-1 truncate">
-            Laju Pertumbuhan
-          </span>
-          <div className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white font-mono-code font-tabular tracking-tight">
-            {isPositiveGrowth ? `+${changePercent}%` : `${changePercent}%`}
-          </div>
-          <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-400">
-            <Activity className="w-3 h-3 text-amber-400 shrink-0" aria-hidden="true" />
-            <span className="text-[11px] truncate">{isPositiveGrowth ? 'Eskalasi aktif' : 'Volume stabil'}</span>
-          </div>
-        </div>
-
-        {/* Metric 3: Critical Negative Share */}
-        <div className="p-3 sm:p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.05] min-w-0">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 font-mono-code block mb-1 truncate">
-            Risiko Negatif
-          </span>
-          <div className={`text-xl sm:text-2xl lg:text-3xl font-extrabold font-mono-code font-tabular tracking-tight ${
-            isCriticalNegative ? 'text-rose-400' : 'text-white'
-          }`}>
-            {negativeSharePercent}%
-          </div>
-          <div className="mt-1 flex items-center gap-1.5 text-xs">
-            {isCriticalNegative ? (
-              <span className="text-rose-400 text-[11px] flex items-center gap-1 font-medium">
-                <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden="true" />
-                <span className="truncate">Di atas batas 25%</span>
-              </span>
             ) : (
-              <span className="text-emerald-400 text-[11px] flex items-center gap-1 font-medium">
-                <ShieldCheck className="w-3 h-3 shrink-0" aria-hidden="true" />
-                <span className="truncate">Kondusif terkelola</span>
-              </span>
+              <div className="h-44 sm:h-48 surface-inset flex items-center justify-center text-xs text-[var(--text-muted)] px-4 text-center">
+                Belum ada catatan volume per jam pada jendela 33 jam terakhir.
+              </div>
             )}
           </div>
-        </div>
 
-        {/* Metric 4: Active Escalating Topics */}
-        <div className="p-3 sm:p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.05] min-w-0">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 font-mono-code block mb-1 truncate">
-            Topik Lonjakan
-          </span>
-          <div className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white font-mono-code font-tabular tracking-tight flex items-baseline gap-1.5">
-            <span>{risingTopicsCount}</span>
-            <span className="text-[11px] sm:text-xs font-normal text-zinc-400 font-sans-ui">Isu Aktif</span>
-          </div>
-          <div className="mt-1 flex items-center gap-1.5 text-xs text-amber-400 font-medium">
-            <Flame className="w-3 h-3 text-amber-400 shrink-0" aria-hidden="true" />
-            <span className="text-[11px] truncate">Atensi proaktif</span>
+          {/* Bottom: Unified Cumulative Sentiment Barometer */}
+          <div className="pt-4 border-t border-[var(--border-subtle)] space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-[var(--text-primary)]">
+                Keseimbangan Sentimen Periode Aktif
+              </span>
+              <span className="text-xs font-semibold font-tabular text-[var(--sentiment-pos)]">
+                {posPct + neuPct}% Kondusif
+              </span>
+            </div>
+
+            <div className="w-full h-2.5 rounded-full overflow-hidden flex bg-[var(--bg-surface-elevated)] gap-0.5">
+              <div
+                style={{ width: `${posPct}%` }}
+                className="h-full bg-[var(--sentiment-pos-bar)] rounded-l-full transition-[width] duration-300"
+                title={`Positif: ${posPct}%`}
+              />
+              <div
+                style={{ width: `${neuPct}%` }}
+                className="h-full bg-[var(--sentiment-neu-bar)] transition-[width] duration-300"
+                title={`Netral: ${neuPct}%`}
+              />
+              <div
+                style={{ width: `${negPct}%` }}
+                className="h-full bg-[var(--sentiment-neg-bar)] rounded-r-full transition-[width] duration-300"
+                title={`Negatif: ${negPct}%`}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-xs font-tabular">
+              <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-[var(--bg-surface-elevated)]">
+                <span className="text-[var(--text-secondary)]">Positif</span>
+                <span className="font-bold text-[var(--sentiment-pos)]">{posPct}%</span>
+              </div>
+              <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-[var(--bg-surface-elevated)]">
+                <span className="text-[var(--text-secondary)]">Netral</span>
+                <span className="font-bold text-[var(--text-primary)]">{neuPct}%</span>
+              </div>
+              <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-[var(--bg-surface-elevated)]">
+                <span className="text-[var(--text-secondary)]">Negatif</span>
+                <span className="font-bold text-[var(--sentiment-neg)]">{negPct}%</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Factual Chronology Strip (Clean 3-card row separated from Hero, no nested boxes) */}
+      {events.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-xs sm:text-[13px] font-semibold text-[var(--text-secondary)] inline-flex items-center gap-2">
+              <Clock className="w-3.5 h-3.5 text-[var(--accent-gold-text)]" aria-hidden="true" />
+              <span>Kronologi Peristiwa Lapangan (33 Jam Terakhir)</span>
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {events.slice(0, 3).map((ev) => {
+              const sentimentLabel =
+                ev.sentiment === 'positive'
+                  ? 'Positif'
+                  : ev.sentiment === 'negative'
+                    ? 'Negatif'
+                    : 'Netral';
+              const sentimentClass =
+                ev.sentiment === 'positive'
+                  ? 'bg-[var(--sentiment-pos-subtle)] text-[var(--sentiment-pos)] border-[var(--sentiment-pos-border)]'
+                  : ev.sentiment === 'negative'
+                    ? 'bg-[var(--sentiment-neg-subtle)] text-[var(--sentiment-neg)] border-[var(--sentiment-neg-border)]'
+                    : 'bg-[var(--sentiment-neu-subtle)] text-[var(--sentiment-neu)] border-[var(--sentiment-neu-border)]';
+
+              return (
+                <article
+                  key={ev.id}
+                  className="surface-card surface-card-interactive p-4 sm:p-5 flex flex-col justify-between gap-3.5"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2 text-[11px]">
+                      <span className="font-mono-code font-tabular text-[var(--accent-gold-text)] font-medium">
+                        {ev.time_label}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-lg border text-[10px] font-semibold ${sentimentClass}`}>
+                        {sentimentLabel}
+                      </span>
+                    </div>
+
+                    <div className="text-[11px] font-medium text-[var(--text-muted)] truncate">
+                      {ev.program_name}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onSelectEventMention?.(ev.id)}
+                      className="text-left text-[13px] font-semibold text-[var(--text-primary)] hover:text-[var(--accent-gold-text)] leading-snug line-clamp-2 transition-colors"
+                    >
+                      {ev.headline}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-3 border-t border-[var(--border-subtle)] text-[11px]">
+                    <span className="text-[var(--text-muted)] truncate max-w-[130px]">{ev.source}</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {onAskAi && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onAskAi(
+                              `Analisis konteks dan dampak peristiwa: "${ev.headline}" pada program ${ev.program_name}`
+                            )
+                          }
+                          className="min-h-8 px-2.5 rounded-lg bg-[var(--bg-surface-elevated)] hover:bg-[var(--bg-surface-hover)] text-[var(--text-primary)] font-medium inline-flex items-center gap-1 transition-colors"
+                        >
+                          <MessageSquareText className="w-3 h-3 text-[var(--accent-gold-text)]" aria-hidden="true" />
+                          <span>Bedah AI</span>
+                        </button>
+                      )}
+                      {ev.url ? (
+                        <a
+                          href={ev.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="min-h-8 px-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] inline-flex items-center gap-1 transition-colors"
+                        >
+                          <span>Sumber</span>
+                          <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                        </a>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onSelectEventMention?.(ev.id)}
+                          className="min-h-8 px-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] inline-flex items-center gap-1 transition-colors"
+                        >
+                          <span>Detail</span>
+                          <ArrowUpRight className="w-3 h-3" aria-hidden="true" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }

@@ -36,14 +36,27 @@ const AiIntelligenceDrawer = lazy(() =>
   }))
 );
 
+const RAIL_STORAGE_KEY = 'trinetra_rail_expanded';
+
+function readInitialRailExpanded(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(RAIL_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
 function PageRouteFallback() {
   return (
-    <div className="space-y-4 sm:space-y-6" aria-busy="true" aria-label="Memuat halaman">
-      <div className="h-12 bg-white/[0.03] border border-white/[0.06] rounded-xl animate-pulse" />
-      <div className="h-56 bg-white/[0.03] border border-white/[0.06] rounded-2xl animate-pulse" />
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
-        <div className="lg:col-span-8 h-72 bg-white/[0.03] border border-white/[0.06] rounded-2xl animate-pulse" />
-        <div className="lg:col-span-4 h-72 bg-white/[0.03] border border-white/[0.06] rounded-2xl animate-pulse" />
+    <div className="space-y-5" role="status" aria-busy="true" aria-label="Memuat halaman">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div className="lg:col-span-7 h-72 rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] animate-pulse" />
+        <div className="lg:col-span-5 h-72 rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] animate-pulse" />
+      </div>
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+        <div className="xl:col-span-8 h-80 rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] animate-pulse" />
+        <div className="xl:col-span-4 h-80 rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] animate-pulse" />
       </div>
     </div>
   );
@@ -62,17 +75,19 @@ export default function App() {
   const [hasOpenedAiDrawer, setHasOpenedAiDrawer] = useState(false);
   const [aiInitialQuery, setAiInitialQuery] = useState<string | undefined>(undefined);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isRailExpanded, setIsRailExpanded] = useState<boolean>(readInitialRailExpanded);
 
-  // Enforce permanent Dark Mode (Stealth Intelligence Theme)
-  useEffect(() => {
-    document.documentElement.classList.remove('light');
-    document.documentElement.classList.add('dark');
-    try {
-      localStorage.removeItem('theme');
-    } catch {
-      // ignore
-    }
-  }, []);
+  const toggleRailExpanded = () => {
+    setIsRailExpanded((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(RAIL_STORAGE_KEY, String(next));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+  };
 
   // Keyboard shortcut Ctrl+K / Cmd+K opens Mentions Explorer search
   useEffect(() => {
@@ -113,7 +128,7 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'auto' });
   };
 
-  // Fetch overview data shared with OverviewPage via identical queryKey (deduplicated)
+  // Shared overview query (deduplicated with OverviewPage)
   const { data: overview, refetch: refetchOverview, isFetching } = useQuery({
     queryKey: ['dashboard-overview', workspaceId, days, organicOnly],
     enabled: status === 'authenticated' && Boolean(workspaceId),
@@ -129,7 +144,7 @@ export default function App() {
     },
   });
 
-  // Lightweight surge badge check (never triggers synchronous RSS auto-discovery on dashboard boot)
+  // Lightweight surge badge check (never triggers synchronous RSS auto-discovery on boot)
   const { data: hotIssuesData } = useQuery({
     queryKey: ['hot-issues-badge', workspaceId],
     enabled: status === 'authenticated' && Boolean(workspaceId),
@@ -145,16 +160,7 @@ export default function App() {
   });
 
   const hasSurge = (hotIssuesData?.surging_count ?? 0) > 0;
-
-  const conducivePercent = (() => {
-    if (!overview?.sentiment) return undefined;
-    const total =
-      overview.sentiment.positive +
-      overview.sentiment.neutral +
-      overview.sentiment.negative;
-    if (total === 0) return 0;
-    return Math.round(((overview.sentiment.positive + overview.sentiment.neutral) / total) * 100);
-  })();
+  const hasCriticalAlert = hasSurge || (overview?.kpis?.negative_share_percent ?? 0) > 25;
 
   const handleNavigateToTopic = (topicId?: number) => {
     resetMentionTargets();
@@ -230,17 +236,20 @@ export default function App() {
 
   if (status === 'booting') {
     return (
-      <div className="min-h-dvh bg-[#08090d] text-[#f4f5f8] font-sans-ui flex items-center justify-center p-6">
+      <div className="min-h-dvh bg-[var(--bg-canvas)] text-[var(--text-primary)] font-sans-ui flex items-center justify-center p-6">
         <div className="flex flex-col items-center gap-4 text-center" role="status" aria-live="polite">
-          <img
-            src="/brand/trinetra-logo.svg"
-            alt="Lambang TRINETRA"
-            width={48}
-            height={48}
-            className="w-12 h-12 object-contain"
-          />
-          <div className="flex items-center gap-2 text-sm text-[#9da3ae]">
-            <Loader2 className="w-4 h-4 animate-spin text-[#d4af37]" aria-hidden="true" />
+          <span className="w-14 h-14 rounded-full bg-[#181614] dark:bg-transparent border border-[var(--accent-gold-border)] dark:border-transparent flex items-center justify-center">
+            <img
+              src="/brand/trinetra-logo.svg"
+              alt="Lambang TRINETRA"
+              width={40}
+              height={40}
+              fetchPriority="high"
+              className="w-10 h-10 object-contain"
+            />
+          </span>
+          <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+            <Loader2 className="w-4 h-4 animate-spin text-[var(--accent-gold-text)]" aria-hidden="true" />
             <span>Memverifikasi sesi...</span>
           </div>
         </div>
@@ -253,34 +262,30 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-dvh flex font-sans-ui relative isolate bg-[#08090d] text-[#f4f5f8] selection:bg-amber-500/20 selection:text-amber-200 overflow-x-clip">
-      {/* Ambient Telemetry Backdrop (lightweight non-blended layer to avoid full-screen GPU repaints) */}
-      <div
-        aria-hidden="true"
-        className="fixed top-0 left-0 right-0 h-[520px] sm:h-[720px] pointer-events-none -z-10 opacity-25 sm:opacity-30 bg-cover bg-top bg-no-repeat"
-        style={{ backgroundImage: `url('/brand/ambient-backdrop.webp')` }}
-      />
-      <div
-        aria-hidden="true"
-        className="fixed top-0 left-0 right-0 h-[520px] sm:h-[720px] pointer-events-none -z-10 bg-gradient-to-b from-transparent via-[#08090d]/45 to-[#08090d]"
-      />
+    <div className="min-h-dvh flex font-sans-ui relative isolate bg-[var(--bg-canvas)] text-[var(--text-primary)] overflow-x-clip">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 px-4 py-2 rounded-xl bg-[var(--accent-gold)] text-[var(--accent-gold-ink)] text-xs font-bold"
+      >
+        Lompat ke konten utama
+      </a>
 
-      {/* Sidebar Navigation (Desktop persistent + Mobile/Tablet slide-over drawer) */}
+      {/* Slim Expandable Navigation Rail (Desktop) & Slide-Over Drawer (Mobile/Tablet) */}
       <div className="shrink-0">
         <Sidebar
           currentTab={currentTab}
           onSelectTab={navigateTab}
           onExportCsv={handleExportCsv}
           isExporting={isExporting}
+          isExpanded={isRailExpanded}
+          onToggleExpand={toggleRailExpanded}
           isMobileOpen={isMobileMenuOpen}
           onCloseMobile={() => setIsMobileMenuOpen(false)}
-          conducivePercent={conducivePercent}
-          totalMentionsCount={overview?.kpis?.total_mentions}
           hasSurge={hasSurge}
         />
       </div>
 
-      {/* Main View Area */}
+      {/* Main Content Shell */}
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar
           currentTab={currentTab}
@@ -290,13 +295,18 @@ export default function App() {
           days={days}
           onChangeDays={setDays}
           onNavigateToAlerts={() => navigateTab('alerts')}
+          onQuickSearch={() => navigateTab('mentions')}
           organicOnly={organicOnly}
           onToggleOrganicOnly={() => setOrganicOnly((v) => !v)}
           onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
           isMobileMenuOpen={isMobileMenuOpen}
+          hasAlertIndicator={hasCriticalAlert}
         />
 
-        <main className="flex-1 px-3.5 py-4 sm:px-5 sm:py-6 lg:p-8 pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] md:pb-10 max-w-7xl w-full mx-auto min-w-0">
+        <main
+          id="main-content"
+          className="flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-7 pb-[calc(7.25rem+env(safe-area-inset-bottom,0px))] md:pb-12 max-w-[1440px] w-full mx-auto min-w-0"
+        >
           <Suspense fallback={<PageRouteFallback />}>
             {currentTab === 'overview' && (
               <OverviewPage
@@ -364,7 +374,7 @@ export default function App() {
         hasSurge={hasSurge}
       />
 
-      {/* Floating Action Button (FAB) Bottom-Right AI Assistant */}
+      {/* Floating AI Assistant Trigger */}
       <FloatingAiAssistantButton
         onClick={() => {
           setAiInitialQuery(undefined);
@@ -374,7 +384,7 @@ export default function App() {
         isOpen={isAiDrawerOpen || isMobileMenuOpen}
       />
 
-      {/* AI Intelligence Chatbot Drawer (lazy-mounted on first open) */}
+      {/* AI Intelligence Drawer (lazy-mounted on first open) */}
       {hasOpenedAiDrawer && (
         <Suspense fallback={null}>
           <AiIntelligenceDrawer

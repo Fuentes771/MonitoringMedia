@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import {
   AlertTriangle,
   Scale,
-  Sparkles,
+  FileText,
   CheckCircle2,
   Bookmark,
 } from 'lucide-react';
@@ -33,13 +33,11 @@ export function ExecutiveAiMessageView({ content }: ExecutiveAiMessageViewProps)
   const parsed = useMemo<ParsedExecutiveMessage>(() => {
     const raw = content.trim();
 
-    // Check if message follows the executive structured format
     const hasSummaryHeader = /#*\s*📌?\s*Ringkasan Eksekutif/i.test(raw);
     const hasSentimentHeader = /#*\s*📊?\s*Distribusi Sentimen/i.test(raw);
     const hasHighlightsHeader = /#*\s*🔍?\s*Sorotan Isu/i.test(raw);
 
     if (!hasSummaryHeader && !hasSentimentHeader && !hasHighlightsHeader) {
-      // General conversational message: clean markdown symbols like '###', '**', '---' and brackets
       const cleaned = raw
         .replace(/^#+\s+/gm, '')
         .replace(/---/g, '')
@@ -55,8 +53,9 @@ export function ExecutiveAiMessageView({ content }: ExecutiveAiMessageViewProps)
     let sentimentData: ParsedExecutiveMessage['sentiment'] = null;
     const highlightsList: ParsedExecutiveMessage['highlights'] = [];
 
-    // 1. Extract Summary
-    const summaryMatch = raw.match(/#*\s*📌?\s*Ringkasan Eksekutif\s*\n+([\s\S]*?)(?=\n+#*\s*📊|\n+#*\s*🔍|\n+---|\s*$)/i);
+    const summaryMatch = raw.match(
+      /#*\s*📌?\s*Ringkasan Eksekutif\s*\n+([\s\S]*?)(?=\n+#*\s*📊|\n+#*\s*🔍|\n+---|\s*$)/i
+    );
     if (summaryMatch && summaryMatch[1]) {
       summaryText = summaryMatch[1]
         .replace(/---/g, '')
@@ -68,11 +67,11 @@ export function ExecutiveAiMessageView({ content }: ExecutiveAiMessageViewProps)
         .trim();
     }
 
-    // 2. Extract Sentiment Barometer
-    const sentimentMatch = raw.match(/#*\s*📊?\s*Distribusi Sentimen[^\n]*\n+([\s\S]*?)(?=\n+#*\s*🔍|\n+---|\s*$)/i);
+    const sentimentMatch = raw.match(
+      /#*\s*📊?\s*Distribusi Sentimen[^\n]*\n+([\s\S]*?)(?=\n+#*\s*🔍|\n+---|\s*$)/i
+    );
     if (sentimentMatch && sentimentMatch[1]) {
       const sentText = sentimentMatch[1];
-      // Search for percentages and counts: e.g., Positif: 30% (6 sebutan)
       const posMatch = sentText.match(/Positif[^\d]*(\d+)%?(?:\s*\((\d+)[^\)]*\))?/i);
       const neuMatch = sentText.match(/Netral[^\d]*(\d+)%?(?:\s*\((\d+)[^\)]*\))?/i);
       const negMatch = sentText.match(/Negatif[^\d]*(\d+)%?(?:\s*\((\d+)[^\)]*\))?/i);
@@ -89,7 +88,6 @@ export function ExecutiveAiMessageView({ content }: ExecutiveAiMessageViewProps)
       }
     }
 
-    // 3. Extract Highlights
     const highlightsMatch = raw.match(/#*\s*🔍?\s*Sorotan Isu[^\n]*\n+([\s\S]*?)$/i);
     if (highlightsMatch && highlightsMatch[1]) {
       const hlText = highlightsMatch[1];
@@ -106,18 +104,23 @@ export function ExecutiveAiMessageView({ content }: ExecutiveAiMessageViewProps)
         if (/Katalis Positif|Positif/i.test(trimmed)) {
           type = 'positive';
           title = 'Katalis Positif & Progres';
-          body = trimmed.replace(/^(\*\*)?Katalis Positif(\*\*)?:\s*/i, '').replace(/^(\*\*)?Positif(\*\*)?:\s*/i, '');
+          body = trimmed
+            .replace(/^(\*\*)?Katalis Positif(\*\*)?:\s*/i, '')
+            .replace(/^(\*\*)?Positif(\*\*)?:\s*/i, '');
         } else if (/Tantangan|Risiko|Negatif|Kritis/i.test(trimmed)) {
           type = 'negative';
           title = 'Tantangan, Risiko & Kendala';
-          body = trimmed.replace(/^(\*\*)?Tantangan & Risiko(\*\*)?:\s*/i, '').replace(/^(\*\*)?Risiko(\*\*)?:\s*/i, '');
+          body = trimmed
+            .replace(/^(\*\*)?Tantangan & Risiko(\*\*)?:\s*/i, '')
+            .replace(/^(\*\*)?Risiko(\*\*)?:\s*/i, '');
         } else if (/Tata Kelola|Kebijakan|Regulasi/i.test(trimmed)) {
           type = 'policy';
           title = 'Tata Kelola & Kebijakan';
-          body = trimmed.replace(/^(\*\*)?Tata Kelola \/ Kebijakan(\*\*)?:\s*/i, '').replace(/^(\*\*)?Kebijakan(\*\*)?:\s*/i, '');
+          body = trimmed
+            .replace(/^(\*\*)?Tata Kelola \/ Kebijakan(\*\*)?:\s*/i, '')
+            .replace(/^(\*\*)?Kebijakan(\*\*)?:\s*/i, '');
         }
 
-        // Clean any residual double-asterisks and source citations
         body = body
           .replace(/\*\*/g, '')
           .replace(/---/g, '')
@@ -141,82 +144,59 @@ export function ExecutiveAiMessageView({ content }: ExecutiveAiMessageViewProps)
     };
   }, [content]);
 
-  // If general message without executive sections
   if (parsed.fallbackText) {
     return (
-      <div className="text-zinc-200 leading-relaxed text-[13.5px] whitespace-pre-wrap">
+      <div className="text-[var(--text-primary)] leading-relaxed text-[13.5px] whitespace-pre-wrap">
         {parsed.fallbackText}
       </div>
     );
   }
 
   return (
-    <div className="space-y-3.5 text-zinc-100 font-sans-ui">
-      {/* 1. Executive Summary Card */}
+    <div className="space-y-3.5 text-[var(--text-primary)] font-sans-ui">
       {parsed.summary && (
-        <div className="p-3.5 rounded-xl bg-gradient-to-br from-amber-950/25 via-[#12151c] to-[#0b0d12] border border-amber-500/25 shadow-sm">
-          <div className="flex items-center gap-2 mb-1.5 text-amber-300 text-xs font-bold tracking-wide uppercase">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+        <div className="p-3.5 rounded-xl bg-[var(--accent-gold-subtle)] border border-[var(--accent-gold-border)] space-y-1.5">
+          <div className="flex items-center gap-1.5 text-[var(--accent-gold-text)] text-xs font-semibold">
+            <FileText className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
             <span>Ringkasan Eksekutif</span>
           </div>
-          <p className="text-[13px] text-zinc-200 leading-relaxed font-sans-ui">
-            {parsed.summary}
-          </p>
+          <p className="text-[13px] text-[var(--text-primary)] leading-relaxed">{parsed.summary}</p>
         </div>
       )}
 
-      {/* 2. Visual Sentiment Distribution Barometer */}
       {parsed.sentiment && (
-        <div className="p-3 rounded-xl bg-black/40 border border-white/[0.08] space-y-2">
+        <div className="surface-inset p-3.5 space-y-2.5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs">
-            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider font-mono-code">
-              Distribusi Sentimen Publik
-            </span>
-            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] font-mono-code font-tabular">
-              <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+            <span className="font-semibold text-[var(--text-secondary)]">Distribusi Sentimen</span>
+            <div className="flex flex-wrap items-center gap-3 text-[11px] font-tabular">
+              <span className="inline-flex items-center gap-1 text-[var(--sentiment-pos)] font-semibold">
+                <span className="w-2 h-2 rounded-full bg-[var(--sentiment-pos-bar)] shrink-0" aria-hidden="true" />
                 {parsed.sentiment.posPct}% {parsed.sentiment.posCount ? `(${parsed.sentiment.posCount})` : ''}
               </span>
-              <span className="inline-flex items-center gap-1 text-zinc-300 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-zinc-400 shrink-0" />
+              <span className="inline-flex items-center gap-1 text-[var(--text-secondary)] font-semibold">
+                <span className="w-2 h-2 rounded-full bg-[var(--sentiment-neu-bar)] shrink-0" aria-hidden="true" />
                 {parsed.sentiment.neuPct}% {parsed.sentiment.neuCount ? `(${parsed.sentiment.neuCount})` : ''}
               </span>
-              <span className="inline-flex items-center gap-1 text-rose-400 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0" />
+              <span className="inline-flex items-center gap-1 text-[var(--sentiment-neg)] font-semibold">
+                <span className="w-2 h-2 rounded-full bg-[var(--sentiment-neg-bar)] shrink-0" aria-hidden="true" />
                 {parsed.sentiment.negPct}% {parsed.sentiment.negCount ? `(${parsed.sentiment.negCount})` : ''}
               </span>
             </div>
           </div>
 
-          {/* Visual Progress Bar */}
-          <div className="w-full h-2.5 bg-white/[0.06] rounded-full overflow-hidden flex border border-white/10">
-            <div
-              style={{ width: `${parsed.sentiment.posPct}%` }}
-              className="h-full bg-emerald-500 transition-all duration-300"
-              title={`Positif: ${parsed.sentiment.posPct}%`}
-            />
-            <div
-              style={{ width: `${parsed.sentiment.neuPct}%` }}
-              className="h-full bg-zinc-500 transition-all duration-300"
-              title={`Netral: ${parsed.sentiment.neuPct}%`}
-            />
-            <div
-              style={{ width: `${parsed.sentiment.negPct}%` }}
-              className="h-full bg-rose-500 transition-all duration-300"
-              title={`Negatif: ${parsed.sentiment.negPct}%`}
-            />
+          <div className="w-full h-2 bg-[var(--bg-surface)] rounded-full overflow-hidden flex gap-0.5">
+            <div style={{ width: `${parsed.sentiment.posPct}%` }} className="h-full bg-[var(--sentiment-pos-bar)]" />
+            <div style={{ width: `${parsed.sentiment.neuPct}%` }} className="h-full bg-[var(--sentiment-neu-bar)]" />
+            <div style={{ width: `${parsed.sentiment.negPct}%` }} className="h-full bg-[var(--sentiment-neg-bar)]" />
           </div>
         </div>
       )}
 
-      {/* 3. Strategic Highlights Color-Coded Cards */}
       {parsed.highlights.length > 0 && (
-        <div className="space-y-2.5 pt-1">
-          <div className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider font-mono-code">
-            Sorotan Isu Strategis
-          </div>
+        <div className="space-y-2 pt-1">
+          <div className="text-xs font-semibold text-[var(--text-secondary)]">Sorotan Isu Strategis</div>
 
-          <div className="grid grid-cols-1 gap-2.5">
+          <div className="grid grid-cols-1 gap-2">
             {parsed.highlights.map((hl, i) => {
               const isPos = hl.type === 'positive';
               const isNeg = hl.type === 'negative';
@@ -225,38 +205,40 @@ export function ExecutiveAiMessageView({ content }: ExecutiveAiMessageViewProps)
               return (
                 <div
                   key={i}
-                  className={`p-3 rounded-xl border text-xs space-y-1.5 transition-all ${
+                  className={`p-3 rounded-xl border text-xs space-y-1 ${
                     isPos
-                      ? 'bg-emerald-950/20 border-emerald-500/30'
+                      ? 'bg-[var(--sentiment-pos-subtle)] border-[var(--sentiment-pos-border)]'
                       : isNeg
-                      ? 'bg-rose-950/25 border-rose-500/35'
-                      : isPol
-                      ? 'bg-amber-950/25 border-amber-500/30'
-                      : 'bg-white/[0.02] border-white/10'
+                        ? 'bg-[var(--sentiment-neg-subtle)] border-[var(--sentiment-neg-border)]'
+                        : isPol
+                          ? 'bg-[var(--accent-gold-subtle)] border-[var(--accent-gold-border)]'
+                          : 'bg-[var(--bg-surface-elevated)] border-[var(--border-subtle)]'
                   }`}
                 >
-                  <div className="flex items-center gap-1.5 font-bold tracking-tight">
-                    {isPos && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
-                    {isNeg && <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />}
-                    {isPol && <Scale className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
-                    {!isPos && !isNeg && !isPol && <Bookmark className="w-3.5 h-3.5 text-zinc-400 shrink-0" />}
+                  <div className="flex items-center gap-1.5 font-semibold">
+                    {isPos && <CheckCircle2 className="w-3.5 h-3.5 text-[var(--sentiment-pos)] shrink-0" aria-hidden="true" />}
+                    {isNeg && <AlertTriangle className="w-3.5 h-3.5 text-[var(--sentiment-neg)] shrink-0" aria-hidden="true" />}
+                    {isPol && <Scale className="w-3.5 h-3.5 text-[var(--accent-gold-text)] shrink-0" aria-hidden="true" />}
+                    {!isPos && !isNeg && !isPol && (
+                      <Bookmark className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" aria-hidden="true" />
+                    )}
 
                     <span
                       className={
                         isPos
-                          ? 'text-emerald-300'
+                          ? 'text-[var(--sentiment-pos)]'
                           : isNeg
-                          ? 'text-rose-300'
-                          : isPol
-                          ? 'text-amber-300'
-                          : 'text-zinc-200'
+                            ? 'text-[var(--sentiment-neg)]'
+                            : isPol
+                              ? 'text-[var(--accent-gold-text)]'
+                              : 'text-[var(--text-primary)]'
                       }
                     >
                       {hl.title}
                     </span>
                   </div>
 
-                  <p className="text-[12.5px] text-zinc-200 leading-relaxed font-sans-ui pl-0 sm:pl-5 break-words">
+                  <p className="text-[12.5px] text-[var(--text-primary)] leading-relaxed sm:pl-5 break-words">
                     {hl.body}
                   </p>
                 </div>

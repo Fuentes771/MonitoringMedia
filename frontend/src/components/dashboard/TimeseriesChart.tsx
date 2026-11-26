@@ -11,17 +11,18 @@ import {
   CartesianGrid,
 } from 'recharts';
 import { TimelinePoint } from '@/lib/api';
-import { BarChart3, LineChart, Calendar, TrendingUp, Compass, Shield } from 'lucide-react';
+import { useTheme } from '@/hooks/useTheme';
+import { BarChart3, LineChart, Calendar } from 'lucide-react';
 
 interface TimeseriesChartProps {
   timeline: TimelinePoint[];
 }
 
 export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
+  const { chartTokens } = useTheme();
   const [chartType, setChartType] = useState<'area' | 'bar'>('area');
   const [metricMode, setMetricMode] = useState<'sentiment' | 'total'>('sentiment');
 
-  // Compute derived analytical metrics
   const totalVolume = timeline.reduce((acc, curr) => acc + (curr.total || 0), 0);
   const avgDaily = timeline.length > 0 ? Math.round(totalVolume / timeline.length) : 0;
   const peakPoint = timeline.reduce<TimelinePoint | null>((max, curr) => {
@@ -33,81 +34,121 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
   const totalNeu = timeline.reduce((acc, curr) => acc + (curr.neutral || 0), 0);
   const positiveRatio = totalVolume > 0 ? Math.round(((totalPos + totalNeu) / totalVolume) * 100) : 0;
 
+  const renderTooltip = ({
+    active,
+    payload,
+    label,
+  }: {
+    active?: boolean;
+    payload?: ReadonlyArray<{ name?: string; value?: number; color?: string }>;
+    label?: string | number;
+  }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div
+        className="p-3.5 rounded-2xl shadow-xl text-xs space-y-2 min-w-[190px] border"
+        style={{
+          backgroundColor: chartTokens.tooltipBg,
+          borderColor: chartTokens.tooltipBorder,
+          color: chartTokens.tooltipText,
+        }}
+      >
+        <div
+          className="font-semibold pb-1.5 flex items-center gap-1.5 font-mono-code text-[11px] border-b"
+          style={{ borderColor: chartTokens.tooltipBorder }}
+        >
+          <Calendar className="w-3.5 h-3.5 text-[#DFB84F]" aria-hidden="true" />
+          <span>{label}</span>
+        </div>
+        {payload.map((entry, idx) => (
+          <div key={idx} className="flex items-center justify-between gap-3 text-xs">
+            <span className="flex items-center gap-2" style={{ color: chartTokens.tooltipMuted }}>
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: entry.color }}
+              />
+              <span>{entry.name}</span>
+            </span>
+            <span className="font-bold font-tabular">{entry.value}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <div className="bento-card p-4 sm:p-6 lg:p-7 bg-[#0e1117] transition-all">
-      {/* Header bar */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3.5 sm:gap-4 mb-4 sm:mb-5 pb-3.5 sm:pb-4 border-b border-white/[0.08]">
+    <section aria-label="Fluktuasi volume dan sentimen harian" className="surface-card p-5 sm:p-6 lg:p-7">
+      {/* Clean Header Row (No uppercase mono eyebrow) */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 mb-5 border-b border-[var(--border-subtle)]">
         <div className="min-w-0">
-          <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-amber-400 block mb-0.5">
-            Dinamika Telemetri
-          </span>
-          <h2 className="font-editorial text-lg sm:text-xl lg:text-2xl font-medium tracking-tight text-white leading-tight text-balance">
-            Kronologi Percakapan &amp; Fluktuasi Sentimen
+          <h2 className="font-editorial text-xl sm:text-2xl font-medium tracking-tight text-[var(--text-primary)] leading-tight">
+            Fluktuasi Volume &amp; Sentimen Harian
           </h2>
-          <p className="text-xs text-zinc-400 mt-1 font-sans-ui text-pretty">
-            Pemetaan volume harian berdasarkan klasifikasi sentimen publik berita Indonesia
+          <p className="text-xs text-[var(--text-muted)] mt-1">
+            Perbandingan tren percakapan positif, netral, dan negatif berdasarkan hari publikasi
           </p>
         </div>
 
-        {/* View toggles */}
         <div className="flex items-center justify-between sm:justify-end gap-2 w-full md:w-auto shrink-0">
-          {/* Sentiment vs Total */}
-          <div className="flex items-center bg-white/[0.03] border border-white/[0.08] rounded-xl p-0.5 text-xs shadow-xs flex-1 sm:flex-none">
+          <div
+            role="group"
+            aria-label="Mode metrik grafik"
+            className="inline-flex items-center p-1 rounded-full bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] flex-1 sm:flex-none"
+          >
             <button
               type="button"
               onClick={() => setMetricMode('sentiment')}
               aria-pressed={metricMode === 'sentiment'}
-              className={`min-h-10 sm:min-h-8 flex-1 sm:flex-none px-2.5 sm:px-3 py-1.5 rounded-lg transition-all font-sans-ui text-xs font-semibold ${
+              className={`min-h-9 sm:min-h-8 flex-1 sm:flex-none px-3.5 rounded-full text-xs font-semibold transition-colors ${
                 metricMode === 'sentiment'
-                  ? 'bg-white text-zinc-950 shadow-xs'
-                  : 'text-zinc-300 hover:text-white'
+                  ? 'bg-[var(--action-contrast-bg)] text-[var(--action-contrast-fg)]'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
-              <span className="sm:hidden">Sentimen</span>
-              <span className="hidden sm:inline">Polaritas Sentimen</span>
+              Sentimen
             </button>
             <button
               type="button"
               onClick={() => setMetricMode('total')}
               aria-pressed={metricMode === 'total'}
-              className={`min-h-10 sm:min-h-8 flex-1 sm:flex-none px-2.5 sm:px-3 py-1.5 rounded-lg transition-all font-sans-ui text-xs font-semibold ${
+              className={`min-h-9 sm:min-h-8 flex-1 sm:flex-none px-3.5 rounded-full text-xs font-semibold transition-colors ${
                 metricMode === 'total'
-                  ? 'bg-white text-zinc-950 shadow-xs'
-                  : 'text-zinc-300 hover:text-white'
+                  ? 'bg-[var(--action-contrast-bg)] text-[var(--action-contrast-fg)]'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
-              <span className="sm:hidden">Total</span>
-              <span className="hidden sm:inline">Total Akumulatif</span>
+              Total Volume
             </button>
           </div>
 
-          {/* Area vs Bar */}
-          <div className="flex items-center bg-white/[0.03] border border-white/[0.08] rounded-xl p-0.5 text-xs shadow-xs shrink-0">
+          <div
+            role="group"
+            aria-label="Jenis tampilan grafik"
+            className="inline-flex items-center p-1 rounded-full bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] shrink-0"
+          >
             <button
               type="button"
               onClick={() => setChartType('area')}
-              aria-label="Tampilan Garis Area"
+              aria-label="Tampilan grafik kurva area"
               aria-pressed={chartType === 'area'}
-              className={`min-w-10 min-h-10 sm:min-w-8 sm:min-h-8 flex items-center justify-center rounded-lg transition-all ${
+              className={`min-w-9 min-h-9 sm:min-w-8 sm:min-h-8 flex items-center justify-center rounded-full transition-colors ${
                 chartType === 'area'
-                  ? 'bg-white/[0.12] text-white shadow-xs'
-                  : 'text-zinc-400 hover:text-white'
+                  ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
-              title="Grafik Luminous Area"
             >
               <LineChart className="w-4 h-4" aria-hidden="true" />
             </button>
             <button
               type="button"
               onClick={() => setChartType('bar')}
-              aria-label="Tampilan Diagram Batang"
+              aria-label="Tampilan diagram batang"
               aria-pressed={chartType === 'bar'}
-              className={`min-w-10 min-h-10 sm:min-w-8 sm:min-h-8 flex items-center justify-center rounded-lg transition-all ${
+              className={`min-w-9 min-h-9 sm:min-w-8 sm:min-h-8 flex items-center justify-center rounded-full transition-colors ${
                 chartType === 'bar'
-                  ? 'bg-white/[0.12] text-white shadow-xs'
-                  : 'text-zinc-400 hover:text-white'
+                  ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
-              title="Histogram Kolom"
             >
               <BarChart3 className="w-4 h-4" aria-hidden="true" />
             </button>
@@ -116,98 +157,82 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
       </div>
 
       {/* Chart Canvas */}
-      <div className="h-56 sm:h-68 lg:h-76 w-full">
+      <div className="h-60 sm:h-72 lg:h-80 w-full">
         {timeline.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-zinc-500 text-xs font-sans-ui">
-            Belum ada data untuk rentang waktu yang dipilih
+          <div className="h-full surface-inset flex flex-col items-center justify-center text-center px-6 gap-1">
+            <p className="text-sm font-semibold text-[var(--text-primary)]">
+              Belum ada deret waktu pada periode ini
+            </p>
+            <p className="text-xs text-[var(--text-muted)]">
+              Coba perluas rentang waktu di kanan atas (7 Hari atau 30 Hari) atau jalankan sinkronisasi sumber data.
+            </p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             {chartType === 'area' ? (
               <AreaChart data={timeline} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="areaPos" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.25} />
-                    <stop offset="100%" stopColor="#10b981" stopOpacity={0.0} />
+                  <linearGradient id="tsPos" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={chartTokens.posStroke} stopOpacity={0.24} />
+                    <stop offset="100%" stopColor={chartTokens.posStroke} stopOpacity={0.0} />
                   </linearGradient>
-                  <linearGradient id="areaNeu" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#71717a" stopOpacity={0.15} />
-                    <stop offset="100%" stopColor="#71717a" stopOpacity={0.0} />
+                  <linearGradient id="tsNeu" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={chartTokens.neuStroke} stopOpacity={0.14} />
+                    <stop offset="100%" stopColor={chartTokens.neuStroke} stopOpacity={0.0} />
                   </linearGradient>
-                  <linearGradient id="areaNeg" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.28} />
-                    <stop offset="100%" stopColor="#f43f5e" stopOpacity={0.0} />
+                  <linearGradient id="tsNeg" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={chartTokens.negStroke} stopOpacity={0.24} />
+                    <stop offset="100%" stopColor={chartTokens.negStroke} stopOpacity={0.0} />
                   </linearGradient>
-                  <linearGradient id="areaTot" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#d4af37" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#d4af37" stopOpacity={0.0} />
+                  <linearGradient id="tsTot" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={chartTokens.goldStroke} stopOpacity={0.28} />
+                    <stop offset="100%" stopColor={chartTokens.goldStroke} stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid vertical={false} stroke="rgba(255, 255, 255, 0.05)" strokeDasharray="3 3" />
+                <CartesianGrid vertical={false} stroke={chartTokens.gridStroke} strokeDasharray="3 4" />
                 <XAxis
                   dataKey="label"
-                  stroke="#474d5a"
-                  tick={{ fill: '#a1a1aa', fontSize: 10, fontFamily: 'JetBrains Mono' }}
+                  stroke={chartTokens.axisStroke}
+                  tick={{ fill: chartTokens.tickFill, fontSize: 11 }}
                   tickLine={false}
+                  axisLine={false}
                   interval="preserveStartEnd"
-                  minTickGap={24}
+                  minTickGap={26}
                 />
                 <YAxis
-                  stroke="#474d5a"
-                  tick={{ fill: '#a1a1aa', fontSize: 10, fontFamily: 'JetBrains Mono' }}
+                  stroke={chartTokens.axisStroke}
+                  tick={{ fill: chartTokens.tickFill, fontSize: 11 }}
                   tickLine={false}
+                  axisLine={false}
                 />
-                <Tooltip
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="bg-[#0a0c12]/95 border border-white/[0.12] p-3.5 rounded-xl shadow-2xl text-xs space-y-2 min-w-[200px] backdrop-blur-xl">
-                          <div className="font-semibold text-white border-b border-white/[0.08] pb-1.5 flex items-center gap-1.5 font-mono-code text-[11px]">
-                            <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                            <span>{label}</span>
-                          </div>
-                          {payload.map((entry, idx) => (
-                            <div key={idx} className="flex items-center justify-between gap-3 text-xs">
-                              <span className="flex items-center gap-2" style={{ color: entry.color }}>
-                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                                <span className="font-medium font-sans-ui">{entry.name}:</span>
-                              </span>
-                              <span className="font-bold text-white font-mono-code">{entry.value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
+                <Tooltip content={renderTooltip} />
                 {metricMode === 'sentiment' ? (
                   <>
                     <Area
                       type="monotone"
                       dataKey="positive"
                       name="Positif"
-                      stroke="#10b981"
+                      stroke={chartTokens.posStroke}
                       strokeWidth={2.2}
-                      fill="url(#areaPos)"
+                      fill="url(#tsPos)"
                       isAnimationActive={false}
                     />
                     <Area
                       type="monotone"
                       dataKey="neutral"
                       name="Netral"
-                      stroke="#71717a"
-                      strokeWidth={2}
-                      fill="url(#areaNeu)"
+                      stroke={chartTokens.neuStroke}
+                      strokeWidth={1.8}
+                      fill="url(#tsNeu)"
                       isAnimationActive={false}
                     />
                     <Area
                       type="monotone"
                       dataKey="negative"
                       name="Negatif"
-                      stroke="#f43f5e"
+                      stroke={chartTokens.negStroke}
                       strokeWidth={2.2}
-                      fill="url(#areaNeg)"
+                      fill="url(#tsNeg)"
                       isAnimationActive={false}
                     />
                   </>
@@ -216,61 +241,40 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
                     type="monotone"
                     dataKey="total"
                     name="Total Sebutan"
-                    stroke="#d4af37"
+                    stroke={chartTokens.goldStroke}
                     strokeWidth={2.5}
-                    fill="url(#areaTot)"
+                    fill="url(#tsTot)"
                     isAnimationActive={false}
                   />
                 )}
               </AreaChart>
             ) : (
               <BarChart data={timeline} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid vertical={false} stroke="rgba(255, 255, 255, 0.05)" strokeDasharray="3 3" />
+                <CartesianGrid vertical={false} stroke={chartTokens.gridStroke} strokeDasharray="3 4" />
                 <XAxis
                   dataKey="label"
-                  stroke="#474d5a"
-                  tick={{ fill: '#a1a1aa', fontSize: 10, fontFamily: 'JetBrains Mono' }}
+                  stroke={chartTokens.axisStroke}
+                  tick={{ fill: chartTokens.tickFill, fontSize: 11 }}
                   tickLine={false}
+                  axisLine={false}
                   interval="preserveStartEnd"
-                  minTickGap={24}
+                  minTickGap={26}
                 />
                 <YAxis
-                  stroke="#474d5a"
-                  tick={{ fill: '#a1a1aa', fontSize: 10, fontFamily: 'JetBrains Mono' }}
+                  stroke={chartTokens.axisStroke}
+                  tick={{ fill: chartTokens.tickFill, fontSize: 11 }}
                   tickLine={false}
+                  axisLine={false}
                 />
-                <Tooltip
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="bg-[#0a0c12]/95 border border-white/[0.12] p-3.5 rounded-xl shadow-2xl text-xs space-y-2 min-w-[200px] backdrop-blur-xl">
-                          <div className="font-semibold text-white border-b border-white/[0.08] pb-1.5 flex items-center gap-1.5 font-mono-code text-[11px]">
-                            <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                            <span>{label}</span>
-                          </div>
-                          {payload.map((entry, idx) => (
-                            <div key={idx} className="flex items-center justify-between gap-3 text-xs">
-                              <span className="flex items-center gap-2" style={{ color: entry.color }}>
-                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                                <span className="font-medium font-sans-ui">{entry.name}:</span>
-                              </span>
-                              <span className="font-bold text-white font-mono-code">{entry.value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
+                <Tooltip content={renderTooltip} />
                 {metricMode === 'sentiment' ? (
                   <>
-                    <Bar dataKey="positive" name="Positif" fill="#10b981" radius={[4, 4, 0, 0]} stackId="a" isAnimationActive={false} />
-                    <Bar dataKey="neutral" name="Netral" fill="#71717a" radius={[4, 4, 0, 0]} stackId="a" isAnimationActive={false} />
-                    <Bar dataKey="negative" name="Negatif" fill="#f43f5e" radius={[4, 4, 0, 0]} stackId="a" isAnimationActive={false} />
+                    <Bar dataKey="positive" name="Positif" fill={chartTokens.posStroke} radius={[4, 4, 0, 0]} stackId="a" isAnimationActive={false} />
+                    <Bar dataKey="neutral" name="Netral" fill={chartTokens.neuStroke} radius={[4, 4, 0, 0]} stackId="a" isAnimationActive={false} />
+                    <Bar dataKey="negative" name="Negatif" fill={chartTokens.negStroke} radius={[4, 4, 0, 0]} stackId="a" isAnimationActive={false} />
                   </>
                 ) : (
-                  <Bar dataKey="total" name="Total Sebutan" fill="#d4af37" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                  <Bar dataKey="total" name="Total Sebutan" fill={chartTokens.goldStroke} radius={[6, 6, 0, 0]} isAnimationActive={false} />
                 )}
               </BarChart>
             )}
@@ -278,73 +282,47 @@ export function TimeseriesChart({ timeline }: TimeseriesChartProps) {
         )}
       </div>
 
-      {/* Integrated Analytical Footnotes */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 mt-3 border-t border-white/[0.08]">
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] text-xs">
-          <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/25 flex items-center justify-center shrink-0">
-            <TrendingUp className="w-3.5 h-3.5" />
-          </div>
-          <div>
-            <span className="text-[10px] uppercase font-semibold text-zinc-400 block tracking-wider font-mono-code">
-              Puncak Sebutan
-            </span>
-            <span className="font-semibold text-white font-mono-code text-xs">
-              {peakPoint ? `${peakPoint.label} (${peakPoint.total} sebutan)` : 'Menunggu data'}
-            </span>
-          </div>
+      {/* Clean Analytical Footnote Strip & Legend */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-5 mt-5 border-t border-[var(--border-subtle)] text-xs">
+        <div>
+          <span className="text-[var(--text-muted)] block">Puncak Harian</span>
+          <span className="font-semibold text-[var(--text-primary)] font-tabular mt-0.5 block">
+            {peakPoint ? `${peakPoint.label} (${peakPoint.total.toLocaleString('id-ID')} sebutan)` : 'Belum ada data'}
+          </span>
         </div>
 
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] text-xs">
-          <div className="w-7 h-7 rounded-lg bg-white/[0.05] text-zinc-300 border border-white/[0.1] flex items-center justify-center shrink-0">
-            <Compass className="w-3.5 h-3.5" />
-          </div>
-          <div>
-            <span className="text-[10px] uppercase font-semibold text-zinc-400 block tracking-wider font-mono-code">
-              Rata-rata Harian
-            </span>
-            <span className="font-semibold text-white font-mono-code text-xs">
-              ~{avgDaily} sebutan / hari
-            </span>
-          </div>
+        <div className="sm:border-l sm:border-[var(--border-subtle)] sm:pl-4">
+          <span className="text-[var(--text-muted)] block">Rata-rata Harian</span>
+          <span className="font-semibold text-[var(--text-primary)] font-tabular mt-0.5 block">
+            {avgDaily.toLocaleString('id-ID')} sebutan / hari
+          </span>
         </div>
 
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] text-xs">
-          <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
-            <Shield className="w-3.5 h-3.5" />
-          </div>
-          <div>
-            <span className="text-[10px] uppercase font-semibold text-zinc-400 block tracking-wider font-mono-code">
-              Stabilitas Sentimen
-            </span>
-            <span className="font-semibold text-emerald-400 font-mono-code text-xs">
-              {positiveRatio}% Kondusif / Netral
-            </span>
-          </div>
+        <div className="sm:border-l sm:border-[var(--border-subtle)] sm:pl-4">
+          <span className="text-[var(--text-muted)] block">Stabilitas Kondusif</span>
+          <span className="font-semibold text-[var(--sentiment-pos)] font-tabular mt-0.5 block">
+            {positiveRatio}% Positif &amp; Netral
+          </span>
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-3 mt-3 border-t border-white/[0.06] text-xs text-zinc-400">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block shadow-sm shadow-emerald-500/50" />
-            <span className="text-zinc-200 font-medium text-[11px] font-sans-ui">Sentimen Positif</span>
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-4 mt-4 border-t border-[var(--border-subtle)] text-xs text-[var(--text-muted)]">
+        <div className="flex flex-wrap items-center gap-4">
+          <span className="inline-flex items-center gap-1.5 text-[var(--text-secondary)] font-medium">
+            <span className="w-2.5 h-2.5 rounded-full bg-[var(--sentiment-pos-bar)]" aria-hidden="true" />
+            <span>Positif</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-zinc-500 inline-block" />
-            <span className="text-zinc-200 font-medium text-[11px] font-sans-ui">Sentimen Netral</span>
+          <span className="inline-flex items-center gap-1.5 text-[var(--text-secondary)] font-medium">
+            <span className="w-2.5 h-2.5 rounded-full bg-[var(--sentiment-neu-bar)]" aria-hidden="true" />
+            <span>Netral</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block shadow-sm shadow-rose-500/50" />
-            <span className="text-zinc-200 font-medium text-[11px] font-sans-ui">Sentimen Negatif</span>
+          <span className="inline-flex items-center gap-1.5 text-[var(--text-secondary)] font-medium">
+            <span className="w-2.5 h-2.5 rounded-full bg-[var(--sentiment-neg-bar)]" aria-hidden="true" />
+            <span>Negatif</span>
           </span>
         </div>
-
-        <div className="text-[11px] text-zinc-400 flex items-center gap-1.5 font-mono-code">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-          <span>Model: Multilingual Indobert + Slang Lexicon ID</span>
-        </div>
+        <span className="font-mono-code text-[11px]">IndoBERT + Slang Lexicon ID</span>
       </div>
-    </div>
+    </section>
   );
 }

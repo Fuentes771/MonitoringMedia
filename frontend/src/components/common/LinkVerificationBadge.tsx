@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Check, CheckCircle2, Copy, ExternalLink, FlaskConical, Link2Off, Search } from 'lucide-react';
+import {
+  AlertTriangle,
+  Check,
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  FlaskConical,
+  Link2Off,
+  Search,
+} from 'lucide-react';
 import type { SocialLinkStatusType } from '../../lib/api';
 import { inspectSocialLink } from '../../utils/socialLink';
 import { getPlatformMeta } from './PlatformBadge';
@@ -48,37 +57,37 @@ export const LinkVerificationBadge: React.FC<LinkVerificationBadgeProps> = ({
       case 'verified_post':
         return {
           text: compact ? 'Terverifikasi' : 'Tautan Terverifikasi',
-          cls: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
+          cls: 'bg-[var(--sentiment-pos-subtle)] text-[var(--sentiment-pos)] border-[var(--sentiment-pos-border)]',
           icon: <CheckCircle2 className="w-3 h-3 shrink-0" aria-hidden="true" />,
         };
       case 'verified_article':
         return {
           text: compact ? 'Artikel' : 'Artikel Media',
-          cls: 'bg-sky-500/10 text-sky-300 border-sky-500/30',
-          icon: <CheckCircle2 className="w-3 h-3 shrink-0" aria-hidden="true" />,
+          cls: 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-medium)]',
+          icon: <CheckCircle2 className="w-3 h-3 shrink-0 text-[var(--accent-gold-text)]" aria-hidden="true" />,
         };
       case 'search_fallback':
         return {
           text: 'Perlu Verifikasi',
-          cls: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
+          cls: 'bg-[var(--accent-gold-subtle)] text-[var(--accent-gold-text)] border-[var(--accent-gold-border)]',
           icon: <Search className="w-3 h-3 shrink-0" aria-hidden="true" />,
         };
       case 'broken_legacy':
         return {
           text: 'Tautan Rusak',
-          cls: 'bg-rose-500/10 text-rose-300 border-rose-500/30',
+          cls: 'bg-[var(--sentiment-neg-subtle)] text-[var(--sentiment-neg)] border-[var(--sentiment-neg-border)]',
           icon: <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden="true" />,
         };
       case 'demo_placeholder':
         return {
           text: 'Data Simulasi',
-          cls: 'bg-zinc-800/80 text-zinc-400 border-zinc-700',
+          cls: 'bg-[var(--bg-surface-elevated)] text-[var(--text-muted)] border-[var(--border-subtle)]',
           icon: <FlaskConical className="w-3 h-3 shrink-0" aria-hidden="true" />,
         };
       default:
         return {
           text: 'Tanpa Tautan',
-          cls: 'bg-zinc-800/60 text-zinc-500 border-zinc-800',
+          cls: 'bg-[var(--bg-surface-elevated)] text-[var(--text-muted)] border-[var(--border-subtle)]',
           icon: <Link2Off className="w-3 h-3 shrink-0" aria-hidden="true" />,
         };
     }
@@ -105,7 +114,7 @@ export const LinkVerificationBadge: React.FC<LinkVerificationBadgeProps> = ({
     <div className={`inline-flex items-center flex-wrap gap-1.5 ${className}`}>
       <span
         title={inspected.reason}
-        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-mono-code ${badgeSpec.cls}`}
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[10.5px] font-medium ${badgeSpec.cls}`}
       >
         {badgeSpec.icon}
         <span>{badgeSpec.text}</span>
@@ -117,12 +126,12 @@ export const LinkVerificationBadge: React.FC<LinkVerificationBadgeProps> = ({
           onClick={handleCopy}
           aria-label={copied ? 'Tautan berhasil disalin' : 'Salin tautan sumber'}
           title="Salin tautan sumber"
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.08] text-[10px] text-zinc-300 hover:text-white font-mono-code transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] text-[10.5px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-medium transition-colors"
         >
           {copied ? (
             <>
-              <Check className="w-3 h-3 text-emerald-400" aria-hidden="true" />
-              <span className="text-emerald-300">Disalin</span>
+              <Check className="w-3 h-3 text-[var(--sentiment-pos)]" aria-hidden="true" />
+              <span className="text-[var(--sentiment-pos)]">Disalin</span>
             </>
           ) : (
             <>
@@ -141,10 +150,10 @@ export const LinkVerificationBadge: React.FC<LinkVerificationBadgeProps> = ({
           onClick={(e) => {
             if (stopPropagation) e.stopPropagation();
           }}
-          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[10.5px] font-medium transition-colors ${
             inspected.isSearchFallback
-              ? 'text-amber-300 hover:text-amber-200 border border-amber-500/25 bg-amber-500/10 hover:bg-amber-500/20'
-              : 'text-zinc-300 hover:text-white border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.09]'
+              ? 'text-[var(--accent-gold-text)] border-[var(--accent-gold-border)] bg-[var(--accent-gold-subtle)]'
+              : 'text-[var(--text-primary)] border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)]'
           }`}
         >
           <span>{resolvedActionLabel}</span>
@@ -154,4 +163,3 @@ export const LinkVerificationBadge: React.FC<LinkVerificationBadgeProps> = ({
     </div>
   );
 };
-

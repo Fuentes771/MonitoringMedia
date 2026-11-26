@@ -14,10 +14,11 @@ import {
   Hash,
   ShieldCheck,
   RotateCcw,
-  Sparkles,
   Layers,
   Copy,
   User,
+  Bot,
+  MessageSquareWarning,
 } from 'lucide-react';
 import {
   PlatformBadge,
@@ -61,7 +62,6 @@ export function MentionsPage({
   const [botClusterId, setBotClusterId] = useState<string>(initialBotClusterId || '');
   const [onlySarcasm, setOnlySarcasm] = useState<boolean>(false);
   const [onlyInauthentic, setOnlyInauthentic] = useState<boolean>(Boolean(initialOnlyInauthentic));
-  // Zero-touch: auto-hide near-duplicates unless drilling into a specific copypasta cluster or bot account
   const [excludeNearDuplicates, setExcludeNearDuplicates] = useState<boolean>(
     !Boolean(initialBotClusterId || initialAuthorName)
   );
@@ -69,7 +69,6 @@ export function MentionsPage({
   const [selectedMentionId, setSelectedMentionId] = useState<number | null>(null);
   const [mobileInspectorMention, setMobileInspectorMention] = useState<MentionItem | null>(null);
 
-  // Debounce search input so typing does not fire an API request per keystroke
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setDebouncedSearch(search.trim());
@@ -77,7 +76,6 @@ export function MentionsPage({
     return () => window.clearTimeout(timer);
   }, [search]);
 
-  // Sync state if initial filter props change
   useEffect(() => {
     setTopicId(initialTopicId);
     setSearch(initialKeyword || '');
@@ -100,7 +98,6 @@ export function MentionsPage({
   const { activeWorkspace } = useAuth();
   const workspaceId = activeWorkspace?.id;
 
-  // Fetch topics for filter dropdown
   const { data: topics } = useQuery({
     queryKey: ['topics-list', workspaceId],
     enabled: Boolean(workspaceId),
@@ -111,7 +108,6 @@ export function MentionsPage({
     },
   });
 
-  // Fetch mentions with keepPreviousData for smooth pagination & filtering
   const { data, isLoading, isPlaceholderData } = useQuery({
     queryKey: [
       'mentions-explorer',
@@ -166,11 +162,11 @@ export function MentionsPage({
   const activeMention = mentionsList.find((m) => m.id === selectedMentionId) || mentionsList[0] || null;
   const activeLink = activeMention
     ? inspectSocialLink({
-      provider: activeMention.provider,
-      sourceUrl: activeMention.source_url,
-      linkStatus: activeMention.link_status || activeMention.metadata_json?.link_status,
-      isDemo: activeMention.is_demo,
-    })
+        provider: activeMention.provider,
+        sourceUrl: activeMention.source_url,
+        linkStatus: activeMention.link_status || activeMention.metadata_json?.link_status,
+        isDemo: activeMention.is_demo,
+      })
     : null;
   const activeIsSocial = activeMention ? isSocialProvider(activeMention.provider) : false;
 
@@ -191,20 +187,20 @@ export function MentionsPage({
 
   const hasActiveFilters = Boolean(
     search ||
-    topicId ||
-    provider ||
-    interactionType ||
-    linkStatus ||
-    sentiment ||
-    authorName ||
-    botClusterId ||
-    onlySarcasm ||
-    onlyInauthentic ||
-    !excludeNearDuplicates
+      topicId ||
+      provider ||
+      interactionType ||
+      linkStatus ||
+      sentiment ||
+      authorName ||
+      botClusterId ||
+      onlySarcasm ||
+      onlyInauthentic ||
+      !excludeNearDuplicates
   );
 
-  const extractDomain = (url?: string | null, authorName?: string | null, prov?: string | null) => {
-    if (authorName && authorName.trim()) return authorName;
+  const extractDomain = (url?: string | null, author?: string | null, prov?: string | null) => {
+    if (author && author.trim()) return author;
     if (prov && isSocialProvider(prov)) return getPlatformMeta(prov).label;
     if (!url) return 'Media Publik';
     try {
@@ -218,13 +214,15 @@ export function MentionsPage({
   const formatTimestamp = (iso: string) => {
     try {
       const d = new Date(iso);
-      return d.toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      }) + ' WIB';
+      return (
+        d.toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }) + ' WIB'
+      );
     } catch {
       return iso;
     }
@@ -234,25 +232,25 @@ export function MentionsPage({
     switch (label) {
       case 'positive':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold font-mono-code bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10.5px] font-semibold bg-[var(--sentiment-pos-subtle)] text-[var(--sentiment-pos)] border border-[var(--sentiment-pos-border)]">
             Positif
           </span>
         );
       case 'negative':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold font-mono-code bg-rose-500/15 text-rose-400 border border-rose-500/30">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10.5px] font-semibold bg-[var(--sentiment-neg-subtle)] text-[var(--sentiment-neg)] border border-[var(--sentiment-neg-border)]">
             Negatif
           </span>
         );
       case 'neutral':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold font-mono-code bg-white/[0.05] text-zinc-300 border border-white/[0.1]">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10.5px] font-semibold bg-[var(--sentiment-neu-subtle)] text-[var(--sentiment-neu)] border border-[var(--sentiment-neu-border)]">
             Netral
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold font-mono-code bg-white/[0.05] text-zinc-400 border border-white/[0.1]">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10.5px] font-semibold bg-[var(--bg-surface-elevated)] text-[var(--text-muted)] border border-[var(--border-subtle)]">
             Lainnya
           </span>
         );
@@ -267,52 +265,50 @@ export function MentionsPage({
   };
 
   return (
-    <div className="space-y-4 sm:space-y-5 font-sans-ui">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
-        <div className="flex items-start sm:items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-400 flex items-center justify-center shadow-xs shrink-0 mt-0.5 sm:mt-0">
-            <MessageSquareText className="w-4 h-4" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="font-editorial text-xl sm:text-2xl font-medium text-white tracking-tight text-balance">
-              Eksplorasi Sebutan &amp; Investigasi Bukti
-            </h1>
-            <p className="text-xs text-zinc-400 font-sans-ui mt-0.5 text-pretty">
-              Studio pembacaan dan analisis mendalam percakapan media sosial serta pemberitaan media nasional
-            </p>
-          </div>
+    <div className="space-y-5 font-sans-ui animate-surface-enter">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-4 border-b border-[var(--border-subtle)]">
+        <div className="space-y-1">
+          <h1 className="font-editorial text-2xl sm:text-3xl font-medium text-[var(--text-primary)] tracking-tight">
+            Eksplorasi Sebutan &amp; Investigasi Bukti
+          </h1>
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)]">
+            Pembacaan mendalam percakapan media sosial dan pemberitaan media nasional.
+          </p>
         </div>
 
         {data?.pagination && (
-          <div className="text-xs text-zinc-300 font-mono-code bg-white/[0.03] px-3 py-1.5 rounded-xl border border-white/[0.08] shrink-0">
-            Total: <span className="font-bold text-white font-tabular">{data.pagination.total.toLocaleString('id-ID')}</span> Dokumen
+          <div className="text-xs text-[var(--text-secondary)] bg-[var(--bg-surface)] px-3.5 py-2 rounded-full border border-[var(--border-subtle)] shrink-0 self-start sm:self-auto font-tabular">
+            Total <strong className="text-[var(--text-primary)]">{data.pagination.total.toLocaleString('id-ID')}</strong> dokumen
           </div>
         )}
       </div>
 
-      {/* Filter Control Ribbon (3-State Responsive Layout) */}
-      <div className="bento-card p-3.5 sm:p-4 bg-[#0e1117] space-y-3">
-        {/* Row 1: Search Input + Reset + AI Synthesis CTA */}
+      {/* Filter Ribbon */}
+      <div className="surface-card p-4 sm:p-5 space-y-3.5">
+        {/* Search + Synthesis */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
           <div className="relative flex-1 min-w-0">
-            <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
+            <Search
+              className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+              aria-hidden="true"
+            />
             <input
               type="text"
               aria-label="Cari kata kunci, akun, atau isi sebutan"
-              placeholder="Cari kata kunci, akun, atau isi opini..."
+              placeholder="Cari kata kunci, akun, atau kutipan opini..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="w-full min-h-11 bg-white/[0.03] border border-white/[0.1] rounded-xl pl-10 pr-11 py-2 text-base sm:text-xs text-white placeholder:text-zinc-400 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs"
+              className="input-field w-full min-h-11 pl-10 pr-11 py-2 text-base sm:text-sm"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="absolute right-0.5 top-1/2 -translate-y-1/2 min-w-10 min-h-10 flex items-center justify-center text-zinc-400 hover:text-white cursor-pointer rounded-lg"
+                className="absolute right-0.5 top-1/2 -translate-y-1/2 min-w-10 min-h-10 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-lg"
                 aria-label="Hapus kata kunci"
               >
                 <X className="w-4 h-4" aria-hidden="true" />
@@ -325,8 +321,8 @@ export function MentionsPage({
               <button
                 type="button"
                 onClick={clearFilters}
-                className="min-w-11 min-h-11 flex items-center justify-center rounded-xl border border-white/[0.1] bg-white/[0.03] text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
-                title="Reset Semua Filter"
+                className="btn-ghost-surface min-w-11 min-h-11 flex items-center justify-center shrink-0"
+                title="Reset semua filter"
                 aria-label="Reset semua filter"
               >
                 <RotateCcw className="w-4 h-4" aria-hidden="true" />
@@ -352,119 +348,73 @@ export function MentionsPage({
                     topicId
                   );
                 }}
-                className="flex-1 sm:flex-none min-h-11 px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 active:bg-amber-500/30 border border-amber-500/35 text-amber-200 hover:text-amber-100 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
-                title="Sintesis seluruh hasil pencarian aktif ini menggunakan AI"
+                className="btn-gold flex-1 sm:flex-none min-h-11 px-4 text-xs inline-flex items-center justify-center gap-1.5 shrink-0"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
+                <MessageSquareText className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                 <span>Sintesis Hasil ({data?.pagination?.total ?? mentionsList.length})</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Row 2: Quick Channel & Sentiment Lenses (Touch Horizontal Scroll) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-0.5 px-0.5 py-0.5">
-          <button
-            type="button"
-            onClick={() => {
-              setProvider('');
-              setPage(1);
-            }}
-            aria-pressed={provider === ''}
-            className={`min-h-10 sm:min-h-8 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 border ${provider === ''
-              ? 'bg-amber-400/15 border-amber-400/40 text-amber-300'
-              : 'border-white/[0.08] text-zinc-300 hover:text-white hover:bg-white/[0.04]'
+        {/* Channel & Sentiment Quick Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          {[
+            { val: '', label: 'Semua Kanal' },
+            { val: 'social', label: 'Media Sosial' },
+            { val: 'rss', label: 'Berita RSS' },
+          ].map((ch) => (
+            <button
+              key={ch.val || 'all-ch'}
+              type="button"
+              onClick={() => {
+                setProvider(ch.val);
+                setPage(1);
+              }}
+              aria-pressed={provider === ch.val}
+              className={`min-h-9 px-3.5 rounded-full text-xs font-semibold shrink-0 border transition-colors ${
+                provider === ch.val
+                  ? 'bg-[var(--accent-gold-subtle)] border-[var(--accent-gold-border)] text-[var(--accent-gold-text)]'
+                  : 'border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
-          >
-            Semua Kanal
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setProvider('social');
-              setPage(1);
-            }}
-            aria-pressed={provider === 'social'}
-            className={`min-h-10 sm:min-h-8 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 border ${provider === 'social'
-              ? 'bg-amber-400/15 border-amber-400/40 text-amber-300'
-              : 'border-white/[0.08] text-zinc-300 hover:text-white hover:bg-white/[0.04]'
-              }`}
-          >
-            Media Sosial
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setProvider('rss');
-              setPage(1);
-            }}
-            aria-pressed={provider === 'rss'}
-            className={`min-h-10 sm:min-h-8 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 border ${provider === 'rss'
-              ? 'bg-amber-400/15 border-amber-400/40 text-amber-300'
-              : 'border-white/[0.08] text-zinc-300 hover:text-white hover:bg-white/[0.04]'
-              }`}
-          >
-            Berita RSS
-          </button>
+            >
+              {ch.label}
+            </button>
+          ))}
 
-          <span className="h-4 w-px bg-white/[0.1] mx-1 shrink-0" aria-hidden="true" />
+          <span className="h-4 w-px bg-[var(--border-subtle)] mx-1 shrink-0" aria-hidden="true" />
 
-          <button
-            type="button"
-            onClick={() => {
-              setSentiment('');
-              setPage(1);
-            }}
-            aria-pressed={sentiment === ''}
-            className={`min-h-10 sm:min-h-8 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 ${sentiment === ''
-              ? 'bg-white text-zinc-950 shadow-xs'
-              : 'text-zinc-300 hover:text-white hover:bg-white/[0.04]'
-              }`}
-          >
-            Semua Sentimen
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setSentiment('positive');
-              setPage(1);
-            }}
-            aria-pressed={sentiment === 'positive'}
-            className={`min-h-10 sm:min-h-8 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 ${sentiment === 'positive'
-              ? 'bg-emerald-500 text-white shadow-xs'
-              : 'text-zinc-300 hover:text-emerald-400 hover:bg-white/[0.04]'
-              }`}
-          >
-            Positif
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setSentiment('neutral');
-              setPage(1);
-            }}
-            aria-pressed={sentiment === 'neutral'}
-            className={`min-h-10 sm:min-h-8 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 ${sentiment === 'neutral'
-              ? 'bg-zinc-300 text-zinc-950 shadow-xs'
-              : 'text-zinc-300 hover:text-white hover:bg-white/[0.04]'
-              }`}
-          >
-            Netral
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setSentiment('negative');
-              setPage(1);
-            }}
-            aria-pressed={sentiment === 'negative'}
-            className={`min-h-10 sm:min-h-8 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 ${sentiment === 'negative'
-              ? 'bg-rose-500 text-white shadow-xs'
-              : 'text-zinc-300 hover:text-rose-400 hover:bg-white/[0.04]'
-              }`}
-          >
-            Negatif
-          </button>
+          {[
+            { val: '', label: 'Semua Sentimen' },
+            { val: 'positive', label: 'Positif' },
+            { val: 'neutral', label: 'Netral' },
+            { val: 'negative', label: 'Negatif' },
+          ].map((s) => {
+            const active = sentiment === s.val;
+            return (
+              <button
+                key={s.val || 'all-s'}
+                type="button"
+                onClick={() => {
+                  setSentiment(s.val);
+                  setPage(1);
+                }}
+                aria-pressed={active}
+                className={`min-h-9 px-3.5 rounded-full text-xs font-semibold shrink-0 transition-colors ${
+                  active
+                    ? s.val === 'positive'
+                      ? 'bg-[var(--sentiment-pos-bar)] text-white'
+                      : s.val === 'negative'
+                        ? 'bg-[var(--sentiment-neg-bar)] text-white'
+                        : 'bg-[var(--action-contrast-bg)] text-[var(--action-contrast-fg)]'
+                    : 'bg-[var(--bg-surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                {s.label}
+              </button>
+            );
+          })}
+
           <button
             type="button"
             onClick={() => {
@@ -472,13 +422,15 @@ export function MentionsPage({
               setPage(1);
             }}
             aria-pressed={onlySarcasm}
-            className={`min-h-10 sm:min-h-8 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 border ${onlySarcasm
-              ? 'bg-amber-500/20 border-amber-500/40 text-amber-300 shadow-xs'
-              : 'border-white/[0.08] text-zinc-300 hover:text-amber-300 hover:bg-white/[0.04]'
-              }`}
+            className={`min-h-9 px-3.5 rounded-full text-xs font-semibold shrink-0 border transition-colors ${
+              onlySarcasm
+                ? 'bg-[var(--accent-gold-subtle)] border-[var(--accent-gold-border)] text-[var(--accent-gold-text)]'
+                : 'border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            }`}
           >
             Sarkasme
           </button>
+
           <button
             type="button"
             onClick={() => {
@@ -486,17 +438,18 @@ export function MentionsPage({
               setPage(1);
             }}
             aria-pressed={onlyInauthentic}
-            className={`min-h-10 sm:min-h-8 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 border ${onlyInauthentic
-              ? 'bg-rose-500/20 border-rose-500/40 text-rose-300 shadow-xs'
-              : 'border-white/[0.08] text-zinc-300 hover:text-rose-300 hover:bg-white/[0.04]'
-              }`}
+            className={`min-h-9 px-3.5 rounded-full text-xs font-semibold shrink-0 border transition-colors ${
+              onlyInauthentic
+                ? 'bg-[var(--sentiment-neg-subtle)] border-[var(--sentiment-neg-border)] text-[var(--sentiment-neg)]'
+                : 'border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--sentiment-neg)]'
+            }`}
           >
             Indikasi Bot
           </button>
         </div>
 
-        {/* Row 3: 4 Structured Dropdown Selects (2x2 on Phone, 4-Col on Tablet+) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {/* 4 Structured Selects */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
           <select
             aria-label="Filter topik"
             value={topicId || ''}
@@ -504,11 +457,11 @@ export function MentionsPage({
               setTopicId(e.target.value ? Number(e.target.value) : undefined);
               setPage(1);
             }}
-            className="w-full min-w-0 min-h-11 sm:min-h-9 bg-white/[0.03] border border-white/[0.1] rounded-xl px-2.5 py-2 text-xs text-zinc-200 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs"
+            className="input-field w-full min-w-0 min-h-10 px-3 py-2 text-xs"
           >
-            <option value="" className="bg-[#0e1117]">Semua Topik</option>
+            <option value="">Semua Topik</option>
             {topics?.map((t) => (
-              <option key={t.id} value={t.id} className="bg-[#0e1117]">
+              <option key={t.id} value={t.id}>
                 {t.name}
               </option>
             ))}
@@ -521,18 +474,18 @@ export function MentionsPage({
               setProvider(e.target.value);
               setPage(1);
             }}
-            className="w-full min-w-0 min-h-11 sm:min-h-9 bg-white/[0.03] border border-white/[0.1] rounded-xl px-2.5 py-2 text-xs text-zinc-200 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs"
+            className="input-field w-full min-w-0 min-h-10 px-3 py-2 text-xs"
           >
-            <option value="" className="bg-[#0e1117]">Semua Sumber</option>
-            <option value="social" className="bg-[#0e1117]">Semua Media Sosial</option>
-            <option value="rss" className="bg-[#0e1117]">Media Berita (RSS)</option>
-            <option value="youtube" className="bg-[#0e1117]">YouTube</option>
-            <option value="x" className="bg-[#0e1117]">Twitter / X</option>
-            <option value="tiktok" className="bg-[#0e1117]">TikTok</option>
-            <option value="threads" className="bg-[#0e1117]">Threads (via Muse)</option>
-            <option value="instagram" className="bg-[#0e1117]">Instagram (via Muse)</option>
-            <option value="facebook" className="bg-[#0e1117]">Facebook (via Muse)</option>
-            <option value="reddit" className="bg-[#0e1117]">Reddit</option>
+            <option value="">Semua Sumber</option>
+            <option value="social">Semua Media Sosial</option>
+            <option value="rss">Media Berita (RSS)</option>
+            <option value="youtube">YouTube</option>
+            <option value="x">Twitter / X</option>
+            <option value="tiktok">TikTok</option>
+            <option value="threads">Threads (via Muse)</option>
+            <option value="instagram">Instagram (via Muse)</option>
+            <option value="facebook">Facebook (via Muse)</option>
+            <option value="reddit">Reddit</option>
           </select>
 
           <select
@@ -542,11 +495,11 @@ export function MentionsPage({
               setInteractionType(e.target.value);
               setPage(1);
             }}
-            className="w-full min-w-0 min-h-11 sm:min-h-9 bg-white/[0.03] border border-white/[0.1] rounded-xl px-2.5 py-2 text-xs text-zinc-200 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs"
+            className="input-field w-full min-w-0 min-h-10 px-3 py-2 text-xs"
           >
-            <option value="" className="bg-[#0e1117]">Semua Interaksi</option>
-            <option value="post" className="bg-[#0e1117]">Postingan Utama</option>
-            <option value="comment" className="bg-[#0e1117]">Komentar Netizen</option>
+            <option value="">Semua Interaksi</option>
+            <option value="post">Postingan Utama</option>
+            <option value="comment">Komentar Netizen</option>
           </select>
 
           <select
@@ -556,17 +509,17 @@ export function MentionsPage({
               setLinkStatus(e.target.value);
               setPage(1);
             }}
-            className="w-full min-w-0 min-h-11 sm:min-h-9 bg-white/[0.03] border border-white/[0.1] rounded-xl px-2.5 py-2 text-xs text-zinc-200 focus:outline-none focus:border-amber-400/60 transition-colors shadow-xs"
+            className="input-field w-full min-w-0 min-h-10 px-3 py-2 text-xs"
           >
-            <option value="" className="bg-[#0e1117]">Semua Tautan</option>
-            <option value="verified_post" className="bg-[#0e1117]">Post Terverifikasi</option>
-            <option value="verified_article" className="bg-[#0e1117]">Artikel Media</option>
-            <option value="search_fallback" className="bg-[#0e1117]">Perlu Verifikasi</option>
+            <option value="">Semua Tautan</option>
+            <option value="verified_post">Post Terverifikasi</option>
+            <option value="verified_article">Artikel Media</option>
+            <option value="search_fallback">Perlu Verifikasi</option>
           </select>
         </div>
 
-        {/* Zero-Touch Auto-Deduplication & Cross-Page Drilldown Active Strip */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/[0.06] text-[11px]">
+        {/* Deduplication & Drilldown Chips */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[var(--border-subtle)] text-xs">
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -575,30 +528,24 @@ export function MentionsPage({
                 setPage(1);
               }}
               aria-pressed={excludeNearDuplicates}
-              className={`min-h-9 sm:min-h-8 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-mono-code font-semibold border transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 ${excludeNearDuplicates
-                ? 'bg-sky-500/15 border-sky-500/35 text-sky-300'
-                : 'bg-white/[0.04] border-white/[0.1] text-zinc-300 hover:text-white'
-                }`}
-              title="Saring teks duplikat/copy-paste otomatis agar arus opini tetap bersih"
+              className={`min-h-9 inline-flex items-center gap-1.5 px-3 rounded-xl text-[11px] font-semibold border transition-colors ${
+                excludeNearDuplicates
+                  ? 'bg-[var(--accent-gold-subtle)] border-[var(--accent-gold-border)] text-[var(--accent-gold-text)]'
+                  : 'bg-[var(--bg-surface-elevated)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
             >
               <Layers className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
               <span>
                 {excludeNearDuplicates
-                  ? `Auto-Saring Duplikat${metaCounts && metaCounts.hidden_near_duplicates > 0
-                    ? ` (${metaCounts.hidden_near_duplicates})`
-                    : ''
-                  }`
-                  : `Semua Duplikat${metaCounts && metaCounts.total_near_duplicates > 0
-                    ? ` (${metaCounts.total_near_duplicates})`
-                    : ''
-                  }`}
+                  ? `Saring Duplikat${metaCounts && metaCounts.hidden_near_duplicates > 0 ? ` (${metaCounts.hidden_near_duplicates})` : ''}`
+                  : `Semua Duplikat${metaCounts && metaCounts.total_near_duplicates > 0 ? ` (${metaCounts.total_near_duplicates})` : ''}`}
               </span>
             </button>
 
             {botClusterId && (
-              <span className="min-h-9 sm:min-h-8 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/35 text-rose-300 font-mono-code font-semibold">
+              <span className="min-h-9 inline-flex items-center gap-1.5 px-3 rounded-xl bg-[var(--sentiment-neg-subtle)] border border-[var(--sentiment-neg-border)] text-[var(--sentiment-neg)] text-[11px] font-semibold">
                 <Copy className="w-3 h-3 shrink-0" aria-hidden="true" />
-                <span>Kluster: #{botClusterId}</span>
+                <span>Klaster #{botClusterId}</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -606,8 +553,8 @@ export function MentionsPage({
                     setExcludeNearDuplicates(true);
                     setPage(1);
                   }}
-                  aria-label="Hapus filter kluster copypasta"
-                  className="ml-0.5 p-1 text-rose-300 hover:text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 rounded"
+                  aria-label="Hapus filter klaster copypasta"
+                  className="ml-0.5 p-1 rounded hover:bg-[var(--bg-surface)]"
                 >
                   <X className="w-3 h-3" aria-hidden="true" />
                 </button>
@@ -615,7 +562,7 @@ export function MentionsPage({
             )}
 
             {authorName && (
-              <span className="min-h-9 sm:min-h-8 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/35 text-amber-300 font-mono-code font-semibold">
+              <span className="min-h-9 inline-flex items-center gap-1.5 px-3 rounded-xl bg-[var(--accent-gold-subtle)] border border-[var(--accent-gold-border)] text-[var(--accent-gold-text)] text-[11px] font-semibold">
                 <User className="w-3 h-3 shrink-0" aria-hidden="true" />
                 <span>Akun: {authorName}</span>
                 <button
@@ -625,7 +572,7 @@ export function MentionsPage({
                     setPage(1);
                   }}
                   aria-label="Hapus filter akun"
-                  className="ml-0.5 p-1 text-amber-300 hover:text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 rounded"
+                  className="ml-0.5 p-1 rounded hover:bg-[var(--bg-surface)]"
                 >
                   <X className="w-3 h-3" aria-hidden="true" />
                 </button>
@@ -633,72 +580,78 @@ export function MentionsPage({
             )}
           </div>
 
-          <span className="text-zinc-400 font-mono-code hidden md:inline">
-            Mode Zero-Touch: Klasifikasi &amp; pembersihan noise berjalan otomatis
+          <span className="text-[11px] text-[var(--text-muted)] hidden md:inline">
+            Klasifikasi sentimen dan penyaringan duplikat berjalan otomatis
           </span>
         </div>
       </div>
 
-      {/* 2-PANE INVESTIGATION STUDIO (Desktop) / TAP-TO-DRAWER LIST (Mobile & Tablet) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
-
-        {/* LEFT PANE: Feed List (Full width on mobile/tablet, 5 cols on desktop) */}
-        <div className="lg:col-span-5 space-y-3 min-w-0">
-          <div className="bento-card bg-[#0e1117] overflow-hidden flex flex-col lg:h-[760px]">
-            {/* Subheader */}
-            <div className="px-3.5 sm:px-4 py-3 border-b border-white/[0.08] flex items-center justify-between gap-2 text-xs text-zinc-300 font-mono-code">
-              <span className="truncate">
+      {/* Master-Detail Split Studio (Ref 2 Inspired) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Left Pane: Mentions List */}
+        <div className="lg:col-span-5 min-w-0">
+          <div className="surface-card overflow-hidden flex flex-col lg:h-[760px]">
+            <div className="px-4 py-3.5 border-b border-[var(--border-subtle)] flex items-center justify-between gap-2 text-xs">
+              <span className="font-semibold text-[var(--text-primary)] truncate">
                 {provider === 'social' || isSocialProvider(provider)
-                  ? 'Arus Sebutan Media Sosial'
+                  ? 'Arus Media Sosial'
                   : provider === 'rss'
-                    ? 'Arus Sebutan Berita'
-                    : 'Arus Sebutan & Media Sosial'}
+                    ? 'Arus Berita Nasional'
+                    : 'Daftar Sebutan'}
               </span>
-              <span className="shrink-0 text-zinc-400 font-tabular">
+              <span className="shrink-0 text-[var(--text-muted)] font-mono-code font-tabular">
                 Hal. {page} / {data?.pagination?.last_page || 1}
               </span>
             </div>
 
-            {/* Scrollable Feed List */}
-            <div className={`flex-1 lg:overflow-y-auto divide-y divide-white/[0.06] p-2 space-y-2 transition-opacity ${isPlaceholderData ? 'opacity-65' : 'opacity-100'}`}>
+            <div
+              className={`flex-1 lg:overflow-y-auto p-3 space-y-2.5 transition-opacity ${
+                isPlaceholderData ? 'opacity-65' : 'opacity-100'
+              }`}
+            >
               {isLoading ? (
-                <div className="space-y-3 p-2 sm:p-3">
+                <div className="space-y-3" role="status" aria-label="Memuat daftar sebutan">
                   {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="p-3 rounded-xl border border-white/[0.05] bg-white/[0.02] animate-pulse space-y-2">
-                      <div className="h-3 bg-white/[0.08] rounded w-1/3" />
-                      <div className="h-4 bg-white/[0.12] rounded w-full" />
-                      <div className="h-3 bg-white/[0.06] rounded w-2/3" />
+                    <div key={i} className="surface-inset p-4 animate-pulse space-y-2">
+                      <div className="h-3 bg-[var(--border-subtle)] rounded w-1/3" />
+                      <div className="h-4 bg-[var(--border-medium)] rounded w-full" />
+                      <div className="h-3 bg-[var(--border-subtle)] rounded w-2/3" />
                     </div>
                   ))}
                 </div>
               ) : mentionsList.length === 0 ? (
-                <div className="p-10 sm:p-12 text-center text-zinc-400">
-                  <MessageSquareText className="w-8 h-8 mx-auto mb-2 opacity-40 text-zinc-400" aria-hidden="true" />
-                  <p className="text-xs font-sans-ui">Tidak ada sebutan yang cocok dengan filter</p>
+                <div className="p-10 text-center space-y-2">
+                  <MessageSquareText className="w-8 h-8 mx-auto text-[var(--text-muted)]" aria-hidden="true" />
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">
+                    Tidak ada sebutan yang cocok
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Coba hapus beberapa filter aktif atau ubah kata kunci pencarian.
+                  </p>
                 </div>
               ) : (
                 mentionsList.map((item) => {
                   const isSelected = activeMention?.id === item.id;
                   const isNearDup = Boolean(item.is_near_duplicate || item.metadata_json?.is_near_duplicate);
+
                   return (
-                    <div
+                    <article
                       key={item.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleSelectMention(item)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleSelectMention(item);
-                        }
-                      }}
-                      className={`p-3.5 rounded-xl border transition-all cursor-pointer active:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 ${isSelected
-                        ? 'bg-amber-500/10 border-amber-500/40 shadow-sm'
-                        : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05] hover:border-white/[0.14]'
-                        }`}
+                      className={`relative rounded-2xl border p-3.5 transition-colors space-y-2 ${
+                        isSelected
+                          ? 'bg-[var(--bg-surface-elevated)] border-[var(--accent-gold-border)]'
+                          : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] hover:bg-[var(--bg-surface-elevated)] hover:border-[var(--border-medium)]'
+                      }`}
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5 text-[11px]">
-                        <div className="flex items-center gap-2 min-w-0">
+                      {isSelected && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full bg-[var(--accent-gold)]"
+                        />
+                      )}
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                        <div className="flex items-center gap-1.5 min-w-0">
                           <PlatformBadge
                             provider={item.provider}
                             size="xs"
@@ -706,45 +659,54 @@ export function MentionsPage({
                             isComment={Boolean(item.metadata_json?.is_comment)}
                             ingestionSource={item.ingestion_source || item.metadata_json?.ingestion_source}
                           />
-                          <span className="font-semibold text-zinc-200 truncate max-w-[140px]">
+                          <span className="font-semibold text-[var(--text-primary)] truncate max-w-[130px]">
                             {extractDomain(item.source_url, item.author_name, item.provider)}
                           </span>
                         </div>
+
                         <div className="flex items-center flex-wrap gap-1.5">
                           {(item.is_sarcasm || item.metadata_json?.sarcasm_analysis?.is_sarcasm) && (
-                            <span
-                              title={item.metadata_json?.sarcasm_analysis?.sarcasm_reason || 'Sarkasme terdeteksi'}
-                              className="px-1.5 py-0.5 rounded text-[9px] font-mono-code font-bold bg-amber-500/20 text-amber-300 border border-amber-500/35"
-                            >
-                              SARKASME
+                            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-[var(--accent-gold-subtle)] text-[var(--accent-gold-text)]">
+                              Sarkasme
                             </span>
                           )}
                           {(item.is_inauthentic || item.metadata_json?.bot_analysis?.is_inauthentic) && (
-                            <span
-                              title={item.metadata_json?.bot_analysis?.bot_signals?.join(', ') || 'Indikasi Bot/Buzzer'}
-                              className="px-1.5 py-0.5 rounded text-[9px] font-mono-code font-bold bg-rose-500/20 text-rose-300 border border-rose-500/35"
-                            >
-                              BOT
+                            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-[var(--sentiment-neg-subtle)] text-[var(--sentiment-neg)]">
+                              Bot
                             </span>
                           )}
                           {isNearDup && (
-                            <span
-                              title={
-                                item.near_duplicate_of_id || item.metadata_json?.near_duplicate_of_id
-                                  ? `Near-duplicate dari dokumen #${item.near_duplicate_of_id || item.metadata_json?.near_duplicate_of_id}`
-                                  : 'Terdeteksi teks near-duplicate'
-                              }
-                              className="px-1.5 py-0.5 rounded text-[9px] font-mono-code font-bold bg-sky-500/15 text-sky-300 border border-sky-500/35"
-                            >
-                              DUPLIKAT
+                            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-muted)]">
+                              Duplikat
                             </span>
                           )}
                           {getSentimentPill(item.sentiment?.label)}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSelectMention(item)}
+                        className="w-full text-left text-[13px] font-semibold text-[var(--text-primary)] hover:text-[var(--accent-gold-text)] line-clamp-2 leading-snug transition-colors"
+                      >
+                        {item.text}
+                      </button>
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--text-muted)] pt-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono-code font-tabular">{formatTimestamp(item.published_at)}</span>
+                          <SocialEngagementBar
+                            metrics={item.metadata_json?.metrics}
+                            likesFallback={item.metadata_json?.likes}
+                            metricsAvailable={item.metadata_json?.metrics_available}
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
                           {onOpenAiWithQuery && (
                             <button
                               type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
+                              onClick={() => {
                                 const tId = item.topics?.[0]?.id;
                                 const srcLabel = extractDomain(item.source_url, item.author_name, item.provider);
                                 const isSoc = isSocialProvider(item.provider);
@@ -755,76 +717,51 @@ export function MentionsPage({
                                   tId
                                 );
                               }}
-                              className="min-w-8 min-h-8 flex items-center justify-center rounded-lg hover:bg-amber-500/20 text-zinc-400 hover:text-amber-300 transition-colors cursor-pointer"
-                              title="Tanyakan AI tentang sebutan ini"
-                              aria-label="Analisis dengan AI"
+                              className="min-h-8 px-2 rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--accent-gold-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent-gold-text)] border border-[var(--border-subtle)] inline-flex items-center gap-1 transition-colors"
+                              aria-label="Analisis sebutan ini dengan AI"
                             >
-                              <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+                              <MessageSquareText className="w-3 h-3" aria-hidden="true" />
+                              <span>AI</span>
                             </button>
                           )}
-                        </div>
-                      </div>
 
-                      <h4 className="text-[13px] sm:text-xs font-semibold text-white line-clamp-2 leading-snug">
-                        {item.text}
-                      </h4>
-
-                      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-zinc-400 font-mono-code pt-1">
-                        <div className="flex items-center gap-2.5 flex-wrap">
-                          <span>{formatTimestamp(item.published_at)}</span>
-                          <SocialEngagementBar
-                            metrics={item.metadata_json?.metrics}
-                            likesFallback={item.metadata_json?.likes}
-                            metricsAvailable={item.metadata_json?.metrics_available}
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <LinkVerificationBadge
-                            provider={item.provider}
-                            sourceUrl={item.source_url}
-                            linkStatus={item.link_status || item.metadata_json?.link_status}
-                            isDemo={item.is_demo}
-                            compact
-                          />
-                          {item.sentiment?.confidence && (
-                            <span className="text-zinc-300 font-tabular">
-                              {Math.round(item.sentiment.confidence * 100)}%
-                            </span>
-                          )}
-                          <span className="lg:hidden text-amber-300 font-semibold font-sans-ui inline-flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleSelectMention(item)}
+                            className="lg:hidden min-h-8 px-2 rounded-lg text-[var(--accent-gold-text)] font-semibold inline-flex items-center gap-0.5"
+                          >
                             <span>Detail</span>
-                            <ChevronRight className="w-3 h-3" aria-hidden="true" />
-                          </span>
+                            <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                          </button>
                         </div>
                       </div>
-                    </div>
+                    </article>
                   );
                 })
               )}
             </div>
 
-            {/* Pagination Controls */}
             {data?.pagination && data.pagination.last_page > 1 && (
-              <div className="p-3 border-t border-white/[0.08] flex items-center justify-between gap-2 text-xs font-mono-code">
+              <div className="p-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-2 text-xs">
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="min-h-11 sm:min-h-9 px-3 py-1.5 rounded-xl border border-white/[0.1] bg-white/[0.03] hover:bg-white/[0.08] text-zinc-200 disabled:opacity-35 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                  className="btn-ghost-surface min-h-10 px-3 inline-flex items-center gap-1 font-semibold disabled:opacity-40"
                 >
                   <ChevronLeft className="w-4 h-4" aria-hidden="true" />
-                  <span className="hidden xs:inline sm:inline">Sebelumnya</span>
+                  <span className="hidden sm:inline">Sebelumnya</span>
                 </button>
-                <span className="text-zinc-300 text-[11px] font-tabular">
-                  Hal. {page} / {data.pagination.last_page}
+                <span className="text-[var(--text-secondary)] font-mono-code font-tabular">
+                  {page} / {data.pagination.last_page}
                 </span>
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(data.pagination.last_page, p + 1))}
                   disabled={page >= data.pagination.last_page}
-                  className="min-h-11 sm:min-h-9 px-3 py-1.5 rounded-xl border border-white/[0.1] bg-white/[0.03] hover:bg-white/[0.08] text-zinc-200 disabled:opacity-35 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                  className="btn-ghost-surface min-h-10 px-3 inline-flex items-center gap-1 font-semibold disabled:opacity-40"
                 >
-                  <span className="hidden xs:inline sm:inline">Selanjutnya</span>
+                  <span className="hidden sm:inline">Selanjutnya</span>
                   <ChevronRight className="w-4 h-4" aria-hidden="true" />
                 </button>
               </div>
@@ -832,25 +769,27 @@ export function MentionsPage({
           </div>
         </div>
 
-        {/* RIGHT PANE: Deep Reading & Inspection Studio (Desktop only; mobile/tablet uses MentionInspectorDrawer) */}
+        {/* Right Pane: Desktop Deep Reading Inspector */}
         <div className="hidden lg:block lg:col-span-7 sticky top-20 min-w-0">
           {activeMention ? (
-            <div className="bento-card p-6 sm:p-7 bg-[#0e1117] h-[760px] flex flex-col justify-between overflow-y-auto">
+            <div className="surface-card p-6 sm:p-7 h-[760px] flex flex-col justify-between overflow-y-auto">
               <div className="space-y-6">
                 {/* Meta Ribbon */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/[0.08]">
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[var(--border-subtle)]">
                   <div className="flex items-center flex-wrap gap-2">
                     <PlatformBadge
                       provider={activeMention.provider}
                       size="sm"
                       isComment={Boolean(activeMention.metadata_json?.is_comment)}
-                      ingestionSource={activeMention.ingestion_source || activeMention.metadata_json?.ingestion_source}
+                      ingestionSource={
+                        activeMention.ingestion_source || activeMention.metadata_json?.ingestion_source
+                      }
                     />
-                    <span className="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs font-semibold font-mono-code">
+                    <span className="px-2.5 py-1 rounded-lg bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-semibold">
                       {extractDomain(activeMention.source_url, activeMention.author_name, activeMention.provider)}
                     </span>
-                    <span className="text-zinc-400 text-xs font-mono-code flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-zinc-500" />
+                    <span className="text-[var(--text-muted)] text-xs font-mono-code font-tabular inline-flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5" aria-hidden="true" />
                       <span>{formatTimestamp(activeMention.published_at)}</span>
                     </span>
                   </div>
@@ -879,11 +818,10 @@ export function MentionsPage({
                             tId
                           );
                         }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-300 hover:text-amber-200 text-xs font-semibold transition-all shadow-xs cursor-pointer"
-                        title="Analisis sebutan ini secara mendalam dengan AI"
+                        className="btn-gold min-h-9 px-3.5 text-xs inline-flex items-center gap-1.5"
                       >
-                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Analisis dengan AI</span>
+                        <MessageSquareText className="w-3.5 h-3.5" aria-hidden="true" />
+                        <span>Analisis AI</span>
                       </button>
                     )}
 
@@ -892,37 +830,32 @@ export function MentionsPage({
                         href={activeLink.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${activeLink.isSearchFallback
-                          ? 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-200'
-                          : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/[0.12] text-zinc-200 hover:text-white'
-                          }`}
+                        className="btn-ghost-surface min-h-9 px-3 text-xs font-semibold inline-flex items-center gap-1.5"
                       >
                         <span>
                           {activeLink.isSearchFallback
                             ? 'Cari di Platform'
                             : activeIsSocial
-                              ? 'Buka Postingan Asli'
-                              : 'Kunjungi Tautan Asli'}
+                              ? 'Postingan Asli'
+                              : 'Tautan Asli'}
                         </span>
-                        <ExternalLink className="w-3.5 h-3.5" />
+                        <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
                       </a>
                     )}
                   </div>
                 </div>
 
-                {/* Full Article / Post Content */}
+                {/* Quote / Article Text */}
                 <div className="space-y-3">
-                  <div>
-                    <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-amber-400 block mb-1">
-                      {activeIsSocial ? 'Isi Postingan / Komentar Netizen' : 'Isi & Kutipan Lengkap'}
-                    </span>
-                    <h2 className="font-editorial text-xl sm:text-2xl font-medium text-white leading-relaxed">
-                      &ldquo;{activeMention.text}&rdquo;
-                    </h2>
+                  <div className="text-xs font-semibold text-[var(--accent-gold-text)]">
+                    {activeIsSocial ? 'Isi Postingan / Komentar Netizen' : 'Kutipan & Teks Lengkap'}
                   </div>
+                  <h2 className="font-editorial text-xl sm:text-2xl font-medium text-[var(--text-primary)] leading-relaxed">
+                    &ldquo;{activeMention.text}&rdquo;
+                  </h2>
 
                   {(activeIsSocial || activeMention.metadata_json?.metrics) && (
-                    <div className="pt-1 flex items-center gap-3">
+                    <div className="pt-1">
                       <SocialEngagementBar
                         metrics={activeMention.metadata_json?.metrics}
                         likesFallback={activeMention.metadata_json?.likes}
@@ -933,95 +866,86 @@ export function MentionsPage({
                   )}
                 </div>
 
-                {/* NLP Sentiment Verdict & Deep Probabilities */}
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-[11px] font-mono-code font-bold uppercase text-zinc-400">
-                      Keputusan Sentimen Model NLP
+                {/* NLP Sentiment Classification */}
+                <div className="surface-inset p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="font-semibold text-[var(--text-primary)]">
+                      Klasifikasi Sentimen NLP
                     </span>
                     <div className="flex items-center gap-2">
                       {getSentimentPill(activeMention.sentiment?.label)}
                       {activeMention.sentiment?.confidence && (
-                        <span className="text-[11px] font-mono-code text-zinc-300">
-                          {Math.round(activeMention.sentiment.confidence * 100)}% Keyakinan
+                        <span className="text-xs font-tabular text-[var(--text-secondary)]">
+                          {Math.round(activeMention.sentiment.confidence * 100)}% keyakinan
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Read-only Automatic AI Reasoning Strip (aspect, urgency, key_reason) */}
                   {(activeMention.metadata_json?.ai_analysis?.key_reason ||
                     activeMention.metadata_json?.ai_analysis?.aspect ||
                     activeMention.metadata_json?.ai_analysis?.urgency) && (
-                      <div className="p-3 rounded-lg bg-[#08090d]/85 border border-white/[0.07] space-y-1.5 text-xs">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5">
-                            {activeMention.metadata_json.ai_analysis.aspect && (
-                              <span className="px-2 py-0.5 rounded bg-white/[0.06] border border-white/[0.1] text-[10px] font-mono-code text-zinc-200 uppercase">
-                                Aspek: {activeMention.metadata_json.ai_analysis.aspect}
-                              </span>
-                            )}
-                            {activeMention.metadata_json.ai_analysis.urgency && (
-                              <span
-                                className={`px-2 py-0.5 rounded border text-[10px] font-mono-code font-bold uppercase ${activeMention.metadata_json.ai_analysis.urgency === 'high'
-                                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/35'
-                                  : activeMention.metadata_json.ai_analysis.urgency === 'medium'
-                                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/35'
-                                    : 'bg-zinc-500/20 text-zinc-300 border-zinc-500/35'
-                                  }`}
-                              >
-                                Urgensi: {activeMention.metadata_json.ai_analysis.urgency}
-                              </span>
-                            )}
-                          </div>
-                          {activeMention.metadata_json.ai_analysis.engine && (
-                            <span className="text-[10px] font-mono-code text-zinc-400">
-                              {activeMention.metadata_json.ai_analysis.engine}
+                    <div className="p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-1.5 text-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          {activeMention.metadata_json.ai_analysis.aspect && (
+                            <span className="px-2 py-0.5 rounded-lg bg-[var(--bg-surface-elevated)] text-[11px] text-[var(--text-secondary)]">
+                              Aspek: {activeMention.metadata_json.ai_analysis.aspect}
+                            </span>
+                          )}
+                          {activeMention.metadata_json.ai_analysis.urgency && (
+                            <span className="px-2 py-0.5 rounded-lg bg-[var(--accent-gold-subtle)] text-[11px] font-semibold text-[var(--accent-gold-text)]">
+                              Urgensi: {activeMention.metadata_json.ai_analysis.urgency}
                             </span>
                           )}
                         </div>
-                        {activeMention.metadata_json.ai_analysis.key_reason && (
-                          <p className="text-[11.5px] text-zinc-300 leading-relaxed">
-                            <strong className="text-amber-300 font-semibold">Alasan Otomatis AI:</strong>{' '}
-                            {activeMention.metadata_json.ai_analysis.key_reason}
-                          </p>
+                        {activeMention.metadata_json.ai_analysis.engine && (
+                          <span className="text-[11px] font-mono-code text-[var(--text-muted)]">
+                            {activeMention.metadata_json.ai_analysis.engine}
+                          </span>
                         )}
                       </div>
-                    )}
+                      {activeMention.metadata_json.ai_analysis.key_reason && (
+                        <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                          <strong className="text-[var(--text-primary)]">Catatan Analisis:</strong>{' '}
+                          {activeMention.metadata_json.ai_analysis.key_reason}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
-                  {/* Probabilities Bars */}
                   {activeMention.sentiment?.probabilities_json && (
-                    <div className="space-y-1.5 pt-2 border-t border-white/[0.05]">
-                      <div className="flex items-center justify-between text-[11px] font-mono-code">
-                        <span className="text-emerald-400">
-                          Positif: {Math.round(activeMention.sentiment.probabilities_json.positive * 100)}%
+                    <div className="space-y-2 pt-2 border-t border-[var(--border-subtle)]">
+                      <div className="flex items-center justify-between text-xs font-tabular">
+                        <span className="text-[var(--sentiment-pos)] font-semibold">
+                          Positif {Math.round(activeMention.sentiment.probabilities_json.positive * 100)}%
                         </span>
-                        <span className="text-zinc-400">
-                          Netral: {Math.round(activeMention.sentiment.probabilities_json.neutral * 100)}%
+                        <span className="text-[var(--text-secondary)] font-semibold">
+                          Netral {Math.round(activeMention.sentiment.probabilities_json.neutral * 100)}%
                         </span>
-                        <span className="text-rose-400">
-                          Negatif: {Math.round(activeMention.sentiment.probabilities_json.negative * 100)}%
+                        <span className="text-[var(--sentiment-neg)] font-semibold">
+                          Negatif {Math.round(activeMention.sentiment.probabilities_json.negative * 100)}%
                         </span>
                       </div>
-                      <div className="w-full h-2 bg-white/[0.05] rounded-full overflow-hidden flex border border-white/[0.06]">
+                      <div className="w-full h-2 bg-[var(--bg-surface)] rounded-full overflow-hidden flex gap-0.5">
                         <div
                           style={{ width: `${Math.round(activeMention.sentiment.probabilities_json.positive * 100)}%` }}
-                          className="bg-emerald-500 h-full"
+                          className="bg-[var(--sentiment-pos-bar)] h-full"
                         />
                         <div
                           style={{ width: `${Math.round(activeMention.sentiment.probabilities_json.neutral * 100)}%` }}
-                          className="bg-zinc-600 h-full"
+                          className="bg-[var(--sentiment-neu-bar)] h-full"
                         />
                         <div
                           style={{ width: `${Math.round(activeMention.sentiment.probabilities_json.negative * 100)}%` }}
-                          className="bg-rose-500 h-full"
+                          className="bg-[var(--sentiment-neg-bar)] h-full"
                         />
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Sarcasm, Bot & Near-Duplicate Authenticity Telemetry Box */}
+                {/* Authenticity Telemetry */}
                 {(activeMention.is_sarcasm ||
                   activeMention.metadata_json?.sarcasm_analysis?.is_sarcasm ||
                   activeMention.is_inauthentic ||
@@ -1029,186 +953,190 @@ export function MentionsPage({
                   activeMention.is_near_duplicate ||
                   activeMention.metadata_json?.is_near_duplicate ||
                   activeMention.bot_cluster_id) && (
-                    <div className="p-4 rounded-xl bg-amber-500/[0.04] border border-amber-500/30 space-y-3">
-                      <div className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-amber-300">
-                        Intelijen Keaslian Opini &amp; Pembedahan Sarkasme
-                      </div>
+                  <div className="p-4 rounded-2xl bg-[var(--accent-gold-subtle)] border border-[var(--accent-gold-border)] space-y-3 text-xs">
+                    <div className="font-semibold text-[var(--accent-gold-text)]">
+                      Deteksi Keaslian Opini &amp; Sarkasme
+                    </div>
 
-                      {(activeMention.is_near_duplicate ||
-                        activeMention.metadata_json?.is_near_duplicate ||
-                        activeMention.bot_cluster_id) && (
-                          <div className="p-3 rounded-lg bg-[#08090d]/85 border border-sky-500/30 flex flex-wrap items-center justify-between gap-2 text-xs">
-                            <div className="space-y-0.5">
-                              <span className="font-semibold text-sky-300 flex items-center gap-1.5">
-                                <Copy className="w-3.5 h-3.5" aria-hidden="true" />
-                                <span>
-                                  {activeMention.bot_cluster_id
-                                    ? `Terhubung ke Kluster Copypasta #${activeMention.bot_cluster_id}`
-                                    : 'Teridentifikasi Teks Near-Duplicate'}
-                                </span>
-                              </span>
-                              {(activeMention.near_duplicate_of_id || activeMention.metadata_json?.near_duplicate_of_id) && (
-                                <p className="text-[11px] text-zinc-300">
-                                  Konten identik dengan dokumen referensi #{activeMention.near_duplicate_of_id || activeMention.metadata_json?.near_duplicate_of_id}.
-                                </p>
-                              )}
-                            </div>
-                            {activeMention.bot_cluster_id && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setBotClusterId(activeMention.bot_cluster_id || '');
-                                  setExcludeNearDuplicates(false);
-                                  setPage(1);
-                                }}
-                                className="px-2.5 py-1 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-200 text-[11px] font-mono-code font-semibold cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
-                              >
-                                Filter Kluster Ini
-                              </button>
-                            )}
-                          </div>
-                        )}
-
-                      {(activeMention.is_sarcasm ||
-                        activeMention.metadata_json?.sarcasm_analysis?.is_sarcasm) && (
-                          <div className="p-3 rounded-lg bg-[#08090d]/85 border border-amber-500/25 space-y-1.5 text-xs">
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-amber-300">
-                                🎭 Terdeteksi Sarkasme / Satir Politik
-                              </span>
-                              <span className="font-mono-code text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
-                                Sentimen Dikoreksi &rarr; NEGATIF
-                              </span>
-                            </div>
-                            <p className="text-zinc-300 text-xs leading-relaxed">
-                              {activeMention.metadata_json?.sarcasm_analysis?.sarcasm_reason ||
-                                'Komentar menggunakan pujian ironis untuk menyindir kebijakan publik.'}
+                    {(activeMention.is_near_duplicate ||
+                      activeMention.metadata_json?.is_near_duplicate ||
+                      activeMention.bot_cluster_id) && (
+                      <div className="p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-2">
+                        <div className="space-y-0.5">
+                          <span className="font-semibold text-[var(--text-primary)] inline-flex items-center gap-1.5">
+                            <Copy className="w-3.5 h-3.5 text-[var(--accent-gold-text)]" aria-hidden="true" />
+                            <span>
+                              {activeMention.bot_cluster_id
+                                ? `Terhubung ke Klaster Copypasta #${activeMention.bot_cluster_id}`
+                                : 'Teridentifikasi Teks Duplikat Serupa'}
+                            </span>
+                          </span>
+                          {(activeMention.near_duplicate_of_id ||
+                            activeMention.metadata_json?.near_duplicate_of_id) && (
+                            <p className="text-[11px] text-[var(--text-secondary)]">
+                              Merujuk dokumen #{activeMention.near_duplicate_of_id || activeMention.metadata_json?.near_duplicate_of_id}.
                             </p>
-                          </div>
+                          )}
+                        </div>
+                        {activeMention.bot_cluster_id && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBotClusterId(activeMention.bot_cluster_id || '');
+                              setExcludeNearDuplicates(false);
+                              setPage(1);
+                            }}
+                            className="btn-ghost-surface min-h-8 px-2.5 text-[11px] font-semibold"
+                          >
+                            Filter Klaster Ini
+                          </button>
                         )}
+                      </div>
+                    )}
 
-                      {(activeMention.is_inauthentic ||
-                        activeMention.metadata_json?.bot_analysis?.is_inauthentic) && (
-                          <div className="p-3 rounded-lg bg-[#08090d]/85 border border-rose-500/25 space-y-1.5 text-xs">
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-rose-300">
-                                🤖 Terindikasi Amplifikasi Bot / Buzzer
-                              </span>
-                              <span className="font-mono-code text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
-                                Skor Bot:{' '}
-                                {Math.round(
-                                  (activeMention.inauthentic_score ??
-                                    activeMention.metadata_json?.bot_analysis?.inauthentic_score ??
-                                    0.7) * 100
-                                )}
-                                %
-                              </span>
-                            </div>
-                            {activeMention.metadata_json?.bot_analysis?.bot_signals &&
-                              activeMention.metadata_json.bot_analysis.bot_signals.length > 0 && (
-                                <ul className="list-disc list-inside text-zinc-300 text-xs space-y-0.5">
-                                  {activeMention.metadata_json.bot_analysis.bot_signals.map((sig, idx) => (
-                                    <li key={idx}>{sig}</li>
-                                  ))}
-                                </ul>
-                              )}
-                          </div>
-                        )}
+                    {(activeMention.is_sarcasm || activeMention.metadata_json?.sarcasm_analysis?.is_sarcasm) && (
+                      <div className="p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-[var(--accent-gold-text)] inline-flex items-center gap-1.5">
+                            <MessageSquareWarning className="w-3.5 h-3.5" aria-hidden="true" />
+                            <span>Terdeteksi Sarkasme / Satir Politik</span>
+                          </span>
+                          <span className="text-[10.5px] px-2 py-0.5 rounded-lg bg-[var(--sentiment-neg-subtle)] text-[var(--sentiment-neg)] font-semibold">
+                            Dikoreksi ke Negatif
+                          </span>
+                        </div>
+                        <p className="text-[var(--text-secondary)] leading-relaxed">
+                          {activeMention.metadata_json?.sarcasm_analysis?.sarcasm_reason ||
+                            'Komentar menggunakan pujian ironis untuk menyindir kebijakan publik.'}
+                        </p>
+                      </div>
+                    )}
+
+                    {(activeMention.is_inauthentic || activeMention.metadata_json?.bot_analysis?.is_inauthentic) && (
+                      <div className="p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--sentiment-neg-border)] space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-[var(--sentiment-neg)] inline-flex items-center gap-1.5">
+                            <Bot className="w-3.5 h-3.5" aria-hidden="true" />
+                            <span>Terindikasi Amplifikasi Bot / Buzzer</span>
+                          </span>
+                          <span className="font-tabular text-[10.5px] px-2 py-0.5 rounded-lg bg-[var(--sentiment-neg-subtle)] text-[var(--sentiment-neg)] font-bold">
+                            Skor Bot:{' '}
+                            {Math.round(
+                              (activeMention.inauthentic_score ??
+                                activeMention.metadata_json?.bot_analysis?.inauthentic_score ??
+                                0.7) * 100
+                            )}
+                            %
+                          </span>
+                        </div>
+                        {activeMention.metadata_json?.bot_analysis?.bot_signals &&
+                          activeMention.metadata_json.bot_analysis.bot_signals.length > 0 && (
+                            <ul className="list-disc list-inside text-[var(--text-secondary)] space-y-0.5">
+                              {activeMention.metadata_json.bot_analysis.bot_signals.map((sig, idx) => (
+                                <li key={idx}>{sig}</li>
+                              ))}
+                            </ul>
+                          )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Keywords & Topics */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {activeMention.keywords && activeMention.keywords.length > 0 && (
+                    <div>
+                      <span className="text-xs font-semibold text-[var(--text-secondary)] block mb-2">
+                        Kata Kunci Terdeteksi
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {activeMention.keywords.map((kw, i) => (
+                          <span
+                            key={i}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--bg-surface-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)]"
+                          >
+                            <Hash className="w-3 h-3 text-[var(--accent-gold-text)]" aria-hidden="true" />
+                            <span>{kw.keyword}</span>
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
 
-                {/* Extracted Keywords */}
-                {activeMention.keywords && activeMention.keywords.length > 0 && (
-                  <div>
-                    <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-zinc-400 block mb-2">
-                      Entitas &amp; Kata Kunci Terdeteksi
-                    </span>
-                    <div className="flex flex-wrap gap-2">
-                      {activeMention.keywords.map((kw, i) => (
-                        <span
-                          key={i}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs font-mono-code text-zinc-200"
-                        >
-                          <Hash className="w-3 h-3 text-amber-400" />
-                          <span>{kw.keyword}</span>
-                        </span>
-                      ))}
+                  {activeMention.topics && activeMention.topics.length > 0 && (
+                    <div>
+                      <span className="text-xs font-semibold text-[var(--text-secondary)] block mb-2">
+                        Topik Pemantauan Terkait
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {activeMention.topics.map((t) => (
+                          <span
+                            key={t.id}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--accent-gold-subtle)] border border-[var(--accent-gold-border)] text-xs font-medium text-[var(--accent-gold-text)]"
+                          >
+                            <Tag className="w-3 h-3" aria-hidden="true" />
+                            <span>{t.name}</span>
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-
-                {/* Associated Topics */}
-                {activeMention.topics && activeMention.topics.length > 0 && (
-                  <div>
-                    <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-zinc-400 block mb-2">
-                      Topik Pemantauan Terkait
-                    </span>
-                    <div className="flex flex-wrap gap-2">
-                      {activeMention.topics.map((t) => (
-                        <span
-                          key={t.id}
-                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/25 text-xs font-medium text-amber-300"
-                        >
-                          <Tag className="w-3 h-3 text-amber-400" />
-                          <span>{t.name}</span>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
-              {/* Bottom Context Badge */}
-              <div className="pt-4 mt-6 border-t border-white/[0.08] flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-400 font-mono-code">
-                <span>
-                  Dokumen ID: #{activeMention.id}
-                  {activeMention.metadata_json?.raw_source && (
-                    <span className="ml-2 text-zinc-300">
-                      | Sumber: {activeMention.metadata_json.raw_source}
-                    </span>
-                  )}
+              {/* Footer Provenance */}
+              <div className="pt-4 mt-6 border-t border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--text-muted)]">
+                <span className="font-mono-code">
+                  ID #{activeMention.id}
+                  {activeMention.metadata_json?.raw_source && ` | ${activeMention.metadata_json.raw_source}`}
                 </span>
-                <span className={`flex items-center gap-1 ${activeLink?.isVerifiedDirect ? 'text-emerald-400' : 'text-amber-300'}`}>
+                <span
+                  className={`inline-flex items-center gap-1.5 font-medium ${
+                    activeLink?.isVerifiedDirect ? 'text-[var(--sentiment-pos)]' : 'text-[var(--accent-gold-text)]'
+                  }`}
+                >
                   <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />
-                  <span>{activeLink?.isVerifiedDirect ? 'Tautan Terverifikasi' : activeLink?.reason || 'Pipeline Ingesti'}</span>
+                  <span>
+                    {activeLink?.isVerifiedDirect ? 'Tautan Terverifikasi' : activeLink?.reason || 'Pipeline Ingesti'}
+                  </span>
                 </span>
               </div>
             </div>
           ) : (
-            <div className="bento-card p-12 bg-[#0e1117] h-[760px] flex items-center justify-center text-center text-zinc-500">
-              <div>
-                <MessageSquareText className="w-10 h-10 mx-auto mb-3 opacity-30 text-zinc-400" />
-                <h3 className="font-semibold text-sm text-zinc-300 mb-1">Pilih Dokumen Sebutan</h3>
-                <p className="text-xs max-w-xs mx-auto">
-                  Klik artikel di panel sebelah kiri untuk membaca analisis sentimen dan probabilitas secara mendalam.
+            <div className="surface-card p-12 h-[760px] flex items-center justify-center text-center">
+              <div className="space-y-2 max-w-xs">
+                <MessageSquareText className="w-9 h-9 mx-auto text-[var(--text-muted)]" aria-hidden="true" />
+                <h2 className="font-editorial text-lg font-medium text-[var(--text-primary)]">
+                  Pilih Dokumen Sebutan
+                </h2>
+                <p className="text-xs text-[var(--text-muted)]">
+                  Pilih salah satu item di daftar sebelah kiri untuk membaca analisis sentimen dan buktinya secara lengkap.
                 </p>
               </div>
             </div>
           )}
         </div>
-
       </div>
 
-      {/* Mobile & Tablet Slide-Over Detail Inspector */}
+      {/* Mobile Drawer */}
       <MentionInspectorDrawer
         mention={mobileInspectorMention}
         onClose={() => setMobileInspectorMention(null)}
         onAskAi={
           onOpenAiWithQuery
             ? (mention) => {
-              setMobileInspectorMention(null);
-              const tId = mention.topics?.[0]?.id;
-              const srcLabel =
-                mention.author_name ||
-                extractDomain(mention.source_url, mention.author_name, mention.provider);
-              const isSoc = isSocialProvider(mention.provider);
-              onOpenAiWithQuery(
-                isSoc
-                  ? `Bedah dan analisis opini media sosial (${getPlatformMeta(mention.provider).label}) ini: "${mention.text}" (Akun: ${srcLabel}, Sentimen: ${mention.sentiment?.label || 'Netral'}). Jelaskan konteks sentimen netizen, potensi eskalasi isu, dan respons komunikasi yang disarankan.`
-                  : `Bedah dan analisis secara mendalam artikel/sebutan ini: "${mention.text}" (Sumber: ${srcLabel}, Sentimen: ${mention.sentiment?.label || 'Netral'}). Jelaskan implikasi isu, potensi resistensi publik, dan poin kebijakan terkait.`,
-                tId
-              );
-            }
+                setMobileInspectorMention(null);
+                const tId = mention.topics?.[0]?.id;
+                const srcLabel =
+                  mention.author_name || extractDomain(mention.source_url, mention.author_name, mention.provider);
+                const isSoc = isSocialProvider(mention.provider);
+                onOpenAiWithQuery(
+                  isSoc
+                    ? `Bedah dan analisis opini media sosial (${getPlatformMeta(mention.provider).label}) ini: "${mention.text}" (Akun: ${srcLabel}, Sentimen: ${mention.sentiment?.label || 'Netral'}). Jelaskan konteks sentimen netizen, potensi eskalasi isu, dan respons komunikasi yang disarankan.`
+                    : `Bedah dan analisis secara mendalam artikel/sebutan ini: "${mention.text}" (Sumber: ${srcLabel}, Sentimen: ${mention.sentiment?.label || 'Netral'}). Jelaskan implikasi isu, potensi resistensi publik, dan poin kebijakan terkait.`,
+                  tId
+                );
+              }
             : undefined
         }
       />
