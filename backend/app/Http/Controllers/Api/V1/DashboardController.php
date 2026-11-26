@@ -170,10 +170,10 @@ class DashboardController extends Controller
             ->limit(5)
             ->get()
             ->map(function ($m) {
-                $lines = explode("\n", trim($m->text));
-                $headline = trim($lines[0] ?? $m->text);
-                if (strlen($headline) > 110) {
-                    $headline = substr($headline, 0, 107) . '...';
+                $lines = explode("\n", trim((string) $m->text));
+                $headline = trim($lines[0] ?? (string) $m->text);
+                if (mb_strlen($headline, 'UTF-8') > 110) {
+                    $headline = mb_substr($headline, 0, 107, 'UTF-8') . '...';
                 }
 
                 $linkValidator = app(\App\Services\SocialLinkValidator::class);
